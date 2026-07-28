@@ -26,6 +26,15 @@ export class ApiError extends Error {
 type UnauthorizedHandler = () => void
 
 let onUnauthorized: UnauthorizedHandler | null = null
+let locale: string | null = null
+
+/**
+ * Set by I18nProvider. Laravel localises responses off Content-Language, so the
+ * active locale has to travel with every call.
+ */
+export function setApiLocale(next: string | null): void {
+  locale = next
+}
 
 /**
  * Registered once by AuthProvider. Lets a 401 from any call anywhere drop the
@@ -92,6 +101,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   const send = (): Promise<Response> => {
     const headers: Record<string, string> = { Accept: 'application/json' }
     if (body !== undefined) headers['Content-Type'] = 'application/json'
+    if (locale !== null) headers['Content-Language'] = locale
 
     const token = readCookie(CSRF_COOKIE)
     if (mutates && token !== null) headers['X-XSRF-TOKEN'] = token

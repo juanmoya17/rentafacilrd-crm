@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router'
 import { useAuth } from '@/lib/auth-context'
+import { useT } from '@/lib/i18n/context'
+import { LanguageSwitcher } from '@/components/language-switcher'
 
 interface LocationState {
   from?: string
@@ -9,6 +11,7 @@ interface LocationState {
 export function LoginPage() {
   const { state, login } = useAuth()
   const location = useLocation()
+  const t = useT()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -19,7 +22,7 @@ export function LoginPage() {
   if (state.status === 'loading') {
     return (
       <div className="grid min-h-dvh place-items-center bg-slate-50" role="status">
-        <p className="text-sm text-slate-500">Verificando sesión…</p>
+        <p className="text-sm text-slate-500">{t('auth.checking')}</p>
       </div>
     )
   }
@@ -36,7 +39,9 @@ export function LoginPage() {
     try {
       await login(email, password)
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : 'No pudimos iniciar sesión.')
+      // The backend already localises its message via Content-Language; the
+      // fallback is for network-level failures that never reached it.
+      setError(caught instanceof Error ? caught.message : t('auth.failed'))
     } finally {
       setSubmitting(false)
     }
@@ -48,8 +53,13 @@ export function LoginPage() {
         onSubmit={(event) => void handleSubmit(event)}
         className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
       >
-        <h1 className="text-lg font-semibold text-slate-900">RentaFácil CRM</h1>
-        <p className="mt-1 text-sm text-slate-500">Entra con tu cuenta de agente.</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-lg font-semibold text-slate-900">{t('app.name')}</h1>
+            <p className="mt-1 text-sm text-slate-500">{t('auth.subtitle')}</p>
+          </div>
+          <LanguageSwitcher />
+        </div>
 
         {error && (
           <p
@@ -61,7 +71,7 @@ export function LoginPage() {
         )}
 
         <label htmlFor="email" className="mt-5 block text-sm font-medium text-slate-700">
-          Correo
+          {t('auth.email')}
         </label>
         <input
           id="email"
@@ -79,7 +89,7 @@ export function LoginPage() {
           htmlFor="password"
           className="mt-4 block text-sm font-medium text-slate-700"
         >
-          Contraseña
+          {t('auth.password')}
         </label>
         <input
           id="password"
@@ -98,7 +108,7 @@ export function LoginPage() {
           disabled={submitting}
           className="mt-6 w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
         >
-          {submitting ? 'Entrando…' : 'Entrar'}
+          {submitting ? t('auth.signingIn') : t('auth.signIn')}
         </button>
       </form>
     </div>

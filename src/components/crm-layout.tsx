@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router'
 import { useAuth } from '@/lib/auth-context'
+import { useT } from '@/lib/i18n/context'
+import type { TranslationKey } from '@/lib/i18n/es'
+import { LanguageSwitcher } from '@/components/language-switcher'
 
-const NAV = [{ to: '/', label: 'Inicio' }]
+const NAV: { to: string; label: TranslationKey }[] = [{ to: '/', label: 'nav.home' }]
 
 export function CrmLayout() {
   const { state, logout } = useAuth()
+  const t = useT()
   const [signingOut, setSigningOut] = useState(false)
   const [signOutError, setSignOutError] = useState<string | null>(null)
 
@@ -19,9 +23,7 @@ export function CrmLayout() {
     } catch (error: unknown) {
       // The local session is already cleared by logout(), so RequireAuth is
       // redirecting regardless. This only reports that the server never heard.
-      setSignOutError(
-        error instanceof Error ? error.message : 'No pudimos avisar al servidor.',
-      )
+      setSignOutError(error instanceof Error ? error.message : t('auth.signOutFailed'))
     } finally {
       setSigningOut(false)
     }
@@ -31,9 +33,9 @@ export function CrmLayout() {
     <div className="min-h-dvh bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
-          <span className="font-semibold text-slate-900">RentaFácil CRM</span>
+          <span className="font-semibold text-slate-900">{t('app.name')}</span>
 
-          <nav aria-label="Principal" className="flex gap-1">
+          <nav aria-label={t('nav.main')} className="flex gap-1">
             {NAV.map((item) => (
               <NavLink
                 key={item.to}
@@ -46,7 +48,7 @@ export function CrmLayout() {
                   }`
                 }
               >
-                {item.label}
+                {t(item.label)}
               </NavLink>
             ))}
           </nav>
@@ -55,13 +57,14 @@ export function CrmLayout() {
             {user && (
               <span className="hidden text-sm text-slate-600 sm:inline">{user.name}</span>
             )}
+            <LanguageSwitcher />
             <button
               type="button"
               onClick={() => void handleSignOut()}
               disabled={signingOut}
               className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
             >
-              {signingOut ? 'Saliendo…' : 'Cerrar sesión'}
+              {signingOut ? t('auth.signingOut') : t('auth.signOut')}
             </button>
           </div>
         </div>

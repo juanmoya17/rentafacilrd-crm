@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, Navigate } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
 import { AuthProvider } from '@/lib/auth-provider'
+import { I18nProvider } from '@/lib/i18n/provider'
 import { RequireAuth } from '@/components/require-auth'
 import { CrmLayout } from '@/components/crm-layout'
 import { LoginPage } from '@/routes/login'
@@ -29,8 +30,10 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <I18nProvider>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </I18nProvider>
   </StrictMode>,
 )
