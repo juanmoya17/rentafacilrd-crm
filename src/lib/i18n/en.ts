@@ -30,6 +30,12 @@ export const en: Record<TranslationKey, string> = {
   'auth.failed': 'We could not sign you in.',
   'auth.signOutFailed': 'We could not reach the server.',
 
+  'verification.title': 'Your account is not verified as an agent yet',
+  'verification.body': 'Hi {name}. The CRM is for verified agents, and your verification has not been approved yet.',
+  'verification.leadsSafe': 'Your listings and leads are still active. They are being stored and will show up here the moment your verification is approved — nothing is lost.',
+  'verification.howTitle': 'How do I get verified?',
+  'verification.how': 'Request agent verification from your profile in the RentaFácil app. Our team reviews it.',
+
   'error.backendTitle': 'We could not reach the server',
   'error.retry': 'Retry',
   'error.unreachable': 'We could not reach the server.',

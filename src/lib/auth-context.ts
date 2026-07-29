@@ -1,11 +1,28 @@
 import { createContext, useContext } from 'react'
 
-/** Only the fields the CRM actually reads off Customer. Widen as screens need more. */
+/**
+ * Only the fields the CRM actually reads off Customer. Wire shape, so the keys
+ * stay snake_case exactly as the API sends them. Widen as screens need more.
+ */
 export interface CrmUser {
   id: number
   name: string
   email: string
   profile?: string | null
+  /** Derived server-side from a successful verify_customers row. */
+  is_verified_agent?: boolean
+  verification_status?: 'unverified_user' | 'verified_user' | 'verified_agent'
+}
+
+/**
+ * The CRM is for verified agents. Fails closed: a missing flag — an old backend,
+ * a trimmed payload — counts as not verified rather than letting someone in.
+ *
+ * This is a UI gate only. The real one is the `verified.agent` middleware on the
+ * API; never treat this as the security boundary.
+ */
+export function isVerifiedAgent(user: CrmUser): boolean {
+  return user.is_verified_agent === true
 }
 
 export type AuthState =

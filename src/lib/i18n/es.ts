@@ -33,6 +33,12 @@ export const es = {
   'auth.failed': 'No pudimos iniciar sesión.',
   'auth.signOutFailed': 'No pudimos avisar al servidor.',
 
+  'verification.title': 'Tu cuenta aún no está verificada como agente',
+  'verification.body': 'Hola {name}. El CRM es para agentes verificados, y tu verificación todavía no está aprobada.',
+  'verification.leadsSafe': 'Tus anuncios y tus leads siguen activos. Se están guardando y aparecerán aquí en cuanto se apruebe la verificación — no se pierde nada.',
+  'verification.howTitle': '¿Cómo me verifico?',
+  'verification.how': 'Solicita la verificación de agente desde tu perfil en la app de RentaFácil. La revisa nuestro equipo.',
+
   'error.backendTitle': 'No pudimos contactar el servidor',
   'error.retry': 'Reintentar',
   'error.unreachable': 'No pudimos contactar el servidor.',

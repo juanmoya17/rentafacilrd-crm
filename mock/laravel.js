@@ -16,9 +16,28 @@ import { createServer } from 'node:http'
 
 const PORT = Number(process.env.MOCK_PORT ?? 8787)
 
+// `is_verified_agent` and `verification_status` are $appends on the real
+// Customer model, so get-user-data already returns them. The CRM gates on the
+// first one; the API enforces it for real via the `verified.agent` middleware.
 const USERS = [
-  { email: 'agente@test.com', password: 'secret', active: true, data: { id: 42, name: 'Agente Demo', email: 'agente@test.com' } },
-  { email: 'inactivo@test.com', password: 'secret', active: false, data: { id: 43, name: 'Agente Inactivo', email: 'inactivo@test.com' } },
+  {
+    email: 'agente@test.com',
+    password: 'secret',
+    active: true,
+    data: { id: 42, name: 'Agente Demo', email: 'agente@test.com', is_verified_agent: true, verification_status: 'verified_agent' },
+  },
+  {
+    email: 'sinverificar@test.com',
+    password: 'secret',
+    active: true,
+    data: { id: 44, name: 'Agente Sin Verificar', email: 'sinverificar@test.com', is_verified_agent: false, verification_status: 'verified_user' },
+  },
+  {
+    email: 'inactivo@test.com',
+    password: 'secret',
+    active: false,
+    data: { id: 43, name: 'Agente Inactivo', email: 'inactivo@test.com', is_verified_agent: true, verification_status: 'verified_agent' },
+  },
 ]
 
 const sessions = new Map()
@@ -132,8 +151,9 @@ createServer(async (request, response) => {
   json(response, 404, { error: true, message: `No mock route for ${url.pathname}` })
 }).listen(PORT, () => {
   console.log(`\n  Mock Laravel  →  http://localhost:${PORT}`)
-  console.log('  agente@test.com / secret     (entra)')
-  console.log('  inactivo@test.com / secret   (200 + error:true)')
+  console.log('  agente@test.com / secret        (entra)')
+  console.log('  sinverificar@test.com / secret  (pantalla de verificación pendiente)')
+  console.log('  inactivo@test.com / secret      (200 + error:true)')
   console.log('  cualquier otra contraseña    (422)')
   console.log('  curl :%d/api/__rotate-csrf   (fuerza un 419)\n', PORT)
 })

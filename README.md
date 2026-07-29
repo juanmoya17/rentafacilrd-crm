@@ -44,12 +44,31 @@ Dos detalles que `src/lib/api.ts` maneja y que son fáciles de perder:
 ese subárbol a propósito para exponerla. El comodín `*` redirige a `/`, que pasa
 por el guard.
 
-`RequireAuth` distingue cuatro estados y ninguno es una pantalla en blanco:
+### Verificación de agente
+
+El CRM es solo para **agentes verificados**. No existe columna de tipo de cuenta:
+`customers` guarda a todo el mundo y "agente" se deriva de una fila con
+`status = success` en `verify_customers`. Cualquiera puede publicar un anuncio y
+acumular leads sin estar verificado — esos leads se guardan igual contra
+`propertys.added_by` y aparecen el día que se aprueba la verificación.
+
+Quien entra sin estar verificado ve `VerificationPending`, que explica eso en
+vez de rebotarlo al login que acaba de pasar.
+
+**El gate del cliente no es la frontera de seguridad**: la real es el middleware
+`verified.agent` en la API (`app/Http/Middleware/EnsureVerifiedAgent.php` del
+panel), que responde 403 con `key: agentNotVerified`. Toda ruta de CRM que se
+añada en C.2 tiene que llevarlo.
+
+### Estados del guard
+
+`RequireAuth` distingue cinco estados y ninguno es una pantalla en blanco:
 
 | Estado | Qué se ve |
 |---|---|
 | `loading` | "Verificando sesión…" — evita que un refresh parpadee el login |
-| `authenticated` | la app |
+| `authenticated` + agente verificado | la app |
+| `authenticated` sin verificar | pantalla de verificación pendiente + cerrar sesión |
 | `anonymous` | redirección a `/login` con `replace` (Back no vuelve al CRM) y `from` para regresar tras entrar |
 | `error` | "No pudimos contactar el servidor" + Reintentar — backend caído ≠ sesión cerrada |
 
@@ -73,6 +92,7 @@ Cuentas del mock:
 | Correo | Contraseña | Qué prueba |
 |---|---|---|
 | `agente@test.com` | `secret` | entra |
+| `sinverificar@test.com` | `secret` | pantalla de verificación pendiente |
 | `inactivo@test.com` | `secret` | cuenta desactivada → HTTP **200** con `{error:true}` |
 | cualquiera | otra | 422 |
 
