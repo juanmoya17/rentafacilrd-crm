@@ -22,7 +22,9 @@ export const es = {
 
   'auth.signIn': 'Entrar',
   'auth.signingIn': 'Entrando…',
-  'auth.subtitle': 'Entra con tu cuenta de agente.',
+  // Not "cuenta de agente": there is no account type. Anyone who published a
+  // listing owns leads, verified agent or not.
+  'auth.subtitle': 'Entra con tu cuenta de RentaFácil.',
   'auth.email': 'Correo',
   'auth.password': 'Contraseña',
   'auth.signOut': 'Cerrar sesión',

@@ -21,7 +21,7 @@ export const en: Record<TranslationKey, string> = {
 
   'auth.signIn': 'Sign in',
   'auth.signingIn': 'Signing in…',
-  'auth.subtitle': 'Sign in with your agent account.',
+  'auth.subtitle': 'Sign in with your RentaFácil account.',
   'auth.email': 'Email',
   'auth.password': 'Password',
   'auth.signOut': 'Sign out',
