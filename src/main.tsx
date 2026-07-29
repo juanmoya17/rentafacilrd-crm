@@ -8,6 +8,17 @@ import { RequireAuth } from '@/components/require-auth'
 import { CrmLayout } from '@/components/crm-layout'
 import { LoginPage } from '@/routes/login'
 import { DashboardPage } from '@/routes/dashboard'
+import { PipelinePage } from '@/routes/pipeline'
+import { LeadsPage } from '@/routes/leads'
+import { LeadDetailPage } from '@/routes/lead-detail'
+import { PropertiesPage } from '@/routes/properties'
+import { PropertyDetailPage } from '@/routes/property-detail'
+import { ProjectsPage } from '@/routes/projects'
+import { ProjectDetailPage } from '@/routes/project-detail'
+import { InventoryPage } from '@/routes/inventory'
+import { TasksPage } from '@/routes/tasks'
+import { NotificationsPage } from '@/routes/notifications'
+import { SettingsPage } from '@/routes/settings'
 import './index.css'
 
 // /login is the ONLY public route. Everything else is a child of RequireAuth,
@@ -20,7 +31,20 @@ const router = createBrowserRouter([
     children: [
       {
         element: <CrmLayout />,
-        children: [{ path: '/', element: <DashboardPage /> }],
+        children: [
+          { path: '/', element: <DashboardPage /> },
+          { path: '/pipeline', element: <PipelinePage /> },
+          { path: '/leads', element: <LeadsPage /> },
+          { path: '/leads/:id', element: <LeadDetailPage /> },
+          { path: '/properties', element: <PropertiesPage /> },
+          { path: '/properties/:code', element: <PropertyDetailPage /> },
+          { path: '/projects', element: <ProjectsPage /> },
+          { path: '/projects/:id', element: <ProjectDetailPage /> },
+          { path: '/inventory', element: <InventoryPage /> },
+          { path: '/tasks', element: <TasksPage /> },
+          { path: '/notifications', element: <NotificationsPage /> },
+          { path: '/settings', element: <SettingsPage /> },
+        ],
       },
     ],
   },

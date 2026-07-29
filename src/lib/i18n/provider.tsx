@@ -3,16 +3,17 @@ import type { ReactNode } from 'react'
 import { setApiLocale } from '@/lib/api'
 import { en } from './en'
 import { es, type TranslationKey } from './es'
-import {
-  DEFAULT_LOCALE,
-  I18nContext,
-  isLocale,
-  type Locale,
-  type Translate,
-} from './context'
+import { DEFAULT_LOCALE, I18nContext, isLocale, type Locale } from './context'
+import { createTranslate } from './translate'
 
 const DICTIONARIES: Record<Locale, Record<TranslationKey, string>> = { es, en }
 const STORAGE_KEY = 'rf-crm-locale'
+
+/**
+ * Region matters to Intl even though the UI language does not. Plain 'es'
+ * formats DOP as "14.500.000 DOP"; 'es-DO' gives the "RD$" an agent expects.
+ */
+const INTL_LOCALE: Record<Locale, string> = { es: 'es-DO', en: 'en-US' }
 
 /** Stored choice wins, then the browser, then Spanish. */
 function detectLocale(): Locale {
@@ -57,20 +58,15 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(() => {
     const dictionary = DICTIONARIES[locale]
+    const intlLocale = INTL_LOCALE[locale]
 
-    const t: Translate = (key, vars) => {
-      const template = dictionary[key]
-      if (vars === undefined) return template
-      return template.replace(/\{(\w+)\}/g, (match, name: string) =>
-        name in vars ? String(vars[name]) : match,
-      )
-    }
+    const t = createTranslate(intlLocale, dictionary)
 
     const formatNumber = (input: number, options?: Intl.NumberFormatOptions) =>
-      new Intl.NumberFormat(locale, options).format(input)
+      new Intl.NumberFormat(intlLocale, options).format(input)
 
     const formatCurrency = (input: number, currency = 'DOP') =>
-      new Intl.NumberFormat(locale, {
+      new Intl.NumberFormat(intlLocale, {
         style: 'currency',
         currency,
         maximumFractionDigits: 0,
@@ -78,12 +74,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
     const formatDate = (input: Date | string | number, options?: Intl.DateTimeFormatOptions) =>
       new Intl.DateTimeFormat(
-        locale,
+        intlLocale,
         options ?? { day: 'numeric', month: 'short', year: 'numeric' },
       ).format(new Date(input))
 
     const formatRelativeTime = (input: Date | string | number) => {
-      const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+      const formatter = new Intl.RelativeTimeFormat(intlLocale, { numeric: 'auto' })
       const deltaMs = new Date(input).getTime() - Date.now()
       const absolute = Math.abs(deltaMs)
 
