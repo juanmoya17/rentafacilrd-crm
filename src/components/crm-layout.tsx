@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth-context'
 import { useT } from '@/lib/i18n/context'
 import type { TranslationKey } from '@/lib/i18n/es'
 import { LanguageSwitcher } from '@/components/language-switcher'
+import { Button } from '@/components/ui'
 import { NOTIFICATIONS } from '@/lib/mock/data'
 
 interface NavItem {
@@ -69,37 +70,33 @@ export function CrmLayout() {
 
   return (
     <div className="min-h-dvh bg-surface">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-surface-raised">
+      <header className="sticky top-0 z-20 border-b border-rule bg-surface-raised">
         <div className="flex items-center gap-3 px-4 py-2.5">
           <button
             type="button"
             aria-label={t('nav.toggle')}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((open) => !open)}
-            className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100 lg:hidden"
+            className="rounded-md p-1.5 text-ink-2 hover:bg-surface-sunken lg:hidden"
           >
             <svg viewBox="0 0 20 20" className="size-5" aria-hidden="true" fill="currentColor">
               <path d="M3 5h14v1.5H3V5Zm0 4.25h14v1.5H3v-1.5ZM3 13.5h14V15H3v-1.5Z" />
             </svg>
           </button>
 
-          <span className="font-semibold tracking-tight text-brand-700">
+          {/* Mono is the outlier face, and the wordmark is one of its two
+              sanctioned slots — it gives the chrome a different register from
+              the data without adding a third family. */}
+          <span className="font-mono font-semibold tracking-tight text-brand-700">
             {t('app.name')}
           </span>
 
           <div className="ml-auto flex items-center gap-2">
-            {user && (
-              <span className="hidden text-sm text-slate-600 sm:inline">{user.name}</span>
-            )}
+            {user && <span className="hidden text-sm text-muted sm:inline">{user.name}</span>}
             <LanguageSwitcher />
-            <button
-              type="button"
-              onClick={() => void handleSignOut()}
-              disabled={signingOut}
-              className="rounded-md border border-slate-300 px-2.5 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
-            >
+            <Button state={signingOut ? 'loading' : 'idle'} onClick={() => void handleSignOut()}>
               {signingOut ? t('auth.signingOut') : t('auth.signOut')}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -114,12 +111,14 @@ export function CrmLayout() {
         <aside
           className={`${
             menuOpen ? 'block' : 'hidden'
-          } w-full shrink-0 border-b border-slate-200 bg-surface-raised px-3 py-4 lg:sticky lg:top-[49px] lg:block lg:h-[calc(100dvh-49px)] lg:w-56 lg:border-r lg:border-b-0`}
+          } w-full shrink-0 border-b border-rule bg-surface-raised px-3 py-4 lg:sticky lg:top-[49px] lg:block lg:h-[calc(100dvh-49px)] lg:w-56 lg:border-r lg:border-b-0`}
         >
           <nav aria-label={t('nav.main')} className="space-y-5">
             {SECTIONS.map((section) => (
               <div key={section.title}>
-                <p className="px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                {/* `muted`, not a lighter step: these labels used to sit at
+                    slate-400, which is 2.6:1 on white. */}
+                <p className="px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted">
                   {t(section.title)}
                 </p>
                 <ul className="space-y-0.5">
@@ -133,13 +132,13 @@ export function CrmLayout() {
                           `flex items-center justify-between rounded-md px-2 py-1.5 text-sm ${
                             isActive
                               ? 'bg-brand-50 font-medium text-brand-700'
-                              : 'text-slate-600 hover:bg-slate-100'
+                              : 'text-ink-2 hover:bg-surface-sunken'
                           }`
                         }
                       >
                         {t(item.label)}
                         {item.badge !== undefined && item.badge > 0 && (
-                          <span className="rounded-full bg-brand-600 px-1.5 text-xs font-semibold text-white">
+                          <span className="rounded-full bg-accent px-1.5 font-mono text-xs font-semibold text-accent-ink">
                             {item.badge}
                           </span>
                         )}

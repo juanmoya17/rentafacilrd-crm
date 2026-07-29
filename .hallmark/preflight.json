@@ -1,0 +1,34 @@
+{
+  "date": "2026-07-29",
+  "design_md": null,
+  "fonts": {
+    "found": false,
+    "note": "No font declared anywhere — Tailwind v4 default ui-sans-serif system stack. No Google Fonts link, no @font-face, no next/font."
+  },
+  "palette": {
+    "source": "src/index.css @theme (Tailwind v4)",
+    "tokens": {
+      "brand": "#f0fafa → #0c4242 ramp, brand-600 #087c7c",
+      "surface": "#f5f5f4",
+      "surface-raised": "#ffffff",
+      "sell": "#0186d8 / bg #d6ebf9",
+      "rent": "#db9305 / bg #fdf3e0",
+      "accent": "#ffa928"
+    },
+    "note": "Mirrored from the public site globals.css — cross-product parity is intentional."
+  },
+  "motion": {
+    "stance": "motion-cut",
+    "note": "No framer-motion / motion / gsap / lenis / lottie in package.json."
+  },
+  "spacing": {
+    "scale": "Tailwind v4 default 4pt",
+    "custom": false,
+    "type_scale_override": "--text-xs 0.6875rem · --text-sm 0.8125rem · --text-base 0.875rem (dense tool)"
+  },
+  "framework": "Vite 8 + React 19 + react-router 8 (SPA), Tailwind v4 via @tailwindcss/vite",
+  "findings": [
+    "src/index.css: html, body { overflow-x: hidden } — Hallmark gate 34 wants overflow-x: clip on both.",
+    "src/components/ui.tsx uses raw Tailwind slate-* alongside the brand tokens — no --color-ink/--color-line token for borders and body text."
+  ]
+}

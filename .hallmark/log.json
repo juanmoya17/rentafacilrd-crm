@@ -1,0 +1,16 @@
+[
+  {
+    "date": "2026-07-29",
+    "macrostructure": "n/a (system-lock — no page built)",
+    "theme": "custom",
+    "theme_axes": "light / grotesk-sans / chromatic-other (teal 195°)",
+    "vibe": "instrument panel for a brokerage floor",
+    "genre": "modern-minimal",
+    "tone": "utilitarian",
+    "enrichment": "none",
+    "nav": "n/a (existing N3 side-rail kept)",
+    "footer": "n/a (app shell has no footer)",
+    "brief": "RentaFácil CRM · lock the design system: Geist pairing, ink/rule/focus/state tokens, 8-state Button + Field, design.md + tokens.css",
+    "note": "design.md now exists at the project root — diversification is INVERTED for this project. Future runs must share this system, not rotate away from it."
+  }
+]

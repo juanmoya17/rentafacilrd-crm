@@ -1,0 +1,139 @@
+/* Hallmark · RentaFácil CRM design tokens
+ * genre: modern-minimal · tone: utilitarian
+ * theme: custom (vibe: "instrument panel for a brokerage floor")
+ * axes: light paper / grotesk-sans display / chromatic-other (teal 195°)
+ *
+ * This file is the single source of truth for the CRM's tokens. src/index.css
+ * imports it — do not copy values into a second place. It is also the portable
+ * export: it is a plain Tailwind v4 `@theme` block, so every value is a real
+ * CSS custom property on :root and works in a project with no Tailwind at all.
+ *
+ * Anchored on the public site (globals.css) so an agent moving between
+ * rentafacilrd.com, the Flutter app and the CRM sees one product:
+ *   --primary-color #087c7c · --primary-background #f5f5f4
+ *   --primary-sell  #0186d8 · --primary-rent       #db9305
+ *   --brand-amber   #ffa928
+ *
+ * Every contrast figure in the comments is measured, not estimated — the ledger
+ * with the pairs and ratios is in design.md.
+ */
+
+@theme {
+  /* ---- Type -------------------------------------------------------------
+   * One family plus a mono outlier. Geist carries display and body; weight,
+   * not a second face, makes the hierarchy (400 body / 600 headings).
+   * Mono carries exactly two roles: the wordmark, and machine values
+   * (ids, prices, dates, counts). Nothing else. */
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
+
+  /* Dense tool: 14px body, not 16px. Nominal 1.125 ratio, rounded to the
+   * whole-pixel grid below 18px — sub-pixel small text blurs off-retina, and
+   * this UI lives at 11–14px. Above 14px, Tailwind's own steps are unchanged
+   * (lg 18 · xl 20 · 2xl 24), which is why they are not restated here. */
+  --text-xs: 0.6875rem; /* 11px — badges, table meta */
+  --text-sm: 0.8125rem; /* 13px — labels, secondary */
+  --text-base: 0.875rem; /* 14px — body */
+
+  /* ---- Brand (preserved verbatim from the public site) ------------------- */
+  --color-brand-50: #f0fafa;
+  --color-brand-100: #d7f0f0;
+  --color-brand-200: #aee0e0;
+  --color-brand-300: #7dcccc;
+  --color-brand-400: #4bb2b2;
+  --color-brand-500: #229696;
+  --color-brand-600: #087c7c;
+  --color-brand-700: #076363;
+  --color-brand-800: #0a5050;
+  --color-brand-900: #0c4242;
+
+  /* ---- Surfaces --------------------------------------------------------- */
+  --color-surface: #f5f5f4; /* page paper — preserved */
+  --color-surface-raised: #ffffff; /* cards, header, inputs — preserved */
+  --color-surface-sunken: oklch(96.8% 0.006 195); /* hover fill, zebra rows */
+
+  /* ---- Ink (text). Never carries a border. ------------------------------
+   * The neutral ramp is the layer the CRM was missing. It used to come from
+   * Tailwind's stock `slate`, which sits at hue ~257° — 62° off the brand
+   * teal, at chroma 0.039. That is a visible blue cast fighting a teal brand,
+   * and it was the main reason the CRM read as "default Tailwind" beside the
+   * public site. These keep slate's exact lightness ladder, so the existing
+   * visual hierarchy is untouched, and correct hue 257° → 195° at chroma
+   * 0.006–0.016. Same structure, right temperature. */
+  --color-ink: oklch(20.8% 0.014 195); /* headings          16.3:1 on paper */
+  --color-ink-2: oklch(37.2% 0.016 195); /* body              9.4:1 on paper */
+  --color-muted: oklch(54% 0.016 195); /* secondary, labels 4.6:1 on paper */
+
+  /* ---- Rules (borders). Never carries text. ----------------------------
+   * Two steps on purpose, and the split is a WCAG rule rather than taste:
+   *   --color-rule   separates two surfaces (card edge, header underline).
+   *                  Decorative adjacency — exempt from 1.4.11.
+   *   --color-rule-2 IS the boundary that identifies a control (input edge,
+   *                  secondary button). 1.4.11 wants 3:1, so it is much
+   *                  darker than the old border-slate-300, which read 1.5:1. */
+  --color-rule: oklch(92.9% 0.008 195); /* surface separator */
+  --color-rule-2: oklch(64% 0.014 195); /* control boundary  3.1:1 on paper */
+
+  /* ---- Signals ----------------------------------------------------------
+   * One accent, and it is the brand. Anything that is not a signal is
+   * neutral; the accent stays under ~3% of any view. */
+  --color-accent: #087c7c; /* = brand-600 */
+  --color-accent-ink: #ffffff; /* text on an accent fill  5.0:1 */
+  --color-focus: #087c7c; /* ring; 4.6:1 on paper, offset 2px */
+
+  --color-error: oklch(55% 0.19 25); /* text + border  5.4:1 on white */
+  --color-error-bg: oklch(96% 0.018 25);
+  --color-success: oklch(52% 0.125 155); /* 4.8:1 on white */
+  --color-success-bg: oklch(96.5% 0.022 155);
+
+  /* Operation colours the buyer already reads on the public listings. The
+   * backgrounds are the recognisable part and are preserved exactly; the
+   * *labels* are darkened along the same hue, because the original pairings
+   * read 3.2:1 (sell) and 2.3:1 (rent) — both under the 4.5:1 floor. */
+  --color-sell: #0186d8; /* fills, bars, dots — not text on -bg */
+  --color-sell-bg: #d6ebf9;
+  --color-sell-ink: oklch(51.5% 0.134 246.6); /* 4.6:1 on sell-bg */
+  --color-rent: #db9305;
+  --color-rent-bg: #fdf3e0;
+  --color-rent-ink: oklch(55% 0.116 74); /* 4.5:1 on rent-bg */
+
+  /* Reserved. Site-brand amber, fill-only: 1.9:1 on white, so it may mark a
+   * bar or a dot and must never be text. Unused in the CRM today. */
+  --color-accent-amber: #ffa928;
+
+  /* ---- Motion. Cut, not decorated: no library, two primitives. ---------- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 120ms;
+
+  /* ---- Migration bridge -------------------------------------------------
+   * 19 files still say `slate`. Rather than a 19-file rename, slate is
+   * re-pointed at the ramp above, so every existing `text-slate-700` /
+   * `border-slate-200` re-tints for free and nothing needs editing.
+   *
+   * Two steps are deliberately NOT one-to-one, because the originals failed
+   * contrast and a faithful alias would preserve the bug:
+   *   slate-400 → muted    (was 2.6:1 on white — 8 call sites, all text)
+   *   slate-300 → rule-2   (was 1.5:1 as a control boundary)
+   * Both are collapsed on purpose. Migrate those sites to `text-muted` /
+   * `border-rule-2` and this whole block can be deleted. */
+  --color-slate-50: oklch(98.2% 0.004 195);
+  --color-slate-100: var(--color-surface-sunken);
+  --color-slate-200: var(--color-rule);
+  --color-slate-300: var(--color-rule-2);
+  --color-slate-400: var(--color-muted);
+  --color-slate-500: var(--color-muted);
+  --color-slate-600: oklch(46% 0.016 195);
+  --color-slate-700: var(--color-ink-2);
+  --color-slate-800: oklch(27.5% 0.015 195);
+  --color-slate-900: var(--color-ink);
+}
+
+/* Radii are Tailwind's own, named here for the record rather than re-declared,
+ * so no second name exists for one value:
+ *   badge   4px  → `rounded`
+ *   control 6px  → `rounded-md`   (buttons, inputs, nav items)
+ *   card    8px  → `rounded-lg`
+ *   pill    full → `rounded-full` (count badges only)
+ *
+ * Spacing is Tailwind's default 4pt scale, unmodified.
+ */

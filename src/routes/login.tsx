@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router'
 import { useAuth } from '@/lib/auth-context'
 import { useT } from '@/lib/i18n/context'
 import { LanguageSwitcher } from '@/components/language-switcher'
+import { Button, Field } from '@/components/ui'
 
 interface LocationState {
   from?: string
@@ -21,8 +22,8 @@ export function LoginPage() {
   // would flash the form at an already-authenticated agent.
   if (state.status === 'loading') {
     return (
-      <div className="grid min-h-dvh place-items-center bg-slate-50" role="status">
-        <p className="text-sm text-slate-500">{t('auth.checking')}</p>
+      <div className="grid min-h-dvh place-items-center bg-surface" role="status">
+        <p className="text-sm text-muted">{t('auth.checking')}</p>
       </div>
     )
   }
@@ -48,68 +49,61 @@ export function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-dvh place-items-center bg-slate-50 px-4">
+    <div className="grid min-h-dvh place-items-center bg-surface px-4">
       <form
         onSubmit={(event) => void handleSubmit(event)}
-        className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
+        className="w-full max-w-sm rounded-lg border border-rule bg-surface-raised p-6 shadow-sm"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-lg font-semibold text-slate-900">{t('app.name')}</h1>
-            <p className="mt-1 text-sm text-slate-500">{t('auth.subtitle')}</p>
+            <h1 className="font-mono text-lg font-semibold tracking-tight text-ink">
+              {t('app.name')}
+            </h1>
+            <p className="mt-1 text-sm text-muted">{t('auth.subtitle')}</p>
           </div>
           <LanguageSwitcher />
         </div>
 
+        {/* One form-level alert: the backend does not say which of the two
+            fields was wrong, so neither field claims its own message. They
+            only borrow the invalid border. */}
         {error && (
-          <p
-            role="alert"
-            className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700"
-          >
+          <p role="alert" className="mt-4 rounded-md bg-error-bg px-3 py-2 text-sm text-error">
             {error}
           </p>
         )}
 
-        <label htmlFor="email" className="mt-5 block text-sm font-medium text-slate-700">
-          {t('auth.email')}
-        </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          required
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          aria-invalid={error !== null}
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-900"
-        />
+        <div className="mt-5 space-y-4">
+          <Field
+            id="email"
+            type="email"
+            label={t('auth.email')}
+            autoComplete="email"
+            required
+            value={email}
+            onChange={setEmail}
+            invalid={error !== null}
+          />
+          <Field
+            id="password"
+            type="password"
+            label={t('auth.password')}
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={setPassword}
+            invalid={error !== null}
+          />
+        </div>
 
-        <label
-          htmlFor="password"
-          className="mt-4 block text-sm font-medium text-slate-700"
-        >
-          {t('auth.password')}
-        </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          aria-invalid={error !== null}
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-900"
-        />
-
-        <button
+        <Button
           type="submit"
-          disabled={submitting}
-          className="mt-6 w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+          variant="primary"
+          state={submitting ? 'loading' : 'idle'}
+          className="mt-6 w-full"
         >
           {submitting ? t('auth.signingIn') : t('auth.signIn')}
-        </button>
+        </Button>
       </form>
     </div>
   )

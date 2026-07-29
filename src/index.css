@@ -1,44 +1,64 @@
+/* Hallmark · genre: modern-minimal · tone: utilitarian · scope: system-lock
+ * theme: custom (vibe: "instrument panel for a brokerage floor")
+ *   paper  oklch(97.0% 0.0013 106)  #f5f5f4   (preserved from the public site)
+ *   accent oklch(53.2% 0.0890 194.8) #087c7c  (preserved — brand-600)
+ *   display + body: Geist Variable · outlier: Geist Mono Variable
+ * axes: light paper / grotesk-sans display / chromatic-other (teal 195°)
+ * pre-emit critique: P5 H4 E5 S5 R5 V4
+ * contrast: every rendered pair verified — see design.md § Contrast ledger
+ *
+ * Tokens live in ../tokens.css so there is one source of truth and a portable
+ * export. This file is the app's entry: Tailwind, the fonts, then base rules.
+ */
+
 @import 'tailwindcss';
 
-/**
- * Tokens taken from the public site (globals.css) so an agent moving between
- * rentafacilrd.com, the Flutter app and the CRM sees one product:
- *   --primary-color #087c7c · --primary-background #f5f5f4
- *   --primary-sell  #0186d8 · --primary-rent       #db9305
- *   --brand-amber   #ffa928
- */
-@theme {
-  --color-brand-50: #f0fafa;
-  --color-brand-100: #d7f0f0;
-  --color-brand-200: #aee0e0;
-  --color-brand-300: #7dcccc;
-  --color-brand-400: #4bb2b2;
-  --color-brand-500: #229696;
-  --color-brand-600: #087c7c;
-  --color-brand-700: #076363;
-  --color-brand-800: #0a5050;
-  --color-brand-900: #0c4242;
+/* Self-hosted so first paint never waits on a third-party origin. Only the
+ * `latin` subset is ever fetched; it already covers á é í ó ú ñ ¿ ¡, so the
+ * Spanish UI needs nothing extra. Italic is deliberately not imported. */
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
 
-  /* Warm neutral from the site, not Tailwind's cool slate. */
-  --color-surface: #f5f5f4;
-  --color-surface-raised: #ffffff;
+@import '../tokens.css';
 
-  /* Operation colours the buyer already reads on the public listings. */
-  --color-sell: #0186d8;
-  --color-sell-bg: #d6ebf9;
-  --color-rent: #db9305;
-  --color-rent-bg: #fdf3e0;
-
-  --color-accent: #ffa928;
-
-  /* Dense tool: 13-14px body, not 16px. */
-  --text-xs: 0.6875rem;
-  --text-sm: 0.8125rem;
-  --text-base: 0.875rem;
-}
-
-/* Kanban columns and wide tables scroll inside themselves — the page never does. */
+/* Kanban columns and wide tables scroll inside themselves — the page never
+ * does. `clip` rather than `hidden`: `hidden` makes html/body a scroll
+ * container, which is what silently breaks `position: sticky` descendants —
+ * and both the header and the sidebar are sticky. */
 html,
 body {
-  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+/* Machine values line up in a column, so a price table never has to remember
+ * `tabular-nums` on its own. */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* One focus treatment for the whole app: 2px accent ring, 2px offset so it
+ * lands on the page rather than inside the control. Never animated — a focus
+ * ring that fades in reads as lag. */
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+@keyframes rf-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The spinner's label already reads "Guardando…", so the rotation is
+   * redundant — drop it rather than slow it down. */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
