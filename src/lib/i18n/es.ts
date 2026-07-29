@@ -82,6 +82,9 @@ export const es = {
   'common.resultCount': '{count} resultados',
   'common.resultCount_one': '{count} resultado',
   'common.viewAll': 'Ver todo',
+  'common.loading': 'Cargando…',
+  'common.saving': 'Guardando…',
+  'common.retry': 'Reintentar',
 
   'stage.new': 'Nuevo',
   'stage.contacted': 'Contactado',
@@ -132,6 +135,7 @@ export const es = {
 
   'mock.notice': 'Pantalla de muestra con datos de ejemplo. Se conecta a la API real en {milestone}.',
 
+  'dashboard.partialLive': 'Los contadores de leads son reales (marcados con •). Los de propiedades siguen siendo de ejemplo hasta A.5.',
   'dashboard.title': 'Resumen',
   'dashboard.greeting': 'Hola, {name}',
   'dashboard.kpi.total': 'Propiedades',
@@ -146,9 +150,10 @@ export const es = {
   'dashboard.rejected': 'Anuncios rechazados',
 
   'pipeline.title': 'Pipeline',
-  'pipeline.subtitle': 'Arrastra un lead entre etapas para moverlo.',
+  'pipeline.subtitle': 'Arrastra un lead entre etapas para moverlo. También puedes cambiarla desde la ficha.',
   'pipeline.emptyColumn': 'Sin leads',
   'pipeline.listView': 'Ver como lista',
+  'pipeline.moveFailed': 'No pudimos mover el lead. Lo devolvimos a su etapa anterior.',
 
   'leads.title': 'Leads',
   'leads.searchPlaceholder': 'Nombre, teléfono o código RF####',
@@ -165,6 +170,12 @@ export const es = {
   'leadDetail.contact': 'Contacto',
   'leadDetail.emptyTimeline': 'Sin actividad registrada todavía.',
   'leadDetail.reply': 'Responder',
+  'leadDetail.stage': 'Etapa',
+  'leadDetail.activityType': 'Tipo',
+  'leadDetail.activityBody': 'Detalle',
+  'leadDetail.activityPlaceholder': 'Qué pasó…',
+  'leadDetail.saveActivity': 'Registrar',
+  'leadDetail.noteHint': 'Una nota es privada y no detiene el contador de SLA. Un mensaje, llamada o visita sí.',
 
   'properties.title': 'Mis propiedades',
   'properties.searchPlaceholder': 'Título, ciudad o código RF####',
@@ -188,6 +199,7 @@ export const es = {
   'propertyDetail.leads': 'Leads de este anuncio',
   'propertyDetail.specs': 'Ficha',
   'propertyDetail.emptyLeads': 'Este anuncio aún no ha recibido leads.',
+  'propertyDetail.partialLive': 'La ficha del anuncio es de ejemplo hasta A.1–A.8. Sus leads ya vienen de la API.',
 
   'projects.title': 'Proyectos',
   'projects.subtitle': 'Un proyecto es una sola card en el feed, nunca una por unidad.',

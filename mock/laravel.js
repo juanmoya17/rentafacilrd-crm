@@ -13,6 +13,7 @@
  * Nothing here ships: the SPA builds to static files and talks to the real API.
  */
 import { createServer } from 'node:http'
+import { handleCrm } from './crm.js'
 
 const PORT = Number(process.env.MOCK_PORT ?? 8787)
 
@@ -146,6 +147,36 @@ createServer(async (request, response) => {
     }
     json(response, 200, { error: false, data: user })
     return
+  }
+
+  // CRM endpoints. Mirrors the real group: a session is required, and the user
+  // must be a verified agent — the same 403 + key the Laravel middleware sends.
+  if (url.pathname.startsWith('/api/crm/')) {
+    const user = sessions.get(jar.crm_session)
+    if (user === undefined) {
+      json(response, 401, { error: true, message: 'Unauthenticated.' })
+      return
+    }
+    if (user.is_verified_agent !== true) {
+      json(response, 403, {
+        error: true,
+        message: 'Your account is not verified as an agent yet',
+        key: 'agentNotVerified',
+        verification_status: user.verification_status ?? 'unverified_user',
+      })
+      return
+    }
+
+    const result = handleCrm(
+      request.method,
+      url.pathname.replace('/api/crm', ''),
+      url.searchParams,
+      await readBody(request),
+    )
+    if (result !== null) {
+      json(response, result.status, result.body)
+      return
+    }
   }
 
   json(response, 404, { error: true, message: `No mock route for ${url.pathname}` })

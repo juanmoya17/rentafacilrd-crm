@@ -1,12 +1,9 @@
 import { Badge, type BadgeTone } from '@/components/ui'
 import { useT } from '@/lib/i18n/context'
-import type {
-  Lifecycle,
-  Operation,
-  Origin,
-  Stage,
-  UnitStatus,
-} from '@/lib/mock/data'
+// Stage and Origin come from the wire contract — one definition, so a change in
+// the API cannot silently disagree with the badge that renders it.
+import type { Origin, Stage } from '@/lib/crm/types'
+import type { Lifecycle, Operation, UnitStatus } from '@/lib/mock/data'
 
 /** One place decides which tone every domain value wears, so screens stay consistent. */
 

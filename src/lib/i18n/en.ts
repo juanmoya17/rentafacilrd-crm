@@ -78,6 +78,9 @@ export const en: Record<TranslationKey, string> = {
   'common.resultCount': '{count} results',
   'common.resultCount_one': '{count} result',
   'common.viewAll': 'View all',
+  'common.loading': 'Loading…',
+  'common.saving': 'Saving…',
+  'common.retry': 'Retry',
 
   'stage.new': 'New',
   'stage.contacted': 'Contacted',
@@ -128,6 +131,7 @@ export const en: Record<TranslationKey, string> = {
 
   'mock.notice': 'Sample screen with placeholder data. Wires to the real API in {milestone}.',
 
+  'dashboard.partialLive': 'Lead counts are live (marked with •). Property counts stay sample data until A.5.',
   'dashboard.title': 'Overview',
   'dashboard.greeting': 'Hi, {name}',
   'dashboard.kpi.total': 'Properties',
@@ -142,9 +146,10 @@ export const en: Record<TranslationKey, string> = {
   'dashboard.rejected': 'Rejected listings',
 
   'pipeline.title': 'Pipeline',
-  'pipeline.subtitle': 'Drag a lead between stages to move it.',
+  'pipeline.subtitle': 'Drag a lead between stages to move it. You can also change it from the lead page.',
   'pipeline.emptyColumn': 'No leads',
   'pipeline.listView': 'View as list',
+  'pipeline.moveFailed': 'We could not move the lead. It went back to its previous stage.',
 
   'leads.title': 'Leads',
   'leads.searchPlaceholder': 'Name, phone or RF#### code',
@@ -161,6 +166,12 @@ export const en: Record<TranslationKey, string> = {
   'leadDetail.contact': 'Contact',
   'leadDetail.emptyTimeline': 'No activity recorded yet.',
   'leadDetail.reply': 'Reply',
+  'leadDetail.stage': 'Stage',
+  'leadDetail.activityType': 'Type',
+  'leadDetail.activityBody': 'Details',
+  'leadDetail.activityPlaceholder': 'What happened…',
+  'leadDetail.saveActivity': 'Log it',
+  'leadDetail.noteHint': 'A note is private and does not stop the SLA clock. A message, call or visit does.',
 
   'properties.title': 'My properties',
   'properties.searchPlaceholder': 'Title, city or RF#### code',
@@ -184,6 +195,7 @@ export const en: Record<TranslationKey, string> = {
   'propertyDetail.leads': 'Leads for this listing',
   'propertyDetail.specs': 'Details',
   'propertyDetail.emptyLeads': 'This listing has not received any leads yet.',
+  'propertyDetail.partialLive': 'The listing itself is sample data until A.1–A.8. Its leads already come from the API.',
 
   'projects.title': 'Projects',
   'projects.subtitle': 'A project is one card in the feed, never one per unit.',

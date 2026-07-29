@@ -33,12 +33,15 @@ export function Badge({
 export function Card({
   children,
   className = '',
+  role,
 }: {
   children: ReactNode
   className?: string
+  role?: string
 }) {
   return (
     <div
+      role={role}
       className={`rounded-lg border border-slate-200 bg-surface-raised ${className}`}
     >
       {children}
@@ -130,6 +133,36 @@ export function ScoreDot({ score, band }: { score: number; band: 'hot' | 'warm' 
       <span className={`size-1.5 rounded-full ${colours[band]}`} aria-hidden="true" />
       {score}
     </span>
+  )
+}
+
+export function LoadingState({ label }: { label: string }) {
+  return (
+    <Card className="grid place-items-center px-6 py-12" role="status">
+      <p className="text-sm text-slate-500">{label}</p>
+    </Card>
+  )
+}
+
+/** Errors say what to do next, never just what broke. */
+export function ErrorState({
+  message,
+  retryLabel,
+  onRetry,
+}: {
+  message: string
+  retryLabel: string
+  onRetry: () => void
+}) {
+  return (
+    <Card className="grid place-items-center px-6 py-10 text-center" role="alert">
+      <p className="text-sm text-slate-700">{message}</p>
+      <div className="mt-3">
+        <Button variant="primary" onClick={onRetry}>
+          {retryLabel}
+        </Button>
+      </div>
+    </Card>
   )
 }
 

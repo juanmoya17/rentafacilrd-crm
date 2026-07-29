@@ -199,18 +199,30 @@ trabajo, no una landing.
 
 ## Estado de las pantallas
 
-Las 11 están mockeadas y navegables. Cada una lleva un aviso con la línea del
-M8 que sustituirá sus datos de ejemplo:
+| Pantalla | Datos | Falta |
+|---|---|---|
+| Pipeline (arrastre + persistencia optimista) | **API** | — |
+| Leads (filtros server-side) | **API** | — |
+| Ficha de lead (timeline, etapa, actividades) | **API** | — |
+| Tareas | **API** | — |
+| Ficha de propiedad → sus leads | **API** | la ficha en sí: A.1–A.8 |
+| Resumen: leads nuevos, SLA vencido | **API** | contadores de propiedades: A.5 |
+| Mis propiedades | ejemplo | A.1 – A.8 |
+| Proyectos, ficha, inventario | ejemplo | E.1 – E.8 |
+| Notificaciones | ejemplo | B.2 · B.3 |
 
-| Pantalla | Se conecta en |
-|---|---|
-| Resumen (KPIs + riel) | A.5 · A.6 |
-| Pipeline | C.3 |
-| Leads, ficha de lead | C.2 – C.6 · D.1 |
-| Mis propiedades, ficha | A.1 – A.8 · C.7 |
-| Proyectos, ficha, inventario | E.1 – E.4 · E.8 |
-| Tareas | C.4 · D.5 |
-| Notificaciones | B.2 · B.3 |
+Lo que sigue en ejemplo lo dice en pantalla con un aviso y vive en
+`src/lib/mock/data.ts`. Borra la porción que corresponda cuando su endpoint
+aterrice.
+
+### Capa de datos
+
+`src/lib/crm/types.ts` copia las formas de `CrmLeadResource` y compañía en
+snake_case, tal cual las manda la API, para que un desajuste sea error de
+compilación y no un `undefined` silencioso. `src/lib/crm/api.ts` son las
+llamadas; `src/lib/use-resource.ts` da carga / error / recarga con aborto de la
+petición anterior, que es justo lo que necesitaban cuatro pantallas y no lo
+suficiente para meter una librería de fetching.
 
 ## Siguiente
 

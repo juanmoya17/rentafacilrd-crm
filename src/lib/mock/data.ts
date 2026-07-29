@@ -1,58 +1,16 @@
 /**
- * Placeholder dataset for the UI mock.
+ * What is still placeholder data.
  *
- * The types here are deliberately shaped like the API that C.1/C.2 will expose,
- * so swapping a screen onto the real backend is a change of data source, not a
- * rewrite of the component. Delete a slice of this file as each endpoint lands.
+ * Leads, contacts, activities and tasks left this file when C.2 landed — they
+ * now come from /api/crm, typed in `src/lib/crm/types.ts`. What remains has no
+ * endpoint yet: properties (A.1–A.8), projects (E.1–E.8) and notifications
+ * (B.2/B.3). Delete the matching slice as each one ships.
  */
 
-export type Stage = 'new' | 'contacted' | 'visit' | 'negotiation' | 'won' | 'lost'
 export type Operation = 'sell' | 'rent'
-export type Origin =
-  | 'favorite'
-  | 'direct'
-  | 'whatsapp'
-  | 'shared'
-  | 'price_drop'
-  | 'saved_search'
-export type ActivityType = 'message' | 'call' | 'visit' | 'note'
 export type Lifecycle = 'draft' | 'published' | 'paused' | 'sold' | 'rejected'
 export type Moderation = 'pending' | 'approved' | 'rejected'
 export type UnitStatus = 'available' | 'reserved' | 'sold' | 'unavailable'
-
-export interface Lead {
-  id: number
-  name: string
-  phone: string
-  email: string
-  propertyCode: string
-  propertyTitle: string
-  operation: Operation
-  stage: Stage
-  /** D.1 lead score, 0-100. */
-  score: number
-  origin: Origin
-  /** C.5 — null once the lead has been answered. */
-  slaDueAt: string | null
-  lastActivityAt: string
-  createdAt: string
-}
-
-export interface Activity {
-  id: number
-  leadId: number
-  type: ActivityType
-  body: string
-  at: string
-}
-
-export interface Task {
-  id: number
-  leadId: number | null
-  title: string
-  dueAt: string
-  done: boolean
-}
 
 export interface Property {
   id: number
@@ -120,39 +78,6 @@ const HOUR = 3_600_000
 const DAY = 86_400_000
 const now = Date.now()
 const at = (offsetMs: number): string => new Date(now + offsetMs).toISOString()
-
-export const LEADS: Lead[] = [
-  { id: 1, name: 'María Peralta', phone: '+1 809 555 0142', email: 'maria.peralta@example.do', propertyCode: 'RF0412', propertyTitle: 'Apartamento en Piantini', operation: 'sell', stage: 'new', score: 92, origin: 'price_drop', slaDueAt: at(4 * HOUR), lastActivityAt: at(-2 * HOUR), createdAt: at(-20 * HOUR) },
-  { id: 2, name: 'José Ramírez', phone: '+1 829 555 0187', email: 'jramirez@example.do', propertyCode: 'RF0288', propertyTitle: 'Local comercial en Naco', operation: 'rent', stage: 'new', score: 71, origin: 'whatsapp', slaDueAt: at(-3 * HOUR), lastActivityAt: at(-2 * DAY), createdAt: at(-2 * DAY) },
-  { id: 3, name: 'Ana Michel Cruz', phone: '+1 809 555 0119', email: 'ana.cruz@example.do', propertyCode: 'RF0913', propertyTitle: 'Villa en Punta Cana', operation: 'sell', stage: 'visit', score: 55, origin: 'saved_search', slaDueAt: null, lastActivityAt: at(-6 * HOUR), createdAt: at(-9 * DAY) },
-  { id: 4, name: 'Luis Fernández', phone: '+1 849 555 0163', email: 'lfernandez@example.do', propertyCode: 'RF0412', propertyTitle: 'Apartamento en Piantini', operation: 'sell', stage: 'contacted', score: 78, origin: 'favorite', slaDueAt: null, lastActivityAt: at(-1 * DAY), createdAt: at(-5 * DAY) },
-  { id: 5, name: 'Carolina Batista', phone: '+1 809 555 0155', email: 'cbatista@example.do', propertyCode: 'RF0755', propertyTitle: 'Penthouse en Bella Vista', operation: 'sell', stage: 'negotiation', score: 88, origin: 'direct', slaDueAt: null, lastActivityAt: at(-4 * HOUR), createdAt: at(-22 * DAY) },
-  { id: 6, name: 'Pedro Objío', phone: '+1 829 555 0171', email: 'pobjio@example.do', propertyCode: 'RF0640', propertyTitle: 'Casa en Arroyo Hondo', operation: 'sell', stage: 'contacted', score: 46, origin: 'shared', slaDueAt: null, lastActivityAt: at(-3 * DAY), createdAt: at(-11 * DAY) },
-  { id: 7, name: 'Rosa Guzmán', phone: '+1 809 555 0128', email: 'rguzman@example.do', propertyCode: 'RF0288', propertyTitle: 'Local comercial en Naco', operation: 'rent', stage: 'new', score: 34, origin: 'direct', slaDueAt: at(11 * HOUR), lastActivityAt: at(-30 * 60_000), createdAt: at(-30 * 60_000) },
-  { id: 8, name: 'Frank Then', phone: '+1 849 555 0192', email: 'fthen@example.do', propertyCode: 'RF1024', propertyTitle: 'Apartamento en Evaristo Morales', operation: 'rent', stage: 'visit', score: 63, origin: 'saved_search', slaDueAt: null, lastActivityAt: at(-8 * HOUR), createdAt: at(-6 * DAY) },
-  { id: 9, name: 'Yamilet Reyes', phone: '+1 809 555 0134', email: 'yreyes@example.do', propertyCode: 'RF0755', propertyTitle: 'Penthouse en Bella Vista', operation: 'sell', stage: 'won', score: 95, origin: 'favorite', slaDueAt: null, lastActivityAt: at(-2 * DAY), createdAt: at(-40 * DAY) },
-  { id: 10, name: 'Ramón Castillo', phone: '+1 829 555 0146', email: 'rcastillo@example.do', propertyCode: 'RF0640', propertyTitle: 'Casa en Arroyo Hondo', operation: 'sell', stage: 'lost', score: 22, origin: 'whatsapp', slaDueAt: null, lastActivityAt: at(-15 * DAY), createdAt: at(-38 * DAY) },
-  { id: 11, name: 'Alejandra Nin', phone: '+1 809 555 0177', email: 'anin@example.do', propertyCode: 'RF0913', propertyTitle: 'Villa en Punta Cana', operation: 'sell', stage: 'negotiation', score: 81, origin: 'price_drop', slaDueAt: null, lastActivityAt: at(-12 * HOUR), createdAt: at(-27 * DAY) },
-  { id: 12, name: 'Héctor Made', phone: '+1 849 555 0158', email: 'hmade@example.do', propertyCode: 'RF1024', propertyTitle: 'Apartamento en Evaristo Morales', operation: 'rent', stage: 'contacted', score: 58, origin: 'direct', slaDueAt: null, lastActivityAt: at(-2 * DAY), createdAt: at(-8 * DAY) },
-]
-
-export const ACTIVITIES: Activity[] = [
-  { id: 1, leadId: 1, type: 'message', body: 'Vi que bajó de precio, ¿sigue disponible para visitar este fin de semana?', at: at(-2 * HOUR) },
-  { id: 2, leadId: 1, type: 'note', body: 'Llegó por notificación de bajada de precio. Etiquetar como caliente.', at: at(-2 * HOUR) },
-  { id: 3, leadId: 1, type: 'call', body: 'Llamada sin respuesta. Reintentar en la tarde.', at: at(-90 * 60_000) },
-  { id: 4, leadId: 3, type: 'visit', body: 'Visita realizada. Le gustó la terraza, preguntó por el mantenimiento.', at: at(-6 * HOUR) },
-  { id: 5, leadId: 3, type: 'note', body: 'Pide comparativa con la villa de Bávaro antes de decidir.', at: at(-5 * HOUR) },
-  { id: 6, leadId: 5, type: 'message', body: 'Enviada la oferta formal por RD$ 18,400,000.', at: at(-4 * HOUR) },
-]
-
-export const TASKS: Task[] = [
-  { id: 1, leadId: 3, title: 'Seguimiento post-visita — Ana Michel Cruz', dueAt: at(18 * HOUR), done: false },
-  { id: 2, leadId: 2, title: 'Responder a José Ramírez (SLA vencido)', dueAt: at(-3 * HOUR), done: false },
-  { id: 3, leadId: 5, title: 'Confirmar contraoferta con Carolina Batista', dueAt: at(2 * DAY), done: false },
-  { id: 4, leadId: 8, title: 'Coordinar segunda visita con Frank Then', dueAt: at(3 * DAY), done: false },
-  { id: 5, leadId: null, title: 'Renovar destacado de RF0412', dueAt: at(2 * DAY), done: false },
-  { id: 6, leadId: 11, title: 'Enviar planos a Alejandra Nin', dueAt: at(-1 * DAY), done: true },
-]
 
 export const PROPERTIES: Property[] = [
   { id: 1, code: 'RF0412', title: 'Apartamento en Piantini', city: 'Santo Domingo', sector: 'Piantini', operation: 'sell', lifecycle: 'published', moderation: 'approved', featured: true, featuredExpiresAt: at(2 * DAY), price: 14_500_000, bedrooms: 3, bathrooms: 3, parking: 2, area: 210, leadsCount: 2, unansweredLeads: 1, createdAt: at(-60 * DAY) },
@@ -227,16 +152,3 @@ export const NOTIFICATIONS: NotificationItem[] = [
   { id: 3, type: 'lead_created', title: 'Nuevo lead', body: 'Rosa Guzmán preguntó por RF0288.', at: at(-30 * 60_000), read: false },
   { id: 4, type: 'price_drop', title: 'Bajada de precio publicada', body: 'RF0412 bajó 6% — notificados 14 favoritos y 3 búsquedas guardadas.', at: at(-1 * DAY), read: true },
 ]
-
-/** C.5 — a lead is breaching when its SLA deadline is already in the past. */
-export function isSlaBreached(lead: Lead): boolean {
-  return lead.slaDueAt !== null && new Date(lead.slaDueAt).getTime() < Date.now()
-}
-
-/** D.1 bands: 80-100 very hot, 60-79 hot, 40-59 warm, 0-39 cold. */
-export function scoreBand(score: number): 'hot' | 'warm' | 'mild' | 'cold' {
-  if (score >= 80) return 'hot'
-  if (score >= 60) return 'warm'
-  if (score >= 40) return 'mild'
-  return 'cold'
-}
