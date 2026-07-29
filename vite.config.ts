@@ -6,7 +6,8 @@ import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const devBackend = env.VITE_DEV_BACKEND_ORIGIN
+  // Defaults to `npm run mock`, so a fresh clone runs with no .env.local at all.
+  const devBackend = env.VITE_DEV_BACKEND_ORIGIN || 'http://localhost:8787'
 
   return {
     plugins: [react(), tailwindcss()],
@@ -18,14 +19,12 @@ export default defineConfig(({ mode }) => {
     // cookie would never be sent. Proxying makes dev same-origin: no CORS, no
     // SameSite. Production is cross-subdomain instead (crm.* -> api.*) and leans
     // on SESSION_DOMAIN=.rentafacilrd.com — see README.
-    server: devBackend
-      ? {
-          proxy: {
-            '/api': { target: devBackend, changeOrigin: true },
-            '/sanctum': { target: devBackend, changeOrigin: true },
-          },
-        }
-      : undefined,
+    server: {
+      proxy: {
+        '/api': { target: devBackend, changeOrigin: true },
+        '/sanctum': { target: devBackend, changeOrigin: true },
+      },
+    },
     test: {
       environment: 'node',
       include: ['src/**/*.test.ts'],

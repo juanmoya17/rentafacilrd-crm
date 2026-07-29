@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "mock": "node mock/laravel.js",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test": "vitest run",
