@@ -113,7 +113,7 @@ export function LeadDetailPage() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <StageBadge stage={lead.stage} />
         <OriginBadge origin={lead.origin} />
-        {lead.score_band !== null && (
+        {lead.score_band != null && (
           <span className="inline-flex items-center gap-1.5 rounded bg-slate-100 px-1.5 py-0.5">
             <ScoreDot score={lead.score} band={lead.score_band} />
             <span className="text-xs text-slate-600">{t(`band.${lead.score_band}`)}</span>

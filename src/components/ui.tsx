@@ -132,9 +132,12 @@ export function ScoreDot({
   band,
 }: {
   score: number
-  band: 'hot' | 'warm' | 'mild' | 'cold' | null
+  band?: 'hot' | 'warm' | 'mild' | 'cold' | null
 }) {
-  if (band === null) return null
+  // Absent, not null: the API dropped the key entirely rather than sending a
+  // null, so a `=== null` check never fires and the dot renders with an
+  // "undefined" colour class. Catch both.
+  if (band == null) return null
 
   const colours = {
     hot: 'bg-red-500',

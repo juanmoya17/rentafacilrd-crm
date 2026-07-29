@@ -59,7 +59,7 @@ export interface CrmLead {
    * writes — so treat null as "no signal yet" and render nothing, not a
    * neutral badge that looks like a measurement.
    */
-  score_band: ScoreBand | null
+  score_band?: ScoreBand | null
   contact: CrmContact | null
   property_id: number | null
   property_title: string | null
