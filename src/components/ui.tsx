@@ -120,8 +120,22 @@ export function Button({
   )
 }
 
-/** Lead score dot + number. Colour carries the D.1 band, the number carries the value. */
-export function ScoreDot({ score, band }: { score: number; band: 'hot' | 'warm' | 'mild' | 'cold' }) {
+/**
+ * Lead score dot + number. Colour carries the D.1 band, the number the value.
+ *
+ * Renders nothing without a band. Until D.1 computes a score the API sends no
+ * band at all, and a bare number off an uncomputed field reads as a real
+ * measurement — the same reason the API stopped sending a constant "cold".
+ */
+export function ScoreDot({
+  score,
+  band,
+}: {
+  score: number
+  band: 'hot' | 'warm' | 'mild' | 'cold' | null
+}) {
+  if (band === null) return null
+
   const colours = {
     hot: 'bg-red-500',
     warm: 'bg-orange-400',

@@ -53,7 +53,13 @@ export interface CrmLead {
   stage: Stage
   origin: Origin
   score: number
-  score_band: ScoreBand
+  /**
+   * Absent until D.1 computes a real score. The API deliberately stopped
+   * sending it rather than emit a constant "cold" band off a score nothing
+   * writes — so treat null as "no signal yet" and render nothing, not a
+   * neutral badge that looks like a measurement.
+   */
+  score_band: ScoreBand | null
   contact: CrmContact | null
   property_id: number | null
   property_title: string | null
