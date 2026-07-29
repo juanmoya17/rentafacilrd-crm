@@ -2,9 +2,11 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, Navigate } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
+import { MotionConfig } from 'motion/react'
 import { AuthProvider } from '@/lib/auth-provider'
 import { I18nProvider } from '@/lib/i18n/provider'
 import { RequireAuth } from '@/components/require-auth'
+import { ToastProvider } from '@/components/toast'
 import { CrmLayout } from '@/components/crm-layout'
 import { LoginPage } from '@/routes/login'
 import { DashboardPage } from '@/routes/dashboard'
@@ -54,10 +56,22 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <I18nProvider>
-      <AuthProvider>
-        <RouterProvider router={router} />
-      </AuthProvider>
-    </I18nProvider>
+    {/* One switch for every motion component in the app. The per-hook
+        useReducedMotion() checks cover the reveals and the lift, but the toast,
+        the bulk bar, the segmented indicator and the task layout animations are
+        plain motion components — without this they would keep animating for a
+        user who asked for less motion, which is the half of the rule that
+        always gets missed. */}
+    <MotionConfig reducedMotion="user">
+      <I18nProvider>
+        <AuthProvider>
+          {/* Above the router so a failed optimistic update can still report
+              itself after a navigation started. */}
+          <ToastProvider>
+            <RouterProvider router={router} />
+          </ToastProvider>
+        </AuthProvider>
+      </I18nProvider>
+    </MotionConfig>
   </StrictMode>,
 )

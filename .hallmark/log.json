@@ -1,5 +1,36 @@
 [
   {
+    "date": "2026-07-30",
+    "scope": "app",
+    "macrostructure": "Console · Record · Board · Preferences (families 2–5)",
+    "theme": "custom",
+    "theme_axes": "light / grotesk-sans / chromatic-other (teal 195°)",
+    "genre": "modern-minimal",
+    "tone": "utilitarian",
+    "enrichment": "none",
+    "motion": "maximal (unchanged from wave 1)",
+    "brief": "RentaFácil CRM · wave 2: dashboard, 3 detail screens, pipeline, settings, plus the two auth-shell screens. Added --color-warning and the band ramp; deleted the slate migration bridge.",
+    "designed_as_app": true,
+    "note": "All 13 routes + require-auth + verification-pending now on the family shells. Zero raw Tailwind colour classes remain in src/. design.md § Layout invariants records the four load-bearing min-w-0 / grid-template declarations — each was added after a visible break, do not 'tidy' them away."
+  },
+  {
+    "date": "2026-07-30",
+    "scope": "app",
+    "macrostructure": "Register (family) — filter bar → sticky-head table ≥lg / card stack <lg",
+    "theme": "custom",
+    "theme_axes": "light / grotesk-sans / chromatic-other (teal 195°)",
+    "vibe": "instrument panel for a brokerage floor",
+    "genre": "modern-minimal",
+    "tone": "utilitarian",
+    "enrichment": "none",
+    "nav": "N3 side-rail (kept — the app shell's IA, not a per-page pick)",
+    "footer": "n/a (app shell has no footer)",
+    "motion": "maximal, at explicit user request — view-transition · reveal · press · settle/rollback · lift",
+    "brief": "RentaFácil CRM · wave 1 of the full redesign: motion layer + Register family across leads, properties, inventory, notifications, tasks, projects",
+    "designed_as_app": true,
+    "note": "design.md governs. Diversification stays INVERTED — remaining screens must share this system. Motion stance in design.md was amended from motion-cut; the accepted anti-patterns (scroll reveals, card lift, motion library) are recorded there so an audit does not re-flag them. Remaining families: Console, Record, Board, Preferences."
+  },
+  {
     "date": "2026-07-29",
     "macrostructure": "n/a (system-lock — no page built)",
     "theme": "custom",

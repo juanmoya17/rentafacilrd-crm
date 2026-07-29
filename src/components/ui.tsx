@@ -92,7 +92,9 @@ export function Button({
       onClick={onClick}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`inline-flex min-h-9 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-(--duration-fast) ease-(--ease-out) disabled:cursor-not-allowed disabled:opacity-55 ${BUTTON_VARIANTS[variant]} ${stateRing} ${className}`}
+      /* whitespace-nowrap is not cosmetic: a button label that wraps to two
+         lines is the single most common mobile break, and it is a hard gate. */
+      className={`inline-flex min-h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-(--duration-fast) ease-out active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55 ${BUTTON_VARIANTS[variant]} ${stateRing} ${className}`}
     >
       {loading && <Spinner />}
       {state === 'success' && (
@@ -229,9 +231,7 @@ const BADGE_TONES = {
   sell: 'bg-sell-bg text-sell-ink',
   rent: 'bg-rent-bg text-rent-ink',
   success: 'bg-success-bg text-success',
-  // Warning still rides Tailwind's amber: it clears 4.5:1 already, and the
-  // rent tokens are the wrong semantics to borrow. See design.md § Open edges.
-  warning: 'bg-amber-50 text-amber-800',
+  warning: 'bg-warning-bg text-warning',
   danger: 'bg-error-bg text-error',
 } as const
 
@@ -330,10 +330,10 @@ export function ScoreDot({
   if (band == null) return null
 
   const colours = {
-    hot: 'bg-red-500',
-    warm: 'bg-orange-400',
-    mild: 'bg-amber-300',
-    cold: 'bg-rule-2',
+    hot: 'bg-band-hot',
+    warm: 'bg-band-warm',
+    mild: 'bg-band-mild',
+    cold: 'bg-band-cold',
   }
   return (
     <span className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-ink-2">

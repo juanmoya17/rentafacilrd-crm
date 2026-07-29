@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { isVerifiedAgent, useAuth } from '@/lib/auth-context'
 import { useT } from '@/lib/i18n/context'
+import { Button } from '@/components/ui'
 import { VerificationPending } from '@/components/verification-pending'
 
 /**
@@ -18,27 +19,25 @@ export function RequireAuth() {
 
   if (state.status === 'loading') {
     return (
-      <div className="grid min-h-dvh place-items-center bg-slate-50" role="status">
-        <p className="text-sm text-slate-500">{t('auth.checking')}</p>
+      <div className="grid min-h-dvh place-items-center bg-surface" role="status">
+        <p className="text-sm text-muted">{t('auth.checking')}</p>
       </div>
     )
   }
 
   if (state.status === 'error') {
     return (
-      <div className="grid min-h-dvh place-items-center bg-slate-50 px-4">
+      <div className="grid min-h-dvh place-items-center bg-surface px-4">
         <div className="max-w-sm text-center" role="alert">
-          <h1 className="text-lg font-semibold text-slate-900">
+          <h1 className="text-lg font-semibold tracking-tight text-ink">
             {t('error.backendTitle')}
           </h1>
-          <p className="mt-2 text-sm text-slate-600">{state.message}</p>
-          <button
-            type="button"
-            onClick={retry}
-            className="mt-4 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
-          >
-            {t('error.retry')}
-          </button>
+          <p className="mt-2 text-sm text-ink-2">{state.message}</p>
+          <div className="mt-4">
+            <Button variant="primary" onClick={retry}>
+              {t('error.retry')}
+            </Button>
+          </div>
         </div>
       </div>
     )

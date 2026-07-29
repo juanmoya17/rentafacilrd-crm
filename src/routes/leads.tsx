@@ -1,18 +1,39 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useI18n } from '@/lib/i18n/context'
-import {
-  Card,
-  EmptyState,
-  ErrorState,
-  LoadingState,
-  PageHeader,
-  ScoreDot,
-} from '@/components/ui'
+import { Button, EmptyState, ErrorState, LoadingState, PageHeader, ScoreDot } from '@/components/ui'
+import { FilterBar, Register, SearchField, Segmented, type Column } from '@/components/register'
 import { OriginBadge, StageBadge } from '@/components/labels'
+import { useRecordMorph } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { listLeads } from '@/lib/crm/api'
-import { STAGES, type Stage } from '@/lib/crm/types'
+import { STAGES, type CrmLead, type Stage } from '@/lib/crm/types'
+
+/**
+ * The lead's name is the shared element: clicking it morphs into the heading on
+ * the detail screen. The name is only attached while that specific navigation
+ * is running, because a `view-transition-name` present on fifty rows at once is
+ * a duplicate and silently kills the transition.
+ */
+function LeadName({ lead }: { lead: CrmLead }) {
+  const to = `/leads/${lead.id}`
+  const morph = useRecordMorph(to)
+  const { t } = useI18n()
+
+  return (
+    <>
+      <Link
+        to={to}
+        viewTransition
+        style={morph}
+        className="font-medium text-ink transition-colors duration-(--duration-fast) ease-out hover:text-brand-700"
+      >
+        {lead.contact?.name ?? '—'}
+      </Link>
+      <p className="font-mono text-xs text-muted">{lead.contact?.phone ?? t('common.none')}</p>
+    </>
+  )
+}
 
 export function LeadsPage() {
   const { t, formatRelativeTime } = useI18n()
@@ -51,76 +72,110 @@ export function LeadsPage() {
     setParams(updated, { replace: true })
   }
 
+  const toggleBreached = () => {
+    const updated = new URLSearchParams(params)
+    updated.delete('stage')
+    if (sla === 'breached') updated.delete('sla')
+    else updated.set('sla', 'breached')
+    setParams(updated, { replace: true })
+  }
+
   const total = resource.status === 'ready' ? resource.data.total : undefined
+
+  const columns: Column<CrmLead>[] = [
+    {
+      key: 'lead',
+      header: t('leads.title'),
+      card: 'primary',
+      render: (lead) => <LeadName lead={lead} />,
+    },
+    {
+      key: 'score',
+      header: t('common.score'),
+      numeric: true,
+      render: (lead) => <ScoreDot score={lead.score} band={lead.score_band} />,
+    },
+    {
+      key: 'stage',
+      header: t('common.status'),
+      render: (lead) => <StageBadge stage={lead.stage} />,
+    },
+    {
+      key: 'origin',
+      header: t('common.origin'),
+      render: (lead) => <OriginBadge origin={lead.origin} />,
+    },
+    {
+      key: 'property',
+      header: t('leadDetail.property'),
+      render: (lead) => lead.property_title ?? t('common.none'),
+    },
+    {
+      key: 'sla',
+      header: t('common.sla'),
+      numeric: true,
+      render: (lead) => (
+        <span className={lead.is_sla_breached ? 'font-semibold text-error' : 'text-muted'}>
+          {lead.sla_due_at !== null
+            ? formatRelativeTime(lead.sla_due_at)
+            : lead.last_activity_at !== null
+              ? formatRelativeTime(lead.last_activity_at)
+              : '—'}
+        </span>
+      ),
+    },
+  ]
 
   return (
     <>
       <PageHeader
         title={t('leads.title')}
-        subtitle={total === undefined ? undefined : t('common.resultCount', { count: total })}
         actions={
-          <Link
-            to="/pipeline"
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
-          >
-            {t('leads.kanbanView')}
+          <Link to="/pipeline" viewTransition>
+            <Button>{t('leads.kanbanView')}</Button>
           </Link>
         }
       />
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <label htmlFor="lead-search" className="sr-only">
-          {t('common.search')}
-        </label>
-        <input
+      <FilterBar>
+        <SearchField
           id="lead-search"
-          type="search"
+          label={t('common.search')}
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={setQuery}
           placeholder={t('leads.searchPlaceholder')}
-          className="w-full max-w-xs rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-600"
+          resultLabel={
+            total === undefined ? undefined : t('common.resultCount', { count: total })
+          }
+          pending={query !== debounced}
         />
 
-        <div className="flex flex-wrap gap-1">
-          <button
-            type="button"
-            onClick={() => setStage(null)}
-            className={`rounded-md px-2.5 py-1.5 text-sm ${
-              stage === null && sla === null
-                ? 'bg-brand-600 text-white'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            {t('common.all')}
-          </button>
-          {STAGES.map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => setStage(option)}
-              className={`rounded-md px-2.5 py-1.5 text-sm ${
-                stage === option ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              {t(`stage.${option}`)}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => {
-              const updated = new URLSearchParams(params)
-              updated.delete('stage')
-              updated.set('sla', 'breached')
-              setParams(updated, { replace: true })
-            }}
-            className={`rounded-md px-2.5 py-1.5 text-sm ${
-              sla === 'breached' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-50'
-            }`}
-          >
-            {t('common.sla')} · {t('common.overdue')}
-          </button>
-        </div>
-      </div>
+        <Segmented
+          group="lead-stage"
+          label={t('common.status')}
+          value={sla === 'breached' ? null : (stage as Stage | null)}
+          onChange={setStage}
+          options={[
+            { value: null, label: t('common.all') },
+            ...STAGES.map((option) => ({ value: option, label: t(`stage.${option}`) })),
+          ]}
+        />
+
+        {/* A separate axis from stage, so it is a toggle rather than a segment —
+            folding it into the group would imply it is one of the stages. */}
+        <button
+          type="button"
+          aria-pressed={sla === 'breached'}
+          onClick={toggleBreached}
+          className={`min-h-9 whitespace-nowrap rounded-md border px-2.5 py-1 text-sm font-medium transition-colors duration-(--duration-fast) ease-out active:translate-y-px ${
+            sla === 'breached'
+              ? 'border-error bg-error text-white'
+              : 'border-rule-2 text-error hover:bg-error-bg'
+          }`}
+        >
+          {t('common.sla')} · {t('common.overdue')}
+        </button>
+      </FilterBar>
 
       {resource.status === 'loading' && <LoadingState label={t('common.loading')} />}
 
@@ -136,54 +191,12 @@ export function LeadsPage() {
         (resource.data.items.length === 0 ? (
           <EmptyState title={t('leads.empty')} hint={t('leads.emptyHint')} />
         ) : (
-          <Card className="overflow-x-auto">
-            <table className="w-full min-w-[52rem] text-left text-sm">
-              <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th scope="col" className="px-3 py-2 font-medium">{t('leads.title')}</th>
-                  <th scope="col" className="px-3 py-2 font-medium">{t('common.score')}</th>
-                  <th scope="col" className="px-3 py-2 font-medium">{t('common.status')}</th>
-                  <th scope="col" className="px-3 py-2 font-medium">{t('common.origin')}</th>
-                  <th scope="col" className="px-3 py-2 font-medium">{t('leadDetail.property')}</th>
-                  <th scope="col" className="px-3 py-2 font-medium">{t('common.sla')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {resource.data.items.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-slate-50">
-                    <td className="px-3 py-2">
-                      <Link
-                        to={`/leads/${lead.id}`}
-                        className="font-medium text-slate-900 hover:text-brand-700"
-                      >
-                        {lead.contact?.name ?? '—'}
-                      </Link>
-                      <p className="text-xs text-slate-500">{lead.contact?.phone}</p>
-                    </td>
-                    <td className="px-3 py-2">
-                      <ScoreDot score={lead.score} band={lead.score_band} />
-                    </td>
-                    <td className="px-3 py-2"><StageBadge stage={lead.stage} /></td>
-                    <td className="px-3 py-2"><OriginBadge origin={lead.origin} /></td>
-                    <td className="px-3 py-2 text-slate-600">
-                      {lead.property_title ?? t('common.none')}
-                    </td>
-                    <td
-                      className={`px-3 py-2 tabular-nums ${
-                        lead.is_sla_breached ? 'font-semibold text-red-600' : 'text-slate-500'
-                      }`}
-                    >
-                      {lead.sla_due_at !== null
-                        ? formatRelativeTime(lead.sla_due_at)
-                        : lead.last_activity_at !== null
-                          ? formatRelativeTime(lead.last_activity_at)
-                          : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
+          <Register
+            label={t('leads.title')}
+            columns={columns}
+            rows={resource.data.items}
+            rowKey={(lead) => lead.id}
+          />
         ))}
     </>
   )

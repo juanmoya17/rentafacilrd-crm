@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { useT } from '@/lib/i18n/context'
+import { Button } from '@/components/ui'
 import { LanguageSwitcher } from '@/components/language-switcher'
 
 /**
@@ -33,42 +34,43 @@ export function VerificationPending() {
 
   return (
     <div className="grid min-h-dvh place-items-center bg-surface px-4">
-      <div className="w-full max-w-md rounded-lg border border-slate-200 bg-surface-raised p-6">
+      <div className="w-full max-w-md rounded-lg border border-rule bg-surface-raised p-6">
         <div className="flex items-start justify-between gap-4">
-          <span className="font-semibold tracking-tight text-brand-700">{t('app.name')}</span>
+          <span className="font-mono font-semibold tracking-tight text-brand-700">
+            {t('app.name')}
+          </span>
           <LanguageSwitcher />
         </div>
 
-        <h1 className="mt-6 text-lg font-semibold text-slate-900">
+        <h1 className="mt-6 text-lg font-semibold tracking-tight text-ink">
           {t('verification.title')}
         </h1>
-        <p className="mt-2 text-sm text-slate-600">
-          {t('verification.body', { name })}
-        </p>
+        <p className="mt-2 text-sm text-ink-2">{t('verification.body', { name })}</p>
 
-        <p className="mt-4 rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-800">
+        {/* The accent spine, not a filled block: this is the reassurance, and it
+            should not compete with the error below it for attention. */}
+        <p className="mt-4 border-l-2 border-l-accent bg-brand-50 px-3 py-2 text-sm text-brand-800">
           {t('verification.leadsSafe')}
         </p>
 
-        <h2 className="mt-5 text-sm font-medium text-slate-900">
-          {t('verification.howTitle')}
-        </h2>
-        <p className="mt-1 text-sm text-slate-600">{t('verification.how')}</p>
+        <h2 className="mt-5 text-sm font-semibold text-ink">{t('verification.howTitle')}</h2>
+        <p className="mt-1 text-sm text-ink-2">{t('verification.how')}</p>
 
         {error && (
-          <p role="alert" className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <p role="alert" className="mt-4 rounded-md bg-warning-bg px-3 py-2 text-sm text-warning">
             {error}
           </p>
         )}
 
-        <button
-          type="button"
-          onClick={() => void handleSignOut()}
-          disabled={signingOut}
-          className="mt-6 w-full rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
-        >
-          {signingOut ? t('auth.signingOut') : t('auth.signOut')}
-        </button>
+        <div className="mt-6">
+          <Button
+            state={signingOut ? 'loading' : 'idle'}
+            onClick={() => void handleSignOut()}
+            className="w-full"
+          >
+            {signingOut ? t('auth.signingOut') : t('auth.signOut')}
+          </Button>
+        </div>
       </div>
     </div>
   )

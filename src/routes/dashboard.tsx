@@ -1,8 +1,12 @@
 import { Link } from 'react-router'
+import { motion } from 'motion/react'
 import { useAuth } from '@/lib/auth-context'
 import { useI18n } from '@/lib/i18n/context'
 import type { TranslationKey } from '@/lib/i18n/es'
 import { Card, MockNotice, PageHeader } from '@/components/ui'
+import { CountUp } from '@/components/count-up'
+import { RecordSectionHead } from '@/components/record'
+import { useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { listLeads } from '@/lib/crm/api'
 import { PROPERTIES } from '@/lib/mock/data'
@@ -12,6 +16,7 @@ const EXPIRY_WINDOW_MS = 3 * 86_400_000
 export function DashboardPage() {
   const { state } = useAuth()
   const { t } = useI18n()
+  const reveal = useRowReveal()
 
   // Lead counts are real; the property ones wait for A.5. Showing a fake number
   // beside a real one is worse than showing fewer numbers, so the notice below
@@ -21,8 +26,9 @@ export function DashboardPage() {
 
   if (state.status !== 'authenticated') return null
 
-  const count = (resource: typeof newLeads): string =>
-    resource.status === 'ready' ? String(resource.data.total) : '—'
+  /** null until the request lands — CountUp renders an em dash, never a zero. */
+  const total = (resource: typeof newLeads): number | null =>
+    resource.status === 'ready' ? resource.data.total : null
 
   const published = PROPERTIES.filter((property) => property.lifecycle === 'published')
   const expiring = PROPERTIES.filter(
@@ -32,11 +38,21 @@ export function DashboardPage() {
   )
 
   // A.5 — every KPI is a shortcut that lands on the filtered list, not a dead number.
-  const kpis: { label: TranslationKey; value: string; to: string; live: boolean }[] = [
-    { label: 'dashboard.kpi.total', value: String(PROPERTIES.length), to: '/properties', live: false },
-    { label: 'dashboard.kpi.published', value: String(published.length), to: '/properties?status=published', live: false },
-    { label: 'dashboard.kpi.newLeads', value: count(newLeads), to: '/leads?stage=new', live: true },
-    { label: 'dashboard.kpi.expiring', value: String(expiring.length), to: '/properties?featured=expiring', live: false },
+  const kpis: { label: TranslationKey; value: number | null; to: string; live: boolean }[] = [
+    { label: 'dashboard.kpi.total', value: PROPERTIES.length, to: '/properties', live: false },
+    {
+      label: 'dashboard.kpi.published',
+      value: published.length,
+      to: '/properties?status=published',
+      live: false,
+    },
+    { label: 'dashboard.kpi.newLeads', value: total(newLeads), to: '/leads?stage=new', live: true },
+    {
+      label: 'dashboard.kpi.expiring',
+      value: expiring.length,
+      to: '/properties?featured=expiring',
+      live: false,
+    },
   ]
 
   // A.6 — the rail disappears when there is nothing pending.
@@ -51,7 +67,11 @@ export function DashboardPage() {
       value: PROPERTIES.filter((property) => property.unansweredLeads > 0).length,
       to: '/properties?leads=unanswered',
     },
-    { label: 'dashboard.featuredExpiring', value: expiring.length, to: '/properties?featured=expiring' },
+    {
+      label: 'dashboard.featuredExpiring',
+      value: expiring.length,
+      to: '/properties?featured=expiring',
+    },
     {
       label: 'dashboard.rejected',
       value: PROPERTIES.filter((property) => property.lifecycle === 'rejected').length,
@@ -69,42 +89,59 @@ export function DashboardPage() {
       <MockNotice>{t('dashboard.partialLive')}</MockNotice>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {kpis.map((kpi) => (
-          <Link
-            key={kpi.label}
-            to={kpi.to}
-            className="rounded-lg border border-slate-200 bg-surface-raised p-4 transition-colors hover:border-brand-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
-          >
-            <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-slate-500">
-              {t(kpi.label)}
-              {kpi.live && <span className="size-1.5 rounded-full bg-brand-500" aria-hidden="true" />}
-            </p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">{kpi.value}</p>
-          </Link>
+        {kpis.map((kpi, index) => (
+          <motion.div key={kpi.label} {...reveal(index)}>
+            <Link
+              to={kpi.to}
+              viewTransition
+              className="flex h-full flex-col rounded-lg border border-rule bg-surface-raised p-4 transition-colors duration-(--duration-base) ease-out hover:border-rule-2"
+            >
+              <p className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-muted">
+                {t(kpi.label)}
+                {/* The live dot marks which half of this board is real data —
+                    the other half is still A.5 placeholder. */}
+                {kpi.live && (
+                  <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
+                )}
+              </p>
+              <p className="mt-1">
+                <CountUp value={kpi.value} />
+              </p>
+            </Link>
+          </motion.div>
         ))}
       </div>
 
-      <h2 className="mt-8 mb-3 text-sm font-semibold text-slate-900">
-        {t('dashboard.needsAction')}
-      </h2>
+      <div className="mt-8">
+        <RecordSectionHead label={t('dashboard.needsAction')} count={rail.length} />
+      </div>
 
       {rail.length === 0 ? (
-        <Card className="px-4 py-6 text-sm text-slate-500">
-          {t('dashboard.needsActionEmpty')}
-        </Card>
+        <Card className="px-4 py-6 text-sm text-muted">{t('dashboard.needsActionEmpty')}</Card>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {rail.map((item) => (
-            <Link
-              key={item.label}
-              to={item.to}
-              className="rounded-lg border border-amber-200 bg-amber-50 p-4 transition-colors hover:border-amber-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
-            >
-              <p className="text-2xl font-semibold tabular-nums text-amber-900">{item.value}</p>
-              <p className="mt-0.5 text-sm text-amber-800">{t(item.label)}</p>
-            </Link>
+        /* Was four filled amber cards, which put more colour on this screen than
+           the teal accent and made the whole board read as an alert. It is now
+           one queue: hairline rows, a single amber spine per row, the count in
+           mono. Same information, and the accent is the loudest thing again. */
+        <ul className="overflow-hidden rounded-lg border border-rule bg-surface-raised">
+          {rail.map((item, index) => (
+            <motion.li key={item.label} {...reveal(index)} className="border-b border-rule last:border-0">
+              <Link
+                to={item.to}
+                viewTransition
+                className="flex items-center gap-3 border-l-2 border-l-warning px-4 py-3 transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+              >
+                <span className="w-8 shrink-0 font-mono text-base font-semibold text-warning">
+                  {item.value}
+                </span>
+                <span className="min-w-0 flex-1 text-sm text-ink-2">{t(item.label)}</span>
+                <span aria-hidden="true" className="shrink-0 text-sm text-muted">
+                  →
+                </span>
+              </Link>
+            </motion.li>
           ))}
-        </div>
+        </ul>
       )}
     </>
   )

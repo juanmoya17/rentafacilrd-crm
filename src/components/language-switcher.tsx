@@ -24,7 +24,7 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
         onChange={(event) => {
           if (isLocale(event.target.value)) setLocale(event.target.value)
         }}
-        className={`rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 ${className}`}
+        className={`min-h-9 rounded-md border border-rule-2 bg-surface-raised px-2 py-1.5 text-sm text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken ${className}`}
       >
         {LOCALES.map((option) => (
           <option key={option} value={option}>

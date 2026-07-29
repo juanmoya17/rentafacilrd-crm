@@ -1,128 +1,175 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
+import { AnimatePresence, motion } from 'motion/react'
 import { useI18n } from '@/lib/i18n/context'
-import { Badge, Button, Card, EmptyState, MockNotice, PageHeader } from '@/components/ui'
+import { Badge, Button, Card, EmptyState, MockNotice } from '@/components/ui'
+import { RecordHeader } from '@/components/record'
+import { Register, type Column } from '@/components/register'
 import { UnitStatusBadge } from '@/components/labels'
-import { PROJECTS } from '@/lib/mock/data'
+import { useRowReveal } from '@/lib/motion'
+import { PROJECTS, type Unit } from '@/lib/mock/data'
 
 type Tab = 'models' | 'availability'
+const TABS: Tab[] = ['models', 'availability']
 
 export function ProjectDetailPage() {
   const { id } = useParams()
   const { t, formatCurrency, formatNumber } = useI18n()
   const [tab, setTab] = useState<Tab>('models')
+  const reveal = useRowReveal()
 
   const project = PROJECTS.find((item) => String(item.id) === id)
   if (project === undefined) {
     return (
       <EmptyState
         title={t('error.notFound')}
-        action={<Link to="/projects"><Button>{t('common.back')}</Button></Link>}
+        action={
+          <Link to="/projects" viewTransition>
+            <Button>{t('common.back')}</Button>
+          </Link>
+        }
       />
     )
   }
 
-  const tabs: Tab[] = ['models', 'availability']
+  const typologyName = (typologyId: number): string =>
+    project.typologies.find((item) => item.id === typologyId)?.name ?? t('common.none')
+
+  const unitColumns: Column<Unit>[] = [
+    {
+      key: 'identifier',
+      header: t('projects.units'),
+      card: 'primary',
+      render: (unit) => <span className="font-mono">{unit.identifier}</span>,
+    },
+    {
+      key: 'typology',
+      header: t('projects.typologies'),
+      card: 'meta',
+      render: (unit) => typologyName(unit.typologyId),
+    },
+    {
+      key: 'price',
+      header: t('common.price'),
+      numeric: true,
+      render: (unit) => <span className="text-ink">{formatCurrency(unit.price)}</span>,
+    },
+    {
+      key: 'status',
+      header: t('common.status'),
+      render: (unit) => <UnitStatusBadge status={unit.status} />,
+    },
+  ]
 
   return (
     <>
-      <Link to="/projects" className="mb-3 inline-block text-sm text-brand-700 hover:underline">
-        ← {t('common.back')}
-      </Link>
-
-      <PageHeader
+      <RecordHeader
+        backTo="/projects"
         title={project.name}
         subtitle={`${project.sector}, ${project.city}`}
+        badges={
+          <>
+            <Badge tone="brand">{t(`projectStatus.${project.status}`)}</Badge>
+            <span className="font-mono text-sm font-semibold text-ink">
+              {formatCurrency(project.priceFrom)} – {formatCurrency(project.priceTo)}
+            </span>
+          </>
+        }
         actions={<Button variant="primary">{t('projectDetail.closeSale')}</Button>}
       />
       <MockNotice>{t('mock.notice', { milestone: 'E.1 – E.4 / E.7' })}</MockNotice>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Badge tone="brand">{t(`projectStatus.${project.status}`)}</Badge>
-        <span className="text-sm font-semibold text-slate-900">
-          {formatCurrency(project.priceFrom)} – {formatCurrency(project.priceTo)}
-        </span>
+      {/* The underline is one element that slides between tabs. A border
+          appearing on the new tab and vanishing from the old communicates the
+          same state but not the relationship between them. */}
+      <div role="tablist" aria-label={t('projects.title')} className="mb-4 flex gap-1 border-b border-rule">
+        {TABS.map((option) => {
+          const selected = tab === option
+          return (
+            <button
+              key={option}
+              type="button"
+              role="tab"
+              id={`tab-${option}`}
+              aria-selected={selected}
+              aria-controls={`panel-${option}`}
+              onClick={() => setTab(option)}
+              className={`relative min-h-9 whitespace-nowrap px-3 py-2 text-sm transition-colors duration-(--duration-fast) ease-out ${
+                selected ? 'font-medium text-brand-700' : 'text-muted hover:text-ink'
+              }`}
+            >
+              {t(`projectDetail.${option}`)}
+              {selected && (
+                <motion.span
+                  layoutId="project-tab"
+                  aria-hidden="true"
+                  className="absolute inset-x-0 -bottom-px h-0.5 bg-accent"
+                  transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                />
+              )}
+            </button>
+          )
+        })}
       </div>
 
-      <div role="tablist" className="mb-3 flex gap-1 border-b border-slate-200">
-        {tabs.map((option) => (
-          <button
-            key={option}
-            type="button"
-            role="tab"
-            aria-selected={tab === option}
-            onClick={() => setTab(option)}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm ${
-              tab === option
-                ? 'border-brand-600 font-medium text-brand-700'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            {t(`projectDetail.${option}`)}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'models' ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {project.typologies.map((typology) => (
-            <Card key={typology.id} className="p-4">
-              <h3 className="text-sm font-semibold text-slate-900">{typology.name}</h3>
-              <p className="mt-1 text-xs tabular-nums text-slate-500">
-                {typology.bedrooms}h · {typology.bathrooms}b · {formatNumber(typology.area)} m²
-              </p>
-              <p className="mt-3 text-sm font-semibold text-slate-900">
-                {t('projects.priceFrom', { price: formatCurrency(typology.basePrice) })}
-              </p>
-              <p className="mt-2 text-xs text-slate-500">
-                {t('projectDetail.unitsOf', {
-                  available: typology.unitsAvailable,
-                  total: typology.unitsTotal,
-                })}
-              </p>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <>
-          {/* E.4 — the public side only ever sees this aggregated by typology. */}
-          <p className="mb-3 text-xs text-slate-500">{t('projectDetail.availabilityNote')}</p>
-
-          {project.units.length === 0 ? (
-            <EmptyState title={t('inventory.empty')} />
+      {/* Crossfade, never a horizontal slide: sliding panels imply the tabs are
+          a sequence, and these are two views of one project. */}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={tab}
+          role="tabpanel"
+          id={`panel-${tab}`}
+          aria-labelledby={`tab-${tab}`}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+        >
+          {tab === 'models' ? (
+            <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,17rem),1fr))]">
+              {project.typologies.map((typology, index) => (
+                <motion.div key={typology.id} {...reveal(index)}>
+                  <Card className="flex h-full flex-col p-4">
+                    <h3 className="text-sm font-semibold text-ink">{typology.name}</h3>
+                    <p className="mt-1 font-mono text-xs text-muted">
+                      {typology.bedrooms}h · {typology.bathrooms}b ·{' '}
+                      {formatNumber(typology.area)} m²
+                    </p>
+                    <p className="mt-3 font-mono text-sm font-semibold text-ink">
+                      {t('projects.priceFrom', {
+                        price: formatCurrency(typology.basePrice),
+                      })}
+                    </p>
+                    <p className="mt-auto pt-2 text-xs text-muted">
+                      {t('projectDetail.unitsOf', {
+                        available: typology.unitsAvailable,
+                        total: typology.unitsTotal,
+                      })}
+                    </p>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
           ) : (
-            <Card className="overflow-x-auto">
-              <table className="w-full min-w-[36rem] text-left text-sm">
-                <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th scope="col" className="px-3 py-2 font-medium">{t('projects.units')}</th>
-                    <th scope="col" className="px-3 py-2 font-medium">{t('projects.typologies')}</th>
-                    <th scope="col" className="px-3 py-2 font-medium">{t('common.price')}</th>
-                    <th scope="col" className="px-3 py-2 font-medium">{t('common.status')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {project.units.map((unit) => (
-                    <tr key={unit.id} className="hover:bg-slate-50">
-                      <td className="px-3 py-2 font-medium text-slate-900">{unit.identifier}</td>
-                      <td className="px-3 py-2 text-slate-600">
-                        {project.typologies.find((item) => item.id === unit.typologyId)?.name ??
-                          t('common.none')}
-                      </td>
-                      <td className="px-3 py-2 tabular-nums text-slate-800">
-                        {formatCurrency(unit.price)}
-                      </td>
-                      <td className="px-3 py-2">
-                        <UnitStatusBadge status={unit.status} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
+            <>
+              {/* E.4 — the public side only ever sees this aggregated by typology. */}
+              <p className="mb-3 text-xs text-muted">{t('projectDetail.availabilityNote')}</p>
+
+              {project.units.length === 0 ? (
+                <EmptyState title={t('inventory.empty')} />
+              ) : (
+                <Register
+                  label={t('projects.units')}
+                  columns={unitColumns}
+                  rows={project.units}
+                  rowKey={(unit) => unit.id}
+                  density="compact"
+                />
+              )}
+            </>
           )}
-        </>
-      )}
+        </motion.div>
+      </AnimatePresence>
     </>
   )
 }

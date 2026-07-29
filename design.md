@@ -30,6 +30,8 @@ Roles, so the right token gets picked without reading the file:
 
 | Role | Token | Rule |
 | --- | --- | --- |
+| Warning / pending | `--color-warning` · `-bg` · `-edge` | hue 65; `-edge` is decorative only |
+| Lead-score heat | `--color-band-hot/warm/mild/cold` | dots only, never text |
 | Page paper | `--color-surface` | `#f5f5f4`, preserved from the public site |
 | Raised (card, header, input) | `--color-surface-raised` | `#ffffff` |
 | Hover fill / zebra | `--color-surface-sunken` | never carries a border |
@@ -92,15 +94,79 @@ Geometry rules that keep controls from feeling loose:
 - The right-edge glyph slot is always reserved, so an appearing spinner or ⚠
   never reflows the input's text.
 
+## Macrostructure families
+
+App pages only — there are no marketing or content pages in this project. Pages
+inside a family share its shape and vary only in which columns or fields they
+declare. A new screen picks a family; it does not invent a sixth.
+
+| Family | Shape | Screens |
+| --- | --- | --- |
+| **Console** | Stat row → action queue | dashboard |
+| **Register** | Filter bar → sticky-head table (≥lg) / card stack (<lg) | leads · properties · inventory · notifications · tasks · projects |
+| **Record** | Title spine + detail rail | lead-detail · property-detail · project-detail |
+| **Board** | Horizontal columns, drag between | pipeline |
+| **Preferences** | Labelled field groups | settings |
+
+The Register shell is `components/register.tsx`. Its column definition drives
+both layouts, so the table and the card stack cannot drift apart. Below `lg` the
+table becomes cards — these screens used to be a 56rem table in a horizontal
+scroller, which at 375px was a 3-inch window onto it.
+
 ## Motion stance
 
-Motion-cut. No animation library, and none should be added for UI state. Two
-primitives only: a `--duration-fast` (120ms) colour transition on hover/active,
-and the `rf-spin` loading spinner. `--ease-out` is the only easing; never the
-browser default `ease`, never overshoot.
+**Amended 2026-07-30, at the user's explicit request, from the original
+motion-cut stance.** Recorded rather than quietly changed, because the previous
+version of this file said the opposite.
 
-Reduced-motion collapses both. The spinner's label carries the meaning, so the
-rotation is dropped rather than slowed.
+Five primitives app-wide. No screen uses more than three.
+
+| Primitive | What it communicates | Where |
+| --- | --- | --- |
+| **view-transition** | Spatial continuity across a route change; the row you clicked morphs into the record heading | app shell + every list → detail link |
+| **reveal** | This list just arrived | Register rows, card grids |
+| **press** | The control received the input | every button/input (`active:translate-y-px`) |
+| **settle / rollback** | The server accepted — or refused, and the UI just moved back | tasks, pipeline, via the failure toast |
+| **lift** | This card is a target | project cards, nav indicator |
+
+Rules that hold regardless:
+
+- `transform` and `opacity` only. Never `width`, `height`, `top`, or `margin`.
+- Three easings, all tokens; `--ease-out` entering, `--ease-in` leaving,
+  `--ease-in-out` for toggles. The browser default `ease` is never used, and
+  nothing overshoots.
+- Three durations: 120 / 200 / 320ms. Exits run ~70% of their entrance.
+- **Reveals fire once** (`viewport={{ once: true }}`). A row that re-animates
+  every time it scrolls back into view makes a long table feel like it is still
+  loading.
+- Stagger is capped at 12 steps (~264ms) so a 50-row table finishes settling.
+- **No success toasts.** If the user can see the row moved, saying so is noise.
+  Toasts exist for the case where the UI already showed a change and the server
+  then refused — that rollback is otherwise invisible. Error toasts do not
+  auto-dismiss and carry the retry.
+- `prefers-reduced-motion: reduce` kills every one of the five, including the
+  view transitions — `*` does not match `::view-transition-*` pseudo-elements,
+  so those are cut explicitly in `index.css`.
+
+### Anti-patterns knowingly accepted here
+
+The maximal motion set was requested after these costs were named, so they are
+recorded rather than treated as bugs. A future audit should read this section
+before flagging them:
+
+- **Scroll-triggered row reveals** (Hallmark tell #12). Mitigated to one-shot
+  via `once: true`, but a dense table still animates on first scroll-through.
+- **Hover lift on cards** (tell #2). Limited to project cards and the nav
+  indicator; deliberately absent from table rows, which use a background shift
+  and an accent spine instead.
+- **A motion library in a 3-dependency project.** `motion` adds ~44kB gzipped
+  to the bundle. It earns it on the layout animations (a checked task travelling
+  to Completed, the segmented indicator, toast stacking) which CSS cannot do
+  without measuring; it would not have earned it for fades alone.
+
+If the tool ever starts to feel slow to the agents using it, the first three
+things to cut are the row reveals, the card lift, and the stagger — in that
+order. Nothing else in this list carries information.
 
 ## Contrast ledger
 
@@ -121,6 +187,8 @@ table if any colour token changes.
 | success on raised / success-bg | 5.0 / 4.7 | 4.5 |
 | sell-ink on sell-bg | 4.6 | 4.5 |
 | rent-ink on rent-bg | 4.5 | 4.5 |
+| warning on raised / warning-bg | 5.1 / 4.6 | 4.5 |
+| band-hot / band-cold vs raised (dots) | 4.7 / 3.3 | — |
 
 Four of these were failures in the CRM before this system landed, and the fixes
 are why some tokens look unintuitive:
@@ -134,25 +202,80 @@ are why some tokens look unintuitive:
   the buyer recognises), label darkened to `--color-sell-ink`.
 - `text-rent` on `bg-rent-bg` — **2.3:1**. Same fix, `--color-rent-ink`.
 
+## Layout invariants — do not remove these
+
+Three `min-width: 0` declarations and one grid template are load-bearing. Each
+was added after a real, visible break; none is defensive.
+
+- **`grid-cols-[minmax(0,1fr)]` on the app shell** (`crm-layout.tsx`). A grid
+  item's automatic minimum size in the inline axis is `min-content`, so the
+  Kanban's `min-w-max` propagated up and stretched the shell to 1644px on a
+  1280px viewport, pushing the header's sign-out button to x=1852. `overflow-x:
+  clip` then hid the scrollbar, so the page looked fine while the header was
+  unusable. **This is the trap to know about: `clip` suppresses the symptom, not
+  the cause.** Check header width against viewport width, not for a scrollbar.
+- **`min-w-0` on the shell's flex row and on the `<main>` padding wrapper.**
+  Same failure, two more places it can enter.
+- **No `overflow-*` on the Register's table wrapper.** An overflow container
+  becomes the sticky ancestor, which pins the table head to the card instead of
+  the viewport.
+- **Padding on the wrapper inside `<main>`, never on `<main>` itself.** Sticky
+  offsets resolve against the scrollport's content box, so padding on the
+  scroll container parks a `sticky top-0` head that far down and lets rows
+  scroll through the gap above it.
+- **No hardcoded sticky offsets anywhere.** `<main>` is the scroll container, so
+  every in-page sticky is `top-0`. The old `top-[49px]` constants were measured
+  against a header that later became 57px tall, and everything sat 8px high with
+  content showing through. `grep -rn "top-\[" src/` should return nothing.
+- **The remount key is on the wrapper *inside* `<main>`, never on `<main>`.** A
+  keyed scroll container is rebuilt on every navigation, so there is no element
+  left to restore a scroll offset into — `scrollTop` on a fresh node is always
+  0. Moving that key is what made scroll restoration possible.
+- **Only one Register layout may be visible at a time.** Both the table and the
+  card stack are always in the DOM, so every row's primary cell exists twice.
+  It is only safe for that cell to carry `view-transition-name: record-title`
+  because the hidden copy is `display: none`. Render both at once and two
+  elements claim the same name, which aborts the transition silently — no error,
+  the morph just stops happening.
+
 ## Open edges
 
-Known-incomplete, in priority order. None is a blocker; all are route work.
+Known-incomplete, in priority order. None is a blocker.
 
-1. **Warning surfaces still ride Tailwind `amber`** (`bg-amber-50` /
-   `text-amber-800`, 6 sites each). They clear 4.5:1, so this is a coherence
-   issue, not an accessibility one. Most visible on the dashboard, where four
-   amber "Needs action" cards out-shout the teal accent. Either add
-   `--color-warning` / `--color-warning-bg` at hue ~74, or reduce those cards to
-   a hairline with an amber marker.
-2. **`slate-*` migration bridge.** 19 files still use `slate` class names,
-   re-pointed at the ink/rule ramp in `tokens.css`. Rename to `text-ink-2` /
-   `border-rule` / `text-muted` per site, then delete the bridge block.
-3. **`ScoreDot` band colours** (`red-500`, `orange-400`, `amber-300`) are still
-   raw Tailwind. They are dots, not text, so contrast does not bind — but they
-   are the last un-tokenised palette in the primitives.
-4. **17 route files were not touched.** They inherit the fonts and the re-tint
-   automatically; they do not yet use `Field`, and several hand-roll inputs the
-   way `login.tsx` used to.
+1. **`useResource` refetches on every mount**, so a view transition into a
+   record and straight back re-requests the list. Scroll restoration now waits
+   for that refetch (which is what its retry loop is for), so the cost shows up
+   as a brief pause before the list lands at the right offset rather than as a
+   wrong offset. A short-lived cache would remove the pause.
+2. **Bundle is one 507kB chunk** (156kB gzipped). Vite is warning about it. The
+   obvious split is `motion` + the route components via `React.lazy`.
+3. **`ScoreDot` bands are colour + number, with no third channel.** The number
+   carries the value so nothing is lost, but a shape or letter per band would
+   make the heat readable without relying on the figure.
+4. **Register renders both layouts**, so a 50-row table is 100 row nodes. The
+   alternative — a JS breakpoint — flashes the wrong layout on first paint, so
+   this is the right trade, but it is a real cost at high row counts.
+
+### Closed by the 2026-07-30 redesign
+
+- Warning surfaces now use `--color-warning` / `--color-warning-bg` (hue 65),
+  and the dashboard's four filled amber cards are one hairline queue with a
+  single amber spine per row — the accent is the loudest colour again.
+- The `slate-*` migration bridge is **deleted**. No file in `src/` references a
+  raw Tailwind colour; if a `slate-*` class reappears it will render as
+  Tailwind's blue-grey against a teal brand, which is the intended tell.
+- `ScoreDot` band colours are tokenised as `--color-band-hot/warm/mild/cold`.
+- All 13 routes plus the two auth-shell screens (`require-auth`,
+  `verification-pending`) are on the family shells and the token system.
+- `pipeline.tsx` and `lead-detail.tsx` now report a refused optimistic update
+  through the failure toast with a retry, instead of an inline paragraph.
+- **Scroll restoration** for the `<main>` scroll container
+  (`lib/use-scroll-restoration.ts`). POP restores, PUSH/REPLACE goes to the top.
+  The hard part was not saving the offset but restoring into content that has
+  not loaded yet — assigning `scrollTop` to a still-short container clamps to
+  its maximum, so the restore retries on a `ResizeObserver` until the offset
+  sticks or a 1.2s deadline passes. `lib/scroll-store.ts` holds that decision as
+  a pure function with tests.
 
 ## Exports
 

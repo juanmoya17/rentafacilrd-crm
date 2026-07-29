@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
+import { AnimatePresence, motion } from 'motion/react'
 import { useI18n } from '@/lib/i18n/context'
-import { Badge, Button, Card, EmptyState, MockNotice, PageHeader } from '@/components/ui'
+import { Badge, Button, EmptyState, MockNotice, PageHeader } from '@/components/ui'
+import { FilterBar, Register, SearchField, Segmented, type Column } from '@/components/register'
 import { LifecycleBadge, OperationBadge } from '@/components/labels'
+import { useRecordMorph } from '@/lib/motion'
 import { PROPERTIES, type Lifecycle, type Property } from '@/lib/mock/data'
 
 const LIFECYCLES: Lifecycle[] = ['draft', 'published', 'paused', 'sold', 'rejected']
@@ -16,7 +19,7 @@ function InlineAction({ property }: { property: Property }) {
   if (property.lifecycle === 'paused') return <Button>{t('properties.inlinePublish')}</Button>
   if (property.unansweredLeads > 0) {
     return (
-      <Link to={`/properties/${property.code}`}>
+      <Link to={`/properties/${property.code}`} viewTransition>
         <Button>{t('properties.inlineLeads', { count: property.unansweredLeads })}</Button>
       </Link>
     )
@@ -31,6 +34,22 @@ function InlineAction({ property }: { property: Property }) {
     }
   }
   return null
+}
+
+function PropertyName({ property }: { property: Property }) {
+  const to = `/properties/${property.code}`
+  const morph = useRecordMorph(to)
+
+  return (
+    <Link
+      to={to}
+      viewTransition
+      style={morph}
+      className="font-medium text-ink transition-colors duration-(--duration-fast) ease-out hover:text-brand-700"
+    >
+      {property.title}
+    </Link>
+  )
 }
 
 export function PropertiesPage() {
@@ -84,174 +103,181 @@ export function PropertiesPage() {
   }
 
   const allShown = filtered.length > 0 && filtered.every((property) => selected.has(property.id))
-  const rowPadding = compact ? 'py-1.5' : 'py-3'
+
+  const columns: Column<Property>[] = [
+    {
+      key: 'select',
+      header: '',
+      // Desktop-only: the card layout selects by tapping, so a checkbox column
+      // there would be a second way to do one thing.
+      card: 'hide',
+      render: (property) => (
+        <input
+          type="checkbox"
+          checked={selected.has(property.id)}
+          onChange={() => toggle(property.id)}
+          aria-label={property.title}
+          className="accent-[var(--color-accent)]"
+        />
+      ),
+    },
+    {
+      key: 'title',
+      header: t('properties.title'),
+      card: 'primary',
+      render: (property) => <PropertyName property={property} />,
+    },
+    {
+      key: 'code',
+      header: t('properties.title'),
+      card: 'meta',
+      render: (property) => (
+        <span className="font-mono">
+          {property.code} · {property.sector}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: t('common.status'),
+      render: (property) => (
+        <div className="flex flex-wrap items-center gap-1">
+          <LifecycleBadge lifecycle={property.lifecycle} />
+          <OperationBadge operation={property.operation} />
+          {property.featured && <Badge tone="warning">★</Badge>}
+        </div>
+      ),
+    },
+    {
+      key: 'price',
+      header: t('common.price'),
+      numeric: true,
+      render: (property) => <span className="text-ink">{formatCurrency(property.price)}</span>,
+    },
+    {
+      key: 'specs',
+      header: t('propertyDetail.specs'),
+      numeric: true,
+      // A.3 — specs live on the row, no drill-down to compare.
+      render: (property) => (
+        <span className="text-xs text-muted">
+          {property.bedrooms}h · {property.bathrooms}b · {property.parking}p ·{' '}
+          {formatNumber(property.area)} m²
+        </span>
+      ),
+    },
+    {
+      key: 'leads',
+      header: t('common.leads'),
+      numeric: true,
+      render: (property) => (
+        <span className="inline-flex items-center justify-end gap-1.5">
+          <span className="text-ink-2">{property.leadsCount}</span>
+          {property.unansweredLeads > 0 && (
+            <Badge tone="danger">{property.unansweredLeads}</Badge>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: t('common.actions'),
+      render: (property) => <InlineAction property={property} />,
+    },
+  ]
 
   return (
     <>
       <PageHeader
         title={t('properties.title')}
-        subtitle={t('common.resultCount', { count: filtered.length })}
         actions={
-          <div className="flex items-center gap-1" role="group" aria-label={t('properties.density')}>
-            <button
-              type="button"
-              aria-pressed={compact}
-              onClick={() => setCompact(true)}
-              className={`rounded-md px-2.5 py-1.5 text-sm ${
-                compact ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              {t('properties.densityCompact')}
-            </button>
-            <button
-              type="button"
-              aria-pressed={!compact}
-              onClick={() => setCompact(false)}
-              className={`rounded-md px-2.5 py-1.5 text-sm ${
-                !compact ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              {t('properties.densityComfortable')}
-            </button>
-          </div>
+          <Segmented
+            group="property-density"
+            label={t('properties.density')}
+            value={compact ? 'compact' : 'comfortable'}
+            onChange={(next) => setCompact(next !== 'comfortable')}
+            options={[
+              { value: 'compact', label: t('properties.densityCompact') },
+              { value: 'comfortable', label: t('properties.densityComfortable') },
+            ]}
+          />
         }
       />
       <MockNotice>{t('mock.notice', { milestone: 'A.1 – A.8' })}</MockNotice>
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <label htmlFor="property-search" className="sr-only">
-          {t('common.search')}
-        </label>
-        <input
+      <FilterBar>
+        <SearchField
           id="property-search"
-          type="search"
+          label={t('common.search')}
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={setQuery}
           placeholder={t('properties.searchPlaceholder')}
-          className="w-full max-w-xs rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-600"
+          resultLabel={t('common.resultCount', { count: filtered.length })}
         />
-        <div className="flex flex-wrap gap-1">
-          <button
-            type="button"
-            onClick={() => setStatus(null)}
-            className={`rounded-md px-2.5 py-1.5 text-sm ${
-              status === null ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            {t('common.all')}
-          </button>
-          {LIFECYCLES.map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => setStatus(option)}
-              className={`rounded-md px-2.5 py-1.5 text-sm ${
-                status === option ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              {t(`lifecycle.${option}`)}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* A.4 — the bulk bar only exists while something is selected. */}
-      {selected.size > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-brand-200 bg-brand-50 px-3 py-2">
-          <span className="text-sm font-medium text-brand-800">
-            {t('common.selectedCount', { count: selected.size })}
-          </span>
-          <div className="ml-auto flex flex-wrap gap-1.5">
-            <Button>{t('properties.bulkPublish')}</Button>
-            <Button>{t('properties.bulkPause')}</Button>
-            <Button>{t('properties.bulkFeature')}</Button>
-            <Button>{t('properties.bulkSold')}</Button>
-            {/* Destructive: confirmation lands with the real endpoint. */}
-            <Button className="!border-red-300 !text-red-700 hover:!bg-red-50">
-              {t('properties.bulkDelete')}
-            </Button>
-          </div>
-        </div>
-      )}
+        <Segmented
+          group="property-status"
+          label={t('common.status')}
+          value={status as Lifecycle | null}
+          onChange={setStatus}
+          options={[
+            { value: null, label: t('common.all') },
+            ...LIFECYCLES.map((option) => ({
+              value: option,
+              label: t(`lifecycle.${option}`),
+            })),
+          ]}
+        />
+
+        <label className="ml-auto hidden items-center gap-1.5 text-sm text-muted lg:flex">
+          <input
+            type="checkbox"
+            checked={allShown}
+            onChange={() => setSelected(allShown ? new Set() : new Set(filtered.map((p) => p.id)))}
+            className="accent-[var(--color-accent)]"
+          />
+          {t('common.all')}
+        </label>
+      </FilterBar>
+
+      {/* A.4 — the bulk bar only exists while something is selected, and it
+          slides rather than appears, so the table shifting down is explained. */}
+      <AnimatePresence initial={false}>
+        {selected.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-brand-200 bg-brand-50 px-3 py-2"
+          >
+            <span className="font-mono text-sm font-medium text-brand-800">
+              {t('common.selectedCount', { count: selected.size })}
+            </span>
+            <div className="ml-auto flex flex-wrap gap-1.5">
+              <Button>{t('properties.bulkPublish')}</Button>
+              <Button>{t('properties.bulkPause')}</Button>
+              <Button>{t('properties.bulkFeature')}</Button>
+              <Button>{t('properties.bulkSold')}</Button>
+              {/* Destructive: confirmation lands with the real endpoint. */}
+              <Button className="!border-error !text-error hover:!bg-error-bg">
+                {t('properties.bulkDelete')}
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {filtered.length === 0 ? (
         <EmptyState title={t('properties.empty')} hint={t('properties.emptyHint')} />
       ) : (
-        <Card className="overflow-x-auto">
-          <table className="w-full min-w-[56rem] text-left text-sm">
-            <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th scope="col" className="px-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={allShown}
-                    aria-label={t('common.all')}
-                    onChange={() =>
-                      setSelected(allShown ? new Set() : new Set(filtered.map((p) => p.id)))
-                    }
-                  />
-                </th>
-                <th scope="col" className="px-3 py-2 font-medium">{t('properties.title')}</th>
-                <th scope="col" className="px-3 py-2 font-medium">{t('common.status')}</th>
-                <th scope="col" className="px-3 py-2 font-medium">{t('common.price')}</th>
-                <th scope="col" className="px-3 py-2 font-medium">{t('propertyDetail.specs')}</th>
-                <th scope="col" className="px-3 py-2 font-medium">{t('common.leads')}</th>
-                <th scope="col" className="px-3 py-2 font-medium">{t('common.actions')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.map((property) => (
-                <tr key={property.id} className="hover:bg-slate-50">
-                  <td className={`px-3 ${rowPadding}`}>
-                    <input
-                      type="checkbox"
-                      checked={selected.has(property.id)}
-                      onChange={() => toggle(property.id)}
-                      aria-label={property.title}
-                    />
-                  </td>
-                  <td className={`px-3 ${rowPadding}`}>
-                    <Link
-                      to={`/properties/${property.code}`}
-                      className="font-medium text-slate-900 hover:text-brand-700"
-                    >
-                      {property.title}
-                    </Link>
-                    <p className="text-xs text-slate-500">
-                      {property.code} · {property.sector}
-                    </p>
-                  </td>
-                  <td className={`px-3 ${rowPadding}`}>
-                    <div className="flex flex-wrap items-center gap-1">
-                      <LifecycleBadge lifecycle={property.lifecycle} />
-                      <OperationBadge operation={property.operation} />
-                      {property.featured && <Badge tone="warning">★</Badge>}
-                    </div>
-                  </td>
-                  <td className={`px-3 tabular-nums text-slate-800 ${rowPadding}`}>
-                    {formatCurrency(property.price)}
-                  </td>
-                  {/* A.3 — specs live on the row, no drill-down to compare. */}
-                  <td className={`px-3 text-xs tabular-nums text-slate-500 ${rowPadding}`}>
-                    {property.bedrooms}h · {property.bathrooms}b · {property.parking}p ·{' '}
-                    {formatNumber(property.area)} m²
-                  </td>
-                  <td className={`px-3 ${rowPadding}`}>
-                    <span className="flex items-center gap-1.5">
-                      <span className="tabular-nums text-slate-700">{property.leadsCount}</span>
-                      {property.unansweredLeads > 0 && (
-                        <Badge tone="danger">{property.unansweredLeads}</Badge>
-                      )}
-                    </span>
-                  </td>
-                  <td className={`px-3 ${rowPadding}`}>
-                    <InlineAction property={property} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <Register
+          label={t('properties.title')}
+          columns={columns}
+          rows={filtered}
+          rowKey={(property) => property.id}
+          density={compact ? 'compact' : 'comfortable'}
+        />
       )}
     </>
   )

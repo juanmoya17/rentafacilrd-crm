@@ -1,45 +1,51 @@
+import { motion } from 'motion/react'
 import { useAuth } from '@/lib/auth-context'
 import { useI18n } from '@/lib/i18n/context'
 import { Card, PageHeader } from '@/components/ui'
+import { FactList, RecordSectionHead } from '@/components/record'
 import { LanguageSwitcher } from '@/components/language-switcher'
+import { useRowReveal } from '@/lib/motion'
 
 export function SettingsPage() {
   const { state } = useAuth()
   const { t } = useI18n()
+  const reveal = useRowReveal()
   if (state.status !== 'authenticated') return null
+
+  const profile = [
+    { label: t('settings.name'), value: state.user.name },
+    { label: t('auth.email'), value: state.user.email },
+    { label: t('settings.agentId'), value: String(state.user.id), numeric: true },
+  ]
 
   return (
     <>
       <PageHeader title={t('settings.title')} />
 
-      <div className="grid max-w-2xl gap-4">
-        <Card className="p-4">
-          <h2 className="mb-3 text-sm font-semibold text-slate-900">{t('settings.profile')}</h2>
-          <dl className="space-y-2 text-sm">
-            <div className="flex justify-between gap-3">
-              <dt className="text-slate-500">{t('settings.name')}</dt>
-              <dd className="font-medium text-slate-900">{state.user.name}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-slate-500">{t('auth.email')}</dt>
-              <dd className="font-medium text-slate-900">{state.user.email}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-slate-500">{t('settings.agentId')}</dt>
-              <dd className="tabular-nums font-medium text-slate-900">{state.user.id}</dd>
-            </div>
-          </dl>
-        </Card>
+      {/* Preferences is the one family with no data density to serve, so it is
+          the one place the measure is held to reading width rather than filled. */}
+      <div className="grid max-w-2xl gap-6">
+        <motion.section {...reveal(0)}>
+          <RecordSectionHead label={t('settings.profile')} />
+          <Card className="p-4">
+            <FactList facts={profile} />
+          </Card>
+        </motion.section>
 
-        <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
-          <h2 className="text-sm font-semibold text-slate-900">{t('settings.language')}</h2>
-          <LanguageSwitcher />
-        </Card>
+        <motion.section {...reveal(1)}>
+          <RecordSectionHead label={t('settings.language')} />
+          <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <p className="text-sm text-muted">{t('language.label')}</p>
+            <LanguageSwitcher />
+          </Card>
+        </motion.section>
 
-        <Card className="p-4">
-          <h2 className="mb-2 text-sm font-semibold text-slate-900">{t('settings.session')}</h2>
-          <p className="text-sm text-slate-600">{t('settings.sessionNote')}</p>
-        </Card>
+        <motion.section {...reveal(2)}>
+          <RecordSectionHead label={t('settings.session')} />
+          <Card className="p-4">
+            <p className="max-w-prose text-sm text-ink-2">{t('settings.sessionNote')}</p>
+          </Card>
+        </motion.section>
       </div>
     </>
   )

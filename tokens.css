@@ -86,6 +86,15 @@
   --color-success: oklch(52% 0.125 155); /* 4.8:1 on white */
   --color-success-bg: oklch(96.5% 0.022 155);
 
+  /* Warning was the last signal still riding Tailwind's `amber`. Hue 65 is
+   * 9° off `rent` (74) — close, but the two never carry the same class of
+   * signal (rent is an operation, warning is a status) and the label always
+   * disambiguates. It is 40° off `error` (25), so an alert can never be
+   * mistaken for a warning. */
+  --color-warning: oklch(54.5% 0.122 65); /* 4.7:1 on paper, 4.6:1 on its bg */
+  --color-warning-bg: oklch(96.5% 0.022 65);
+  --color-warning-edge: oklch(78% 0.09 65); /* decorative card edge only */
+
   /* Operation colours the buyer already reads on the public listings. The
    * backgrounds are the recognisable part and are preserved exactly; the
    * *labels* are darkened along the same hue, because the original pairings
@@ -101,31 +110,43 @@
    * bar or a dot and must never be text. Unused in the CRM today. */
   --color-accent-amber: #ffa928;
 
-  /* ---- Motion. Cut, not decorated: no library, two primitives. ---------- */
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --duration-fast: 120ms;
+  /* Lead-score heat ramp (D.1). Dots only — never text, so the bar is "reads
+   * as a distinct step from its neighbours", not 4.5:1. The score number
+   * beside the dot is what actually carries the value, which is why a
+   * colour-blind reader loses nothing here. */
+  --color-band-hot: oklch(58% 0.19 25);
+  --color-band-warm: oklch(70% 0.15 55);
+  --color-band-mild: oklch(82% 0.13 85);
+  --color-band-cold: oklch(64% 0.014 195); /* = rule-2; absence of heat */
 
-  /* ---- Migration bridge -------------------------------------------------
-   * 19 files still say `slate`. Rather than a 19-file rename, slate is
-   * re-pointed at the ramp above, so every existing `text-slate-700` /
-   * `border-slate-200` re-tints for free and nothing needs editing.
+  /* ---- Motion -----------------------------------------------------------
+   * These three names deliberately OVERRIDE Tailwind's own `--ease-*`, so a
+   * class of `ease-out` anywhere in the app resolves to the crafted curve.
+   * One name, one value — no second easing vocabulary to keep in sync.
    *
-   * Two steps are deliberately NOT one-to-one, because the originals failed
-   * contrast and a faithful alias would preserve the bug:
-   *   slate-400 → muted    (was 2.6:1 on white — 8 call sites, all text)
-   *   slate-300 → rule-2   (was 1.5:1 as a control boundary)
-   * Both are collapsed on purpose. Migrate those sites to `text-muted` /
-   * `border-rule-2` and this whole block can be deleted. */
-  --color-slate-50: oklch(98.2% 0.004 195);
-  --color-slate-100: var(--color-surface-sunken);
-  --color-slate-200: var(--color-rule);
-  --color-slate-300: var(--color-rule-2);
-  --color-slate-400: var(--color-muted);
-  --color-slate-500: var(--color-muted);
-  --color-slate-600: oklch(46% 0.016 195);
-  --color-slate-700: var(--color-ink-2);
-  --color-slate-800: oklch(27.5% 0.015 195);
-  --color-slate-900: var(--color-ink);
+   * Tailwind's defaults were cubic-bezier(0, 0, 0.2, 1) and friends; those
+   * read flat. `ease` (the browser default) is never used. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* entering — decelerate in */
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0); /* leaving — accelerate away */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1); /* symmetrical toggles */
+
+  /* Three buckets, no invented values in between. Exits run at ~70% of the
+   * matching entrance, which is why there is no separate exit duration. */
+  --duration-fast: 120ms; /* press tick, colour shift, checkbox */
+  --duration-base: 200ms; /* hover, row settle, segmented slide */
+  --duration-slow: 320ms; /* view transition, reveal, toast, modal */
+
+  /* Per-row reveal offset. Capped in CSS at 12 steps (~264ms) so a 50-row
+   * table finishes settling instead of dribbling in for two seconds. */
+  --stagger-step: 22ms;
+
+  /* The `slate` migration bridge that lived here is gone. It re-pointed
+   * Tailwind's slate ramp at the ink/rule tokens so 19 un-migrated files
+   * re-tinted for free; every one of those call sites now names a semantic
+   * token directly, so the aliases were the only thing keeping `slate` alive.
+   * Nothing in src/ references a raw Tailwind colour any more — if a `slate-*`
+   * class reappears, it is a mistake, and it will now render as Tailwind's
+   * blue-grey against a teal brand, which is the point. */
 }
 
 /* Radii are Tailwind's own, named here for the record rather than re-declared,

@@ -51,6 +51,90 @@ body {
   }
 }
 
+/* ---------------------------------------------------------------- reveals */
+
+/* One-shot entrance. Rows and cards set `--i` to their DOM index; the delay is
+ * clamped at 12 steps so a 50-row table settles in ~264ms instead of dribbling
+ * in for two seconds. */
+@keyframes rf-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.rf-rise {
+  animation: rf-rise var(--duration-slow) var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 12) * var(--stagger-step));
+}
+
+/* In the Register card layout the primary column's link is stretched to cover
+ * the whole card. This is the alternative to wrapping the card in a second
+ * anchor, which would nest <a> inside <a> — invalid, and React warns on it.
+ * Interactive siblings later in the DOM paint above this automatically. */
+.rf-cardlink > a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+/* -------------------------------------------------------- view transitions
+
+ * react-router calls document.startViewTransition() for any navigation from a
+ * <Link viewTransition>. Without the rules below the browser cross-fades the
+ * entire page — including the sidebar and header, which visibly blink even
+ * though they did not change.
+ *
+ * Naming the three shell regions splits them into their own transition groups.
+ * Header and sidebar are geometrically identical across routes, so holding
+ * their animation at `none` keeps them perfectly still; only the main region
+ * moves. */
+.vt-header {
+  view-transition-name: app-header;
+}
+.vt-sidebar {
+  view-transition-name: app-sidebar;
+}
+.vt-main {
+  view-transition-name: app-main;
+}
+
+::view-transition-old(app-header),
+::view-transition-new(app-header),
+::view-transition-old(app-sidebar),
+::view-transition-new(app-sidebar) {
+  animation: none;
+}
+
+::view-transition-old(app-main) {
+  animation: rf-vt-out calc(var(--duration-slow) * 0.7) var(--ease-in) both;
+}
+::view-transition-new(app-main) {
+  animation: rf-vt-in var(--duration-slow) var(--ease-out) both;
+}
+
+@keyframes rf-vt-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@keyframes rf-vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* The shared element: the row you clicked morphs into the record heading. The
+ * name is applied to exactly one element per side of the navigation (see
+ * useRecordMorph in lib/motion.ts) — two elements sharing a name aborts the
+ * whole transition, which is the most common way this feature silently dies. */
+::view-transition-group(record-title) {
+  animation-duration: var(--duration-slow);
+  animation-timing-function: var(--ease-out);
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* The spinner's label already reads "Guardando…", so the rotation is
    * redundant — drop it rather than slow it down. */
@@ -60,5 +144,19 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* `*` does not match view-transition pseudo-elements, so they need saying
+   * again — otherwise the one piece of motion a vestibular user most needs
+   * gone is the one that survives. Cutting the animation entirely makes the
+   * route change instant rather than slow. */
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+
+  .rf-rise {
+    animation: none;
   }
 }
