@@ -109,7 +109,9 @@ describe('messageFor', () => {
     expect(messageFor({ kind: 'stale' }, t)).toBe('bulk.stale')
   })
 
-  it('passes the server message through untouched for "other"', () => {
-    expect(messageFor({ kind: 'other', message: 'ids required' }, t)).toBe('ids required')
+  it('keeps the server message for "other" but still says nothing changed', () => {
+    expect(messageFor({ kind: 'other', message: 'ids required' }, t)).toBe(
+      'ids required bulk.nothingChanged',
+    )
   })
 })

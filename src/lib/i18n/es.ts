@@ -236,6 +236,7 @@ export const es = {
   'bulk.stale': 'La selección ya no es válida. Actualizamos la lista.',
   'bulk.balance': 'Créditos disponibles: {count}',
   'bulk.balanceUnlimited': 'Créditos ilimitados',
+  'bulk.balanceUnavailable': 'Créditos: no disponibles',
 
   'pager.previous': 'Anterior',
   'pager.next': 'Siguiente',

@@ -138,7 +138,7 @@ function Pager({
 
 export function PropertiesPage() {
   const { t, formatCurrency, formatNumber } = useI18n()
-  const { fail, succeed } = useToast()
+  const { fail } = useToast()
   const [params, setParams] = useSearchParams()
   const [compact, setCompact] = useState(true)
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -457,12 +457,13 @@ export function PropertiesPage() {
 
       {/* A.4 — the bulk bar only exists while something is selected, and it
           slides rather than appears, so the table shifting down is explained.
-          BulkBar (Card inside) now owns the visual chrome that used to live on
-          this wrapper — the wrapper is animation-only. The balance needs the
-          summary to be ready: a selection made in the instant before the
-          summary resolves renders nothing rather than a bar with no balance. */}
+          BulkBar owns its own visual chrome — the wrapper is animation-only.
+          Gated on selection alone, not on the summary being ready: only
+          `feature` needs the balance, so a failed/slow summary fetch must not
+          take the other four actions down with it (BulkBar disables just
+          `feature` when balance is null). */}
       <AnimatePresence initial={false}>
-        {selected.size > 0 && summaryResource.status === 'ready' && (
+        {selected.size > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -471,13 +472,13 @@ export function PropertiesPage() {
           >
             <BulkBar
               ids={[...selected]}
-              balance={summaryResource.data.featured_balance}
-              onDone={(affected) => {
-                // Success is transient and needs no action — a toast. Failures
-                // stay inline in the bar (see BulkBar): a shortfall is a number
-                // the agent has to read and act on, and a toast that vanishes
-                // mid-correction is the wrong container for it.
-                succeed(t('bulk.applied', { count: affected }))
+              balance={summaryResource.status === 'ready' ? summaryResource.data.featured_balance : null}
+              onDone={() => {
+                // Rows, KPIs, the cleared selection and the bar closing are
+                // already four visible signals the batch landed — a success
+                // toast would be a fifth saying nothing new (design.md:143,
+                // "no success toasts"). Failures stay inline in the bar: a
+                // shortfall is a number the agent has to read and act on.
                 setSelected(new Set())
                 resource.reload()
                 summaryResource.reload()

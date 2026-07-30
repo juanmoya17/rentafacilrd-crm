@@ -118,9 +118,10 @@ export function classifyBatchError(error: unknown): BatchFailure {
  * by the bulk bar (Task 6) and the inline publish action (Task 7) so the
  * mapping cannot drift between the two call sites.
  *
- * Every branch but `other` appends `bulk.nothingChanged` — the batch endpoint
- * is all-or-nothing, and the one thing every refusal has in common is that
- * nothing was applied.
+ * Every branch but `stale` appends `bulk.nothingChanged` — the batch endpoint
+ * is all-or-nothing, and the one thing every refusal (including an
+ * unclassified `other`, e.g. a 422) has in common is that nothing was
+ * applied. `stale` omits it: the list is refreshing anyway.
  */
 export function messageFor(failure: BatchFailure, t: Translate): string {
   switch (failure.kind) {
@@ -133,7 +134,7 @@ export function messageFor(failure: BatchFailure, t: Translate): string {
     case 'stale':
       return t('bulk.stale')
     case 'other':
-      return failure.message
+      return `${failure.message} ${t('bulk.nothingChanged')}`
   }
 }
 

@@ -232,6 +232,7 @@ export const en: Record<TranslationKey, string> = {
   'bulk.stale': 'The selection is no longer valid. We refreshed the list.',
   'bulk.balance': 'Credits available: {count}',
   'bulk.balanceUnlimited': 'Unlimited credits',
+  'bulk.balanceUnavailable': 'Credits: unavailable',
 
   'pager.previous': 'Previous',
   'pager.next': 'Next',
