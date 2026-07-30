@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '@/lib/api'
-import { classifyBatchError, propertyParams } from './properties'
+import type { Translate } from '@/lib/i18n/context'
+import { classifyBatchError, messageFor, propertyParams, type BatchFailure } from './properties'
 
 describe('propertyParams', () => {
   it('drops empty and undefined values so the URL stays clean', () => {
@@ -64,5 +65,51 @@ describe('classifyBatchError', () => {
 
   it('survives a non-ApiError without throwing', () => {
     expect(classifyBatchError(new Error('offline')).kind).toBe('other')
+  })
+})
+
+describe('messageFor', () => {
+  // Echoes the key and interpolates vars so assertions can check the exact
+  // pieces without depending on the real dictionaries.
+  const t: Translate = (key, vars) => {
+    if (vars === undefined) return key
+    return `${key}(${Object.entries(vars)
+      .map(([name, value]) => `${name}=${value}`)
+      .join(',')})`
+  }
+
+  it('produces a non-empty string for every kind', () => {
+    const failures: BatchFailure[] = [
+      { kind: 'shortfall', shortfall: { need: 20, have: 12, short: 8 } },
+      { kind: 'notApproved', ids: [7, 9] },
+      { kind: 'alreadyFeatured', ids: [4] },
+      { kind: 'stale' },
+      { kind: 'other', message: 'ids required' },
+    ]
+    for (const failure of failures) {
+      expect(messageFor(failure, t).length).toBeGreaterThan(0)
+    }
+  })
+
+  it('carries the exact shortfall numbers and says nothing changed', () => {
+    const result = messageFor({ kind: 'shortfall', shortfall: { need: 20, have: 12, short: 8 } }, t)
+    expect(result).toBe('bulk.shortfall(need=20,have=12,short=8) bulk.nothingChanged')
+  })
+
+  it('carries the offending count for notApproved and alreadyFeatured, and says nothing changed', () => {
+    expect(messageFor({ kind: 'notApproved', ids: [7, 9] }, t)).toBe(
+      'bulk.notApproved(count=2) bulk.nothingChanged',
+    )
+    expect(messageFor({ kind: 'alreadyFeatured', ids: [4] }, t)).toBe(
+      'bulk.alreadyFeatured(count=1) bulk.nothingChanged',
+    )
+  })
+
+  it('does not append nothingChanged to a stale selection — onStale() already covers it', () => {
+    expect(messageFor({ kind: 'stale' }, t)).toBe('bulk.stale')
+  })
+
+  it('passes the server message through untouched for "other"', () => {
+    expect(messageFor({ kind: 'other', message: 'ids required' }, t)).toBe('ids required')
   })
 })

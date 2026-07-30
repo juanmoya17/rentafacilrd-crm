@@ -1,4 +1,5 @@
 import { ApiError, api } from '@/lib/api'
+import type { Translate } from '@/lib/i18n/context'
 import type { Page } from './api'
 import type {
   BulkAction,
@@ -110,6 +111,30 @@ export function classifyBatchError(error: unknown): BatchFailure {
   }
 
   return { kind: 'other', message }
+}
+
+/**
+ * Words for each of the four refusals, plus the non-refusal fallback. Shared
+ * by the bulk bar (Task 6) and the inline publish action (Task 7) so the
+ * mapping cannot drift between the two call sites.
+ *
+ * Every branch but `other` appends `bulk.nothingChanged` — the batch endpoint
+ * is all-or-nothing, and the one thing every refusal has in common is that
+ * nothing was applied.
+ */
+export function messageFor(failure: BatchFailure, t: Translate): string {
+  switch (failure.kind) {
+    case 'shortfall':
+      return `${t('bulk.shortfall', { ...failure.shortfall })} ${t('bulk.nothingChanged')}`
+    case 'notApproved':
+      return `${t('bulk.notApproved', { count: failure.ids.length })} ${t('bulk.nothingChanged')}`
+    case 'alreadyFeatured':
+      return `${t('bulk.alreadyFeatured', { count: failure.ids.length })} ${t('bulk.nothingChanged')}`
+    case 'stale':
+      return t('bulk.stale')
+    case 'other':
+      return failure.message
+  }
 }
 
 function query(params: Record<string, string>): string {

@@ -6,6 +6,7 @@ import { Badge, Button, EmptyState, ErrorState, LoadingState, MockNotice, PageHe
 import { FilterBar, Register, SearchField, Segmented, type Column } from '@/components/register'
 import { LifecycleBadge, ModerationBadge, OperationBadge } from '@/components/labels'
 import { KpiStrip } from '@/components/kpi-strip'
+import { BulkBar } from '@/components/bulk-bar'
 import { useRecordMorph } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { useToast } from '@/lib/toast-context'
@@ -137,7 +138,7 @@ function Pager({
 
 export function PropertiesPage() {
   const { t, formatCurrency, formatNumber } = useI18n()
-  const { fail } = useToast()
+  const { fail, succeed } = useToast()
   const [params, setParams] = useSearchParams()
   const [compact, setCompact] = useState(true)
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -455,29 +456,37 @@ export function PropertiesPage() {
       </FilterBar>
 
       {/* A.4 — the bulk bar only exists while something is selected, and it
-          slides rather than appears, so the table shifting down is explained. */}
+          slides rather than appears, so the table shifting down is explained.
+          BulkBar (Card inside) now owns the visual chrome that used to live on
+          this wrapper — the wrapper is animation-only. The balance needs the
+          summary to be ready: a selection made in the instant before the
+          summary resolves renders nothing rather than a bar with no balance. */}
       <AnimatePresence initial={false}>
-        {selected.size > 0 && (
+        {selected.size > 0 && summaryResource.status === 'ready' && (
           <motion.div
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-brand-200 bg-brand-50 px-3 py-2"
           >
-            <span className="font-mono text-sm font-medium text-brand-800">
-              {t('common.selectedCount', { count: selected.size })}
-            </span>
-            <div className="ml-auto flex flex-wrap gap-1.5">
-              <Button>{t('properties.bulkPublish')}</Button>
-              <Button>{t('properties.bulkPause')}</Button>
-              <Button>{t('properties.bulkFeature')}</Button>
-              <Button>{t('properties.bulkSold')}</Button>
-              {/* Destructive: confirmation lands with the real endpoint. */}
-              <Button className="!border-error !text-error hover:!bg-error-bg">
-                {t('properties.bulkDelete')}
-              </Button>
-            </div>
+            <BulkBar
+              ids={[...selected]}
+              balance={summaryResource.data.featured_balance}
+              onDone={(affected) => {
+                // Success is transient and needs no action — a toast. Failures
+                // stay inline in the bar (see BulkBar): a shortfall is a number
+                // the agent has to read and act on, and a toast that vanishes
+                // mid-correction is the wrong container for it.
+                succeed(t('bulk.applied', { count: affected }))
+                setSelected(new Set())
+                resource.reload()
+                summaryResource.reload()
+              }}
+              onStale={() => {
+                setSelected(new Set())
+                resource.reload()
+              }}
+            />
           </motion.div>
         )}
       </AnimatePresence>
