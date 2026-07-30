@@ -187,6 +187,7 @@ export const es = {
   'leadDetail.noteHint': 'Una nota es privada y no detiene el contador de SLA. Un mensaje, llamada o visita sí.',
 
   'properties.title': 'Mis propiedades',
+  'properties.code': 'Código',
   'properties.searchPlaceholder': 'Título, ciudad o código RF####',
   'properties.density': 'Densidad',
   'properties.densityCompact': 'Compacto',

@@ -183,6 +183,7 @@ export const en: Record<TranslationKey, string> = {
   'leadDetail.noteHint': 'A note is private and does not stop the SLA clock. A message, call or visit does.',
 
   'properties.title': 'My properties',
+  'properties.code': 'Code',
   'properties.searchPlaceholder': 'Title, city or RF#### code',
   'properties.density': 'Density',
   'properties.densityCompact': 'Compact',

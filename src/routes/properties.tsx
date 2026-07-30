@@ -1,36 +1,77 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { AnimatePresence, motion } from 'motion/react'
 import { useI18n } from '@/lib/i18n/context'
 import { Badge, Button, EmptyState, ErrorState, LoadingState, MockNotice, PageHeader } from '@/components/ui'
 import { FilterBar, Register, SearchField, Segmented, type Column } from '@/components/register'
-import { LifecycleBadge, OperationBadge } from '@/components/labels'
+import { LifecycleBadge, ModerationBadge, OperationBadge } from '@/components/labels'
 import { KpiStrip } from '@/components/kpi-strip'
 import { useRecordMorph } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
-import { getPropertySummary, propertyParams, type PropertyFilters } from '@/lib/crm/properties'
-import { PROPERTIES, type Lifecycle, type Property } from '@/lib/mock/data'
+import { useToast } from '@/lib/toast-context'
+import {
+  getPropertySummary,
+  listProperties,
+  propertyParams,
+  PROPERTY_SORTS,
+  type PropertyFilters,
+  type PropertySort,
+} from '@/lib/crm/properties'
+import { LIFECYCLES, MAX_BATCH, type CrmProperty, type Lifecycle } from '@/lib/crm/types'
 
-const LIFECYCLES: Lifecycle[] = ['draft', 'published', 'paused', 'sold', 'rejected']
+const PAGE_SIZE = 30
 const EXPIRY_WINDOW_MS = 3 * 86_400_000
 
+/**
+ * URL -> filters. An unrecognised `lifecycle` or `sort` (a stale bookmark)
+ * falls back to undefined rather than erroring — the same philosophy
+ * PropertyListQuery::sort() uses server-side, where an unknown sort shows a
+ * list instead of a 422.
+ */
+function filtersFromParams(params: URLSearchParams): PropertyFilters {
+  const num = (key: string): number | undefined => {
+    const raw = params.get(key)
+    if (raw === null || raw === '') return undefined
+    const value = Number(raw)
+    return Number.isFinite(value) ? value : undefined
+  }
+
+  const lifecycle = params.get('lifecycle')
+  const sort = params.get('sort')
+  const featured = params.get('is_featured')
+
+  return {
+    search: params.get('search') ?? undefined,
+    lifecycle: LIFECYCLES.includes(lifecycle as Lifecycle) ? (lifecycle as Lifecycle) : undefined,
+    sort: PROPERTY_SORTS.includes(sort as PropertySort) ? (sort as PropertySort) : undefined,
+    is_featured: featured === null ? undefined : featured === 'true',
+    city_id: num('city_id'),
+    price_min: num('price_min'),
+    price_max: num('price_max'),
+    area_min: num('area_min'),
+    area_max: num('area_max'),
+    offset: num('offset') ?? 0,
+    limit: PAGE_SIZE,
+  }
+}
+
 /** A.7 — the one action this listing needs, without opening the detail. */
-function InlineAction({ property }: { property: Property }) {
+function InlineAction({ property }: { property: CrmProperty }) {
   const { t } = useI18n()
 
   if (property.lifecycle === 'rejected') return <Button>{t('properties.inlineFix')}</Button>
   if (property.lifecycle === 'paused') return <Button>{t('properties.inlinePublish')}</Button>
-  if (property.unansweredLeads > 0) {
+  if (property.unanswered_leads > 0) {
     return (
       <Link to={`/properties/${property.code}`} viewTransition>
-        <Button>{t('properties.inlineLeads', { count: property.unansweredLeads })}</Button>
+        <Button>{t('properties.inlineLeads', { count: property.unanswered_leads })}</Button>
       </Link>
     )
   }
-  if (property.featuredExpiresAt !== null) {
+  if (property.featured_expires_at !== null) {
     const days = Math.max(
       0,
-      Math.ceil((new Date(property.featuredExpiresAt).getTime() - Date.now()) / 86_400_000),
+      Math.ceil((new Date(property.featured_expires_at).getTime() - Date.now()) / 86_400_000),
     )
     if (days * 86_400_000 < EXPIRY_WINDOW_MS) {
       return <Button variant="primary">{t('properties.inlineRenew', { days })}</Button>
@@ -39,7 +80,7 @@ function InlineAction({ property }: { property: Property }) {
   return null
 }
 
-function PropertyName({ property }: { property: Property }) {
+function PropertyName({ property }: { property: CrmProperty }) {
   const to = `/properties/${property.code}`
   const morph = useRecordMorph(to)
 
@@ -55,55 +96,105 @@ function PropertyName({ property }: { property: Property }) {
   )
 }
 
+/** Offset pager. One component, used in the desktop `<tfoot>` and the mobile fallback. */
+function Pager({
+  offset,
+  total,
+  itemsCount,
+  onOffsetChange,
+}: {
+  offset: number
+  total: number
+  itemsCount: number
+  onOffsetChange: (nextOffset: number) => void
+}) {
+  const { t } = useI18n()
+  const from = total === 0 ? 0 : offset + 1
+  const to = Math.min(offset + itemsCount, total)
+
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="font-mono text-xs text-muted">{t('pager.range', { from, to, total })}</span>
+      <div className="flex gap-1.5">
+        <Button
+          disabled={offset === 0}
+          onClick={() => onOffsetChange(Math.max(0, offset - PAGE_SIZE))}
+        >
+          {t('pager.previous')}
+        </Button>
+        <Button disabled={to >= total} onClick={() => onOffsetChange(offset + PAGE_SIZE)}>
+          {t('pager.next')}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export function PropertiesPage() {
   const { t, formatCurrency, formatNumber } = useI18n()
+  const { fail } = useToast()
   const [params, setParams] = useSearchParams()
-  const [query, setQuery] = useState('')
   const [compact, setCompact] = useState(true)
   const [selected, setSelected] = useState<Set<number>>(new Set())
+
+  // URL is the single source of filter truth — no filter is ever mirrored
+  // into useState, or the two would drift.
+  const filters = useMemo(() => filtersFromParams(params), [params])
+  const serializedFilters = JSON.stringify(propertyParams(filters))
+
+  // Local mirror ONLY for the text input, so typing stays responsive. The URL
+  // remains the source of truth; this catches up to it 300ms later.
+  const [draftSearch, setDraftSearch] = useState(filters.search ?? '')
+
+  const setParam = useCallback(
+    (key: string, value: string | null) => {
+      const updated = new URLSearchParams(params)
+      if (value === null) updated.delete(key)
+      else updated.set(key, value)
+      // Any filter change invalidates the page cursor — otherwise page 4 of
+      // the old result set silently shows an empty page 4 of the new one.
+      if (key !== 'offset') updated.delete('offset')
+      setParams(updated, { replace: true })
+    },
+    [params, setParams],
+  )
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (draftSearch === (filters.search ?? '')) return
+      setParam('search', draftSearch === '' ? null : draftSearch)
+    }, 300)
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [draftSearch, filters.search, setParam])
+
+  // Keeps the mirror caught up when the URL's search changes for a reason
+  // other than this same debounce (a KPI shortcut replacing the filters, or
+  // back/forward navigation) — otherwise the stale draft re-fires the timer
+  // above and silently reinstates a search the user just navigated away from.
+  useEffect(() => {
+    setDraftSearch(filters.search ?? '')
+  }, [filters.search])
 
   // A.5 — the screen owns this fetch, not the strip: Task 6's bulk bar reads
   // the same featured_balance, and a batch action has to refresh both the
   // rows and this summary through the one `reload` below.
   const summaryResource = useResource((signal) => getPropertySummary(signal), [])
 
-  const handleKpiPick = (filter: PropertyFilters) => {
-    setParams(propertyParams(filter), { replace: true })
+  const resource = useResource((signal) => listProperties(filters, signal), [serializedFilters])
+
+  // A selection that survived a filter change refers to rows nobody can see.
+  // Acting on invisible rows is exactly what the all-or-nothing 404 protects
+  // against, so drop it here rather than letting the server refuse later.
+  useEffect(() => {
     setSelected(new Set())
-  }
+  }, [serializedFilters])
 
-  const status = params.get('status')
-  const leadsFilter = params.get('leads')
-  const featuredFilter = params.get('featured')
-
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase()
-    return PROPERTIES.filter((property) => {
-      if (status !== null && property.lifecycle !== status) return false
-      if (leadsFilter === 'unanswered' && property.unansweredLeads === 0) return false
-      if (featuredFilter === 'expiring') {
-        if (property.featuredExpiresAt === null) return false
-        if (new Date(property.featuredExpiresAt).getTime() - Date.now() >= EXPIRY_WINDOW_MS) {
-          return false
-        }
-      }
-      if (needle === '') return true
-      return (
-        property.title.toLowerCase().includes(needle) ||
-        property.city.toLowerCase().includes(needle) ||
-        property.code.toLowerCase().includes(needle)
-      )
-    })
-  }, [query, status, leadsFilter, featuredFilter])
-
-  const setStatus = (next: Lifecycle | null) => {
-    const updated = new URLSearchParams(params)
-    if (next === null) updated.delete('status')
-    else updated.set('status', next)
-    updated.delete('leads')
-    updated.delete('featured')
-    setParams(updated, { replace: true })
-    setSelected(new Set())
+  const applyKpiFilter = (filter: PropertyFilters) => {
+    // A shortcut is a jump to a view, not an additional constraint —
+    // replaces the current filters rather than merging into them.
+    setParams(new URLSearchParams(propertyParams(filter)), { replace: true })
   }
 
   const toggle = (id: number) => {
@@ -115,9 +206,26 @@ export function PropertiesPage() {
     })
   }
 
-  const allShown = filtered.length > 0 && filtered.every((property) => selected.has(property.id))
+  if (resource.status === 'loading') return <LoadingState label={t('common.loading')} />
+  if (resource.status === 'error') {
+    return (
+      <ErrorState message={resource.message} retryLabel={t('common.retry')} onRetry={resource.reload} />
+    )
+  }
 
-  const columns: Column<Property>[] = [
+  const { items, total } = resource.data
+  const offset = filters.offset ?? 0
+
+  const selectAllShown = () => {
+    // The server refuses more than MAX_BATCH ids. Cap here so the agent gets
+    // a clear message instead of a 422 they cannot act on.
+    setSelected(new Set(items.slice(0, MAX_BATCH).map((property) => property.id)))
+    if (items.length > MAX_BATCH) fail(t('bulk.cappedAt', { max: MAX_BATCH }))
+  }
+
+  const allShown = items.length > 0 && items.every((property) => selected.has(property.id))
+
+  const columns: Column<CrmProperty>[] = [
     {
       key: 'select',
       header: '',
@@ -142,40 +250,49 @@ export function PropertiesPage() {
     },
     {
       key: 'code',
-      header: t('properties.title'),
+      header: t('properties.code'),
       card: 'meta',
       render: (property) => (
         <span className="font-mono">
-          {property.code} · {property.sector}
+          {property.city !== null ? `${property.code} · ${property.city}` : property.code}
         </span>
       ),
     },
     {
       key: 'status',
       header: t('common.status'),
-      render: (property) => (
-        <div className="flex flex-wrap items-center gap-1">
-          <LifecycleBadge lifecycle={property.lifecycle} />
-          <OperationBadge operation={property.operation} />
-          {property.featured && <Badge tone="warning">★</Badge>}
-        </div>
-      ),
+      render: (property) => {
+        // Don't stack two badges saying the same thing: a row rejected at both
+        // lifecycle and moderation would otherwise show "Rechazada" twice.
+        const moderationAddsNothing =
+          property.lifecycle === 'rejected' && property.moderation === 'rejected'
+        return (
+          <div className="flex flex-wrap items-center gap-1">
+            <LifecycleBadge lifecycle={property.lifecycle} />
+            <OperationBadge operation={property.operation} />
+            {!moderationAddsNothing && <ModerationBadge moderation={property.moderation} />}
+            {property.featured_expires_at !== null && <Badge tone="warning">★</Badge>}
+          </div>
+        )
+      },
     },
     {
       key: 'price',
       header: t('common.price'),
       numeric: true,
-      render: (property) => <span className="text-ink">{formatCurrency(property.price)}</span>,
+      render: (property) => (
+        <span className="text-ink">
+          {property.price === null ? '—' : formatCurrency(property.price)}
+        </span>
+      ),
     },
     {
-      key: 'specs',
-      header: t('propertyDetail.specs'),
+      key: 'area',
+      header: t('common.area'),
       numeric: true,
-      // A.3 — specs live on the row, no drill-down to compare.
       render: (property) => (
         <span className="text-xs text-muted">
-          {property.bedrooms}h · {property.bathrooms}b · {property.parking}p ·{' '}
-          {formatNumber(property.area)} m²
+          {property.area === null ? '—' : `${formatNumber(property.area)} m²`}
         </span>
       ),
     },
@@ -185,9 +302,9 @@ export function PropertiesPage() {
       numeric: true,
       render: (property) => (
         <span className="inline-flex items-center justify-end gap-1.5">
-          <span className="text-ink-2">{property.leadsCount}</span>
-          {property.unansweredLeads > 0 && (
-            <Badge tone="danger">{property.unansweredLeads}</Badge>
+          <span className="text-ink-2">{property.leads_count}</span>
+          {property.unanswered_leads > 0 && (
+            <Badge tone="danger">{property.unanswered_leads}</Badge>
           )}
         </span>
       ),
@@ -198,6 +315,15 @@ export function PropertiesPage() {
       render: (property) => <InlineAction property={property} />,
     },
   ]
+
+  const pager = (
+    <Pager
+      offset={offset}
+      total={total}
+      itemsCount={items.length}
+      onOffsetChange={(next) => setParam('offset', String(next))}
+    />
+  )
 
   return (
     <>
@@ -233,24 +359,25 @@ export function PropertiesPage() {
         </div>
       )}
       {summaryResource.status === 'ready' && (
-        <KpiStrip summary={summaryResource.data} onPick={handleKpiPick} />
+        <KpiStrip summary={summaryResource.data} onPick={applyKpiFilter} />
       )}
 
       <FilterBar>
         <SearchField
           id="property-search"
           label={t('common.search')}
-          value={query}
-          onChange={setQuery}
+          value={draftSearch}
+          onChange={setDraftSearch}
           placeholder={t('properties.searchPlaceholder')}
-          resultLabel={t('common.resultCount', { count: filtered.length })}
+          resultLabel={t('common.resultCount', { count: total })}
+          pending={draftSearch !== (filters.search ?? '')}
         />
 
         <Segmented
-          group="property-status"
+          group="property-lifecycle"
           label={t('common.status')}
-          value={status as Lifecycle | null}
-          onChange={setStatus}
+          value={filters.lifecycle ?? null}
+          onChange={(next) => setParam('lifecycle', next)}
           options={[
             { value: null, label: t('common.all') },
             ...LIFECYCLES.map((option) => ({
@@ -260,11 +387,29 @@ export function PropertiesPage() {
           ]}
         />
 
+        <div className="flex items-center gap-1.5">
+          <label htmlFor="property-sort" className="text-sm text-muted">
+            {t('properties.sort')}
+          </label>
+          <select
+            id="property-sort"
+            value={filters.sort ?? 'newest'}
+            onChange={(event) => setParam('sort', event.target.value)}
+            className="min-h-9 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+          >
+            {PROPERTY_SORTS.map((option) => (
+              <option key={option} value={option}>
+                {t(`properties.sort.${option}`)}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <label className="ml-auto hidden items-center gap-1.5 text-sm text-muted lg:flex">
           <input
             type="checkbox"
             checked={allShown}
-            onChange={() => setSelected(allShown ? new Set() : new Set(filtered.map((p) => p.id)))}
+            onChange={() => (allShown ? setSelected(new Set()) : selectAllShown())}
             className="accent-[var(--color-accent)]"
           />
           {t('common.all')}
@@ -299,16 +444,28 @@ export function PropertiesPage() {
         )}
       </AnimatePresence>
 
-      {filtered.length === 0 ? (
+      {items.length === 0 ? (
         <EmptyState title={t('properties.empty')} hint={t('properties.emptyHint')} />
       ) : (
-        <Register
-          label={t('properties.title')}
-          columns={columns}
-          rows={filtered}
-          rowKey={(property) => property.id}
-          density={compact ? 'compact' : 'comfortable'}
-        />
+        <>
+          <Register
+            label={t('properties.title')}
+            columns={columns}
+            rows={items}
+            rowKey={(property) => property.id}
+            density={compact ? 'compact' : 'comfortable'}
+            footer={
+              <tr>
+                <td colSpan={columns.length} className="px-3 py-2">
+                  {pager}
+                </td>
+              </tr>
+            }
+          />
+          {/* The card layout below `lg` has no `<tfoot>` — without this, mobile
+              sees page 1 and nothing else. */}
+          <div className="mt-3 lg:hidden">{pager}</div>
+        </>
       )}
     </>
   )
