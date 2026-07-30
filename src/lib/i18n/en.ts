@@ -140,7 +140,6 @@ export const en: Record<TranslationKey, string> = {
 
   'mock.notice': 'Sample screen with placeholder data. Wires to the real API in {milestone}.',
 
-  'dashboard.partialLive': 'Lead counts are live (marked with •). Property counts stay sample data until A.5.',
   'dashboard.title': 'Overview',
   'dashboard.greeting': 'Hi, {name}',
   'dashboard.kpi.total': 'Properties',
@@ -241,7 +240,6 @@ export const en: Record<TranslationKey, string> = {
   'propertyDetail.leads': 'Leads for this listing',
   'propertyDetail.specs': 'Details',
   'propertyDetail.emptyLeads': 'This listing has not received any leads yet.',
-  'propertyDetail.partialLive': 'The listing itself is sample data until A.1–A.8. Its leads already come from the API.',
 
   'projects.title': 'Projects',
   'projects.subtitle': 'A project is one card in the feed, never one per unit.',

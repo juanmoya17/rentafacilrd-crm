@@ -3,13 +3,13 @@ import { motion } from 'motion/react'
 import { useAuth } from '@/lib/auth-context'
 import { useI18n } from '@/lib/i18n/context'
 import type { TranslationKey } from '@/lib/i18n/es'
-import { Card, PageHeader } from '@/components/ui'
+import { Card, ErrorState, PageHeader } from '@/components/ui'
 import { CountUp } from '@/components/count-up'
 import { RecordSectionHead } from '@/components/record'
 import { useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { listLeads } from '@/lib/crm/api'
-import { getPropertySummary } from '@/lib/crm/properties'
+import { getPropertySummary, listProperties } from '@/lib/crm/properties'
 
 export function DashboardPage() {
   const { state } = useAuth()
@@ -20,6 +20,12 @@ export function DashboardPage() {
   const breached = useResource((signal) => listLeads({ sla: 'breached', limit: 1 }, signal), [])
   // A.5 — same summary endpoint the properties screen's KPI strip uses.
   const summary = useResource((signal) => getPropertySummary(signal), [])
+  // Unlike "unanswered leads," rejected listings ARE expressible as a filter
+  // today — same idiom as newLeads/breached above, just against properties.
+  const rejected = useResource(
+    (signal) => listProperties({ lifecycle: 'rejected', limit: 1 }, signal),
+    [],
+  )
 
   if (state.status !== 'authenticated') return null
 
@@ -49,9 +55,9 @@ export function DashboardPage() {
     },
   ]
 
-  // A.6 — the rail disappears when there is nothing pending. Two more rows
-  // ("unanswered leads", "rejected listings") belong here but need a cached
-  // backend aggregation that does not exist yet (phase 2b) — omitted rather
+  // A.6 — the rail disappears when there is nothing pending. "Unanswered
+  // leads" is left out: unlike the other three, it has no expressible filter
+  // until the A.6 aggregate lands in phase 2b, so it stays dropped rather
   // than filled with a stale mock count now that PROPERTIES is gone.
   const railItems: { label: TranslationKey; value: number; to: string }[] = [
     {
@@ -64,6 +70,11 @@ export function DashboardPage() {
       value: summary.status === 'ready' ? summary.data.expiring_featured : 0,
       to: '/properties?is_featured=true',
     },
+    {
+      label: 'dashboard.rejected',
+      value: rejected.status === 'ready' ? rejected.data.total : 0,
+      to: '/properties?lifecycle=rejected',
+    },
   ]
   const rail = railItems.filter((item) => item.value > 0)
 
@@ -73,6 +84,14 @@ export function DashboardPage() {
         title={t('dashboard.greeting', { name: state.user.name })}
         subtitle={t('dashboard.title')}
       />
+
+      {/* Three of the four KPI tiles read this fetch — without a retry here,
+          a failure leaves three permanent em dashes with no way out. */}
+      {summary.status === 'error' && (
+        <div className="mb-3">
+          <ErrorState message={summary.message} retryLabel={t('common.retry')} onRetry={summary.reload} />
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((kpi, index) => (

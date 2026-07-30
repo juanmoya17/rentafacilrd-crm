@@ -144,7 +144,6 @@ export const es = {
 
   'mock.notice': 'Pantalla de muestra con datos de ejemplo. Se conecta a la API real en {milestone}.',
 
-  'dashboard.partialLive': 'Los contadores de leads son reales (marcados con •). Los de propiedades siguen siendo de ejemplo hasta A.5.',
   'dashboard.title': 'Resumen',
   'dashboard.greeting': 'Hola, {name}',
   'dashboard.kpi.total': 'Propiedades',
@@ -245,7 +244,6 @@ export const es = {
   'propertyDetail.leads': 'Leads de este anuncio',
   'propertyDetail.specs': 'Ficha',
   'propertyDetail.emptyLeads': 'Este anuncio aún no ha recibido leads.',
-  'propertyDetail.partialLive': 'La ficha del anuncio es de ejemplo hasta A.1–A.8. Sus leads ya vienen de la API.',
 
   'projects.title': 'Proyectos',
   'projects.subtitle': 'Un proyecto es una sola card en el feed, nunca una por unidad.',

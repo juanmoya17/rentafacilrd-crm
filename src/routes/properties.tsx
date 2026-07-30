@@ -86,11 +86,12 @@ function InlineAction({
     )
   }
   if (property.featured_expires_at !== null) {
-    const days = Math.max(
-      0,
-      Math.ceil((new Date(property.featured_expires_at).getTime() - Date.now()) / 86_400_000),
-    )
-    if (days * 86_400_000 < EXPIRY_WINDOW_MS) {
+    // Compare the raw remainder, not the rounded display value — rounding
+    // first (e.g. 2.1 days -> ceil -> 3) made the window effectively <=2
+    // days instead of the intended <3.
+    const remaining = new Date(property.featured_expires_at).getTime() - Date.now()
+    if (remaining < EXPIRY_WINDOW_MS) {
+      const days = Math.max(0, Math.ceil(remaining / 86_400_000))
       return <Button variant="primary">{t('properties.inlineRenew', { days })}</Button>
     }
   }
@@ -230,6 +231,18 @@ export function PropertiesPage() {
     filters.area_max !== undefined ||
     filters.is_featured !== undefined
 
+  // Bumped only on an external reset (this button, or a KPI shortcut) —
+  // never by a field's own onBlur commit — so remounting the inputs to pick
+  // up a fresh defaultValue never fights a Tab press or eats the click that
+  // triggered the reset.
+  const [advancedResetKey, setAdvancedResetKey] = useState(0)
+
+  // The panel's open state belongs to the user from here on, seeded once
+  // from whether a filter is already set. Deriving `open` from
+  // hasAdvancedFilters on every render would slam the panel shut the moment
+  // the last field is cleared while the user is still working in it.
+  const [advancedOpen, setAdvancedOpen] = useState(hasAdvancedFilters)
+
   const clearAdvancedFilters = () => {
     const updated = new URLSearchParams(params)
     for (const key of ['price_min', 'price_max', 'area_min', 'area_max', 'is_featured']) {
@@ -237,6 +250,7 @@ export function PropertiesPage() {
     }
     updated.delete('offset')
     setParams(updated, { replace: true })
+    setAdvancedResetKey((n) => n + 1)
   }
 
   const resource = useResource((signal) => listProperties(filters, signal), [serializedFilters])
@@ -265,6 +279,10 @@ export function PropertiesPage() {
     // A shortcut is a jump to a view, not an additional constraint —
     // replaces the current filters rather than merging into them.
     setParams(new URLSearchParams(propertyParams(filter)), { replace: true })
+    // A shortcut can silently drop a price/area filter the advanced panel had
+    // set (none of the KPI cards set one themselves) — remount those fields
+    // so they don't keep showing a value the URL no longer has.
+    setAdvancedResetKey((n) => n + 1)
   }
 
   const toggle = (id: number) => {
@@ -518,16 +536,21 @@ export function PropertiesPage() {
           basic, not advanced. Native <details> for the disclosure: free
           keyboard support and no state to wire up. */}
       {showChrome && (
-        <details className="mb-3" open={hasAdvancedFilters}>
+        <details
+          className="mb-3"
+          open={advancedOpen}
+          onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}
+        >
           <summary className="cursor-pointer select-none text-sm font-medium text-ink-2 hover:text-ink">
             {t('properties.filtersAdvanced')}
           </summary>
-          {/* Keyed on the filter set so a KPI shortcut or "Limpiar filtros"
-              (which both change the URL, not these uncontrolled inputs) remounts
-              the fields with fresh defaultValues instead of leaving stale text
-              in a box the URL no longer agrees with. */}
+          {/* Keyed on advancedResetKey, NOT the filter set: it only bumps on
+              an external reset (this panel's own "Limpiar filtros", or a KPI
+              shortcut), never on a field's own onBlur commit — remounting on
+              every commit destroyed the input mid-Tab and ate clicks on
+              "Limpiar filtros" (its mousedown blurs the focused field first). */}
           <div
-            key={serializedFilters}
+            key={advancedResetKey}
             className="mt-2 flex flex-wrap items-end gap-3 rounded-md border border-rule bg-surface-raised p-3"
           >
             <div className="flex flex-col gap-1">

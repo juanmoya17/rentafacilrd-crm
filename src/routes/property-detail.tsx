@@ -6,20 +6,24 @@ import { FactList, RecordHeader, RecordSectionHead } from '@/components/record'
 import { LifecycleBadge, OperationBadge, StageBadge } from '@/components/labels'
 import { useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
-import { listLeads } from '@/lib/crm/api'
+import { listLeads, type Page } from '@/lib/crm/api'
 import { listProperties } from '@/lib/crm/properties'
+import type { CrmLead } from '@/lib/crm/types'
+
+const EMPTY_LEADS: Page<CrmLead> = { items: [], total: 0 }
 
 export function PropertyDetailPage() {
   const { code } = useParams()
   const { t, formatCurrency, formatNumber, formatDate, formatRelativeTime } = useI18n()
   const reveal = useRowReveal()
 
-  // There is no detail-by-code endpoint yet. `search` already matches a code
-  // substring server-side (see propertyParams' tests), and RF codes are
-  // unique, so fetching by search and taking the exact match is the one row
-  // this page needs without a new endpoint.
+  // There is no detail-by-code endpoint yet. `search` is a fuzzy OR across
+  // title/city/code (see mock/crm.js and propertyParams' tests), so a wider
+  // net than limit:1 is needed — a title that happens to contain an RF-like
+  // string could otherwise take the one slot and starve out the real match
+  // before the .find() below ever sees it.
   const propertyResource = useResource(
-    (signal) => listProperties({ search: code, limit: 1 }, signal),
+    (signal) => listProperties({ search: code, limit: 5 }, signal),
     [code],
   )
   const property =
@@ -27,8 +31,14 @@ export function PropertyDetailPage() {
       ? propertyResource.data.items.find((item) => item.code === code)
       : undefined
 
+  // Gated on the id being known: without this, first render fires
+  // listLeads({ property_id: undefined }) — an unfiltered fetch of every
+  // lead — before immediately refetching once the property resolves.
   const leads = useResource(
-    (signal) => listLeads({ property_id: property?.id, limit: 50 }, signal),
+    (signal) =>
+      property === undefined
+        ? Promise.resolve(EMPTY_LEADS)
+        : listLeads({ property_id: property.id, limit: 50 }, signal),
     [property?.id],
   )
 
