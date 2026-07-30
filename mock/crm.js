@@ -54,12 +54,16 @@ const seedLeads = [
 // listing) to cover the render-nothing branch.
 const seedProperties = [
   { id: 1, code: 'RF0412', title: 'Apartamento en Piantini', city: 'Santo Domingo', city_id: 1, price: 14_500_000, area: 210, bedrooms: 3, bathrooms: 3, lifecycle: 'published', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 1, featured_expires_at: at(2 * DAY), created_at: at(-60 * DAY) },
-  { id: 2, code: 'RF0288', title: 'Local comercial en Naco', city: 'Santo Domingo', city_id: 1, price: 95_000, area: 180, bedrooms: 0, bathrooms: 2, lifecycle: 'published', operation: 'rent', moderation: 'approved', leads_count: 2, unanswered_leads: 2, featured_expires_at: null, created_at: at(-45 * DAY) },
+  { id: 2, code: 'RF0288', title: 'Local comercial en Naco', city: 'Santo Domingo', city_id: 1, price: 95_000, area: 180, bedrooms: null, bathrooms: 2, lifecycle: 'published', operation: 'rent', moderation: 'approved', leads_count: 2, unanswered_leads: 2, featured_expires_at: null, created_at: at(-45 * DAY) },
   { id: 3, code: 'RF0913', title: 'Villa en Punta Cana', city: 'Punta Cana', city_id: 2, price: 27_900_000, area: 420, bedrooms: 4, bathrooms: 5, lifecycle: 'published', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: at(9 * DAY), created_at: at(-90 * DAY) },
   { id: 4, code: 'RF0755', title: 'Penthouse en Bella Vista', city: 'Santo Domingo', city_id: 1, price: 18_400_000, area: 265, bedrooms: 3, bathrooms: 4, lifecycle: 'sold', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: null, created_at: at(-120 * DAY) },
   { id: 5, code: 'RF0640', title: 'Casa en Arroyo Hondo', city: 'Santo Domingo', city_id: 1, price: 11_200_000, area: 310, bedrooms: 4, bathrooms: 3, lifecycle: 'paused', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: null, created_at: at(-75 * DAY) },
   { id: 6, code: 'RF1024', title: 'Apartamento en Evaristo Morales', city: 'Santo Domingo', city_id: 1, price: 68_000, area: 120, bedrooms: 2, bathrooms: 2, lifecycle: 'rented', operation: 'rent', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: null, created_at: at(-30 * DAY) },
-  { id: 7, code: 'RF1108', title: 'Solar en Santiago', city: 'Santiago', city_id: 3, price: 4_800_000, area: 800, bedrooms: 0, bathrooms: 0, lifecycle: 'rejected', operation: 'sell', moderation: 'rejected', leads_count: 0, unanswered_leads: 0, featured_expires_at: null, created_at: at(-12 * DAY) },
+  // bedrooms/bathrooms null, not 0: a plot has no EAV rows for either, and
+  // PropertySpecs.php:66 maps that absence to null on purpose so nothing
+  // states "0 habitaciones" about land. This is the row that exercises
+  // formatSpecs's null branch (and property-detail's em dash) in dev.
+  { id: 7, code: 'RF1108', title: 'Solar en Santiago', city: 'Santiago', city_id: 3, price: 4_800_000, area: 800, bedrooms: null, bathrooms: null, lifecycle: 'rejected', operation: 'sell', moderation: 'rejected', leads_count: 0, unanswered_leads: 0, featured_expires_at: null, created_at: at(-12 * DAY) },
   // pending_ad (mock-only, not on the wire — see openAdPropertyIds below):
   // an ad was requested but is not yet approved, so it has no end_date and
   // no star, same as an unfeatured row from featured_expires_at alone.
