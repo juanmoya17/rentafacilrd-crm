@@ -62,6 +62,8 @@ export const es = {
   'common.price': 'Precio',
   'common.city': 'Ciudad',
   'common.area': 'Área',
+  'common.bedrooms': 'Habitaciones',
+  'common.bathrooms': 'Baños',
   'common.status': 'Estado',
   'common.operation': 'Operación',
   'common.origin': 'Origen',
@@ -150,7 +152,6 @@ export const es = {
   'dashboard.needsAction': 'Requiere acción',
   'dashboard.needsActionEmpty': 'Nada pendiente. El riel aparece solo cuando hay trabajo.',
   'dashboard.slaBreached': 'Leads con SLA vencido',
-  'dashboard.unanswered': 'Anuncios con leads sin responder',
   'dashboard.featuredExpiring': 'Destacados por vencer',
   'dashboard.rejected': 'Anuncios rechazados',
 
@@ -272,6 +273,8 @@ export const es = {
   'tasks.completed': 'Completadas',
   'tasks.empty': 'No tienes tareas pendientes.',
   'tasks.emptyHint': 'Las visitas registradas crean un seguimiento a +24h automáticamente.',
+  'tasks.filteredByStatus': 'Filtrado por estado',
+  'tasks.clearStatusFilter': 'Quitar el filtro por estado',
 
   'notifications.title': 'Notificaciones',
   'notifications.preferences': 'Preferencias',

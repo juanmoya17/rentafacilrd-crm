@@ -414,7 +414,11 @@ export function PropertiesPage() {
     },
     {
       key: 'area',
-      header: t('common.area'),
+      // Not common.area ("Área") — this cell renders bedrooms/bathrooms/area
+      // together, and below `lg` the Register card layout uses this header
+      // as the field's own <dt> (register.tsx), so a stale "Área" label sits
+      // directly over "3h · 2b · 210 m²" on mobile.
+      header: t('propertyDetail.specs'),
       numeric: true,
       render: (property) => (
         <span className="text-xs text-muted">{formatSpecs(property, formatNumber)}</span>

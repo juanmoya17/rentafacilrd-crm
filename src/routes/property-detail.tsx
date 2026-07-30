@@ -66,10 +66,10 @@ export function PropertyDetailPage() {
     )
   }
 
-  // CrmProperty carries no bedrooms/bathrooms/parking — those live in an EAV
-  // table the endpoint does not surface yet (owner decision from Task 5:
-  // area-only for 2a). Showing fewer specs beats inventing ones the API
-  // never sent.
+  // No parking figure — not a parameter in this installation (owner decision
+  // from Task 5). bedrooms/bathrooms/area are all on CrmProperty now; each
+  // renders '—' for a null value rather than inventing a zero, same
+  // discipline the list row's formatSpecs() uses.
   const specs = [
     {
       label: t('common.price'),
@@ -79,6 +79,16 @@ export function PropertyDetailPage() {
     {
       label: t('common.area'),
       value: property.area === null ? '—' : `${formatNumber(property.area)} m²`,
+      numeric: true,
+    },
+    {
+      label: t('common.bedrooms'),
+      value: property.bedrooms === null ? '—' : formatNumber(property.bedrooms),
+      numeric: true,
+    },
+    {
+      label: t('common.bathrooms'),
+      value: property.bathrooms === null ? '—' : formatNumber(property.bathrooms),
       numeric: true,
     },
     { label: t('common.city'), value: property.city ?? '—' },

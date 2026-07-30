@@ -9,12 +9,7 @@ import { RecordSectionHead } from '@/components/record'
 import { useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { listLeads } from '@/lib/crm/api'
-import {
-  getActionRail,
-  getPropertySummary,
-  listProperties,
-  railBucketTarget,
-} from '@/lib/crm/properties'
+import { getPropertySummary, listProperties } from '@/lib/crm/properties'
 
 export function DashboardPage() {
   const { state } = useAuth()
@@ -31,8 +26,6 @@ export function DashboardPage() {
     (signal) => listProperties({ lifecycle: 'rejected', limit: 1 }, signal),
     [],
   )
-  // A.6 — the aggregate "unanswered leads" needed. Its own row below.
-  const actionRail = useResource((signal) => getActionRail(signal), [])
 
   if (state.status !== 'authenticated') return null
 
@@ -64,25 +57,18 @@ export function DashboardPage() {
   ]
 
   // A.6 — the rail disappears when there is nothing pending. "Unanswered
-  // leads" is back: the A.6 aggregate now exists, and `sla_breached` is the
-  // closest predicate to it (a lead whose SLA breached is, by definition,
-  // one nobody answered in time) — there is still no listing-level count of
-  // "properties with an unanswered lead" to source it from instead.
-  const unansweredCount =
-    actionRail.status === 'ready'
-      ? (actionRail.data.buckets.find((bucket) => bucket.key === 'sla_breached')?.count ?? 0)
-      : 0
-
+  // leads" (no first response, regardless of SLA) stays out on purpose: the
+  // only aggregate that exists is `sla_breached` — a strict subset (also
+  // past due) — and that's exactly what the row below already shows. A
+  // second row reading "unanswered" over the same number and the same
+  // /leads?sla=breached link would be copy that lies about what it counts,
+  // and two rows for one number is the noise A.6 exists to remove. Add a
+  // real "unanswered" row only once a superset aggregate exists to back it.
   const railItems: { label: TranslationKey; value: number; to: string }[] = [
     {
       label: 'dashboard.slaBreached',
       value: breached.status === 'ready' ? breached.data.total : 0,
       to: '/leads?sla=breached',
-    },
-    {
-      label: 'dashboard.unanswered',
-      value: unansweredCount,
-      to: railBucketTarget('sla_breached'),
     },
     {
       label: 'dashboard.featuredExpiring',

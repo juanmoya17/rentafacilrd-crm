@@ -59,6 +59,8 @@ export const en: Record<TranslationKey, string> = {
   'common.price': 'Price',
   'common.city': 'City',
   'common.area': 'Area',
+  'common.bedrooms': 'Bedrooms',
+  'common.bathrooms': 'Bathrooms',
   'common.status': 'Status',
   'common.operation': 'Operation',
   'common.origin': 'Source',
@@ -146,7 +148,6 @@ export const en: Record<TranslationKey, string> = {
   'dashboard.needsAction': 'Needs action',
   'dashboard.needsActionEmpty': 'Nothing pending. This rail only shows up when there is work.',
   'dashboard.slaBreached': 'Leads past their SLA',
-  'dashboard.unanswered': 'Listings with unanswered leads',
   'dashboard.featuredExpiring': 'Featured slots expiring',
   'dashboard.rejected': 'Rejected listings',
 
@@ -268,6 +269,8 @@ export const en: Record<TranslationKey, string> = {
   'tasks.completed': 'Completed',
   'tasks.empty': 'You have no pending tasks.',
   'tasks.emptyHint': 'Logging a visit creates a +24h follow-up automatically.',
+  'tasks.filteredByStatus': 'Filtered by status',
+  'tasks.clearStatusFilter': 'Remove the status filter',
 
   'notifications.title': 'Notifications',
   'notifications.preferences': 'Preferences',

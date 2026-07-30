@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import { AnimatePresence, motion } from 'motion/react'
 import { useI18n } from '@/lib/i18n/context'
 import { Badge, Card, EmptyState, ErrorState, LoadingState, PageHeader } from '@/components/ui'
+import { FilterBar } from '@/components/register'
 import { useToast } from '@/lib/toast-context'
 import { useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
@@ -22,12 +23,22 @@ export function TasksPage() {
   const { t, formatDate, formatRelativeTime } = useI18n()
   const toast = useToast()
   const reveal = useRowReveal()
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   // The A.6 rail's `overdue_tasks` bucket lands here via ?status=overdue —
   // without reading it, that link showed every task instead of the filtered
   // subset the bucket's count promised.
   const status = statusFromParam(params.get('status'))
   const resource = useResource((signal) => listTasks({ limit: 100, status }, signal), [status])
+
+  // Same affordance leads.tsx uses for property_id: status has no filter
+  // widget of its own here (unlike leads.tsx's stage/sla), and only ever
+  // arrives via a link (the rail) — without this, landing on a filtered
+  // list with no sign it is filtered reads as "I only have one task".
+  const clearStatusFilter = () => {
+    const updated = new URLSearchParams(params)
+    updated.delete('status')
+    setParams(updated, { replace: true })
+  }
 
   const [tasks, setTasks] = useState<CrmTask[]>([])
 
@@ -112,6 +123,20 @@ export function TasksPage() {
   return (
     <>
       <PageHeader title={t('tasks.title')} subtitle={t('tasks.subtitle')} />
+
+      {status !== undefined && (
+        <FilterBar>
+          <button
+            type="button"
+            onClick={clearStatusFilter}
+            aria-label={t('tasks.clearStatusFilter')}
+            className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken active:translate-y-px"
+          >
+            {t('tasks.filteredByStatus')}
+            <span aria-hidden="true">×</span>
+          </button>
+        </FilterBar>
+      )}
 
       {resource.status === 'loading' && <LoadingState label={t('common.loading')} />}
 
