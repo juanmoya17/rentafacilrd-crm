@@ -43,7 +43,7 @@ export function DashboardPage() {
     {
       label: 'dashboard.kpi.published',
       value: published.length,
-      to: '/properties?status=published',
+      to: '/properties?lifecycle=published',
       live: false,
     },
     { label: 'dashboard.kpi.newLeads', value: total(newLeads), to: '/leads?stage=new', live: true },
@@ -75,7 +75,7 @@ export function DashboardPage() {
     {
       label: 'dashboard.rejected',
       value: PROPERTIES.filter((property) => property.lifecycle === 'rejected').length,
-      to: '/properties?status=rejected',
+      to: '/properties?lifecycle=rejected',
     },
   ]
   const rail = railItems.filter((item) => item.value > 0)

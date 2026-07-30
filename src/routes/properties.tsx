@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { AnimatePresence, motion } from 'motion/react'
 import { useI18n } from '@/lib/i18n/context'
@@ -50,7 +50,9 @@ function filtersFromParams(params: URLSearchParams): PropertyFilters {
     price_max: num('price_max'),
     area_min: num('area_min'),
     area_max: num('area_max'),
-    offset: num('offset') ?? 0,
+    // Clamped the way the server already clamps its own offset — a negative
+    // value would otherwise reach the API and make the pager range read "−4–…".
+    offset: Math.max(0, num('offset') ?? 0),
     limit: PAGE_SIZE,
   }
 }
@@ -109,7 +111,10 @@ function Pager({
   onOffsetChange: (nextOffset: number) => void
 }) {
   const { t } = useI18n()
-  const from = total === 0 ? 0 : offset + 1
+  // itemsCount, not total: an offset beyond the result set (the last page
+  // shrank, or a stale ?offset=N bookmark) shows 0 items even though total
+  // is nonzero — "61–9 of 9" would otherwise read as nonsense.
+  const from = itemsCount === 0 ? 0 : offset + 1
   const to = Math.min(offset + itemsCount, total)
 
   return (
@@ -146,6 +151,14 @@ export function PropertiesPage() {
   // remains the source of truth; this catches up to it 300ms later.
   const [draftSearch, setDraftSearch] = useState(filters.search ?? '')
 
+  // The search value this component itself last wrote to the URL. Lets the
+  // sync effect below tell "the URL changed because our own debounce just
+  // committed" apart from "the URL changed for some other reason" — without
+  // it, a keystroke typed in the gap between the timer firing and the URL
+  // update reaching that effect gets silently overwritten (dropped
+  // character, caret jump).
+  const lastCommittedSearch = useRef(filters.search ?? '')
+
   const setParam = useCallback(
     (key: string, value: string | null) => {
       const updated = new URLSearchParams(params)
@@ -162,6 +175,7 @@ export function PropertiesPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (draftSearch === (filters.search ?? '')) return
+      lastCommittedSearch.current = draftSearch
       setParam('search', draftSearch === '' ? null : draftSearch)
     }, 300)
     return () => {
@@ -173,8 +187,13 @@ export function PropertiesPage() {
   // other than this same debounce (a KPI shortcut replacing the filters, or
   // back/forward navigation) — otherwise the stale draft re-fires the timer
   // above and silently reinstates a search the user just navigated away from.
+  // Skips when the change is the debounce's own commit landing, so a
+  // keystroke typed just after that commit isn't clobbered.
   useEffect(() => {
-    setDraftSearch(filters.search ?? '')
+    const next = filters.search ?? ''
+    if (next === lastCommittedSearch.current) return
+    lastCommittedSearch.current = next
+    setDraftSearch(next)
   }, [filters.search])
 
   // A.5 — the screen owns this fetch, not the strip: Task 6's bulk bar reads
@@ -183,6 +202,19 @@ export function PropertiesPage() {
   const summaryResource = useResource((signal) => getPropertySummary(signal), [])
 
   const resource = useResource((signal) => listProperties(filters, signal), [serializedFilters])
+
+  // useResource keeps the previous ready `data` in place while a deps-change
+  // refetch is in flight — good for not blanking the table, but it means
+  // nothing today tells the pager/segmented controls a fetch is running. This
+  // derives that signal locally rather than changing the shared hook.
+  const readyData = resource.status === 'ready' ? resource.data : undefined
+  const [isRefetching, setIsRefetching] = useState(false)
+  useEffect(() => {
+    setIsRefetching(true)
+  }, [serializedFilters])
+  useEffect(() => {
+    if (readyData !== undefined) setIsRefetching(false)
+  }, [readyData])
 
   // A selection that survived a filter change refers to rows nobody can see.
   // Acting on invisible rows is exactly what the all-or-nothing 404 protects
@@ -370,22 +402,28 @@ export function PropertiesPage() {
           onChange={setDraftSearch}
           placeholder={t('properties.searchPlaceholder')}
           resultLabel={t('common.resultCount', { count: total })}
-          pending={draftSearch !== (filters.search ?? '')}
+          pending={draftSearch !== (filters.search ?? '') || isRefetching}
         />
 
-        <Segmented
-          group="property-lifecycle"
-          label={t('common.status')}
-          value={filters.lifecycle ?? null}
-          onChange={(next) => setParam('lifecycle', next)}
-          options={[
-            { value: null, label: t('common.all') },
-            ...LIFECYCLES.map((option) => ({
-              value: option,
-              label: t(`lifecycle.${option}`),
-            })),
-          ]}
-        />
+        <div
+          className={
+            isRefetching ? 'opacity-60 transition-opacity duration-(--duration-base)' : ''
+          }
+        >
+          <Segmented
+            group="property-lifecycle"
+            label={t('common.status')}
+            value={filters.lifecycle ?? null}
+            onChange={(next) => setParam('lifecycle', next)}
+            options={[
+              { value: null, label: t('common.all') },
+              ...LIFECYCLES.map((option) => ({
+                value: option,
+                label: t(`lifecycle.${option}`),
+              })),
+            ]}
+          />
+        </div>
 
         <div className="flex items-center gap-1.5">
           <label htmlFor="property-sort" className="text-sm text-muted">
@@ -445,9 +483,16 @@ export function PropertiesPage() {
       </AnimatePresence>
 
       {items.length === 0 ? (
-        <EmptyState title={t('properties.empty')} hint={t('properties.emptyHint')} />
-      ) : (
         <>
+          <EmptyState title={t('properties.empty')} hint={t('properties.emptyHint')} />
+          {/* A filter can legitimately have zero matches (offset 0 — nothing to
+              go back to), but a nonzero offset past the end of the result set
+              (the page shrank under you, or a stale ?offset=N bookmark) is a
+              dead end without this: no Previous button anywhere on screen. */}
+          {offset > 0 && <div className="mt-3">{pager}</div>}
+        </>
+      ) : (
+        <div className={isRefetching ? 'opacity-60 transition-opacity duration-(--duration-base)' : ''}>
           <Register
             label={t('properties.title')}
             columns={columns}
@@ -465,7 +510,7 @@ export function PropertiesPage() {
           {/* The card layout below `lg` has no `<tfoot>` — without this, mobile
               sees page 1 and nothing else. */}
           <div className="mt-3 lg:hidden">{pager}</div>
-        </>
+        </div>
       )}
     </>
   )
