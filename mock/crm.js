@@ -132,6 +132,25 @@ const seedProperties = [
   { id: 9, code: 'RF0821', title: 'Apartamento en Gazcue', city: 'Santo Domingo', city_id: 1, price: 9_600_000, area: 140, bedrooms: 2, bathrooms: 2, lifecycle: 'expired', operation: null, moderation: 'approved', leads_count: 1, unanswered_leads: 0, featured_expires_at: null, created_at: at(-100 * DAY) },
 ]
 
+// B.3 — five event types, two channels (push/email — in-app has no
+// preference to configure, see handleCrm below). All true is the fixture's
+// resolved baseline; the real endpoint's `defaults` already folds in the
+// agent's legacy rows, but the mock has none to fold in.
+const NOTIFICATION_EVENT_TYPES = [
+  'lead_alerts',
+  'listing_matches',
+  'subscription',
+  'reengagement',
+  'meeting_updates',
+]
+const NOTIFICATION_CHANNELS = ['push', 'email']
+
+function defaultNotificationMap() {
+  const defaults = {}
+  for (const type of NOTIFICATION_EVENT_TYPES) defaults[type] = { push: true, email: true }
+  return defaults
+}
+
 const state = {
   contacts,
   properties: seedProperties,
@@ -139,6 +158,12 @@ const state = {
   // enough ids to exceed either quota in one batch call and hit the 409s.
   featureBalance: { total: 3, unlimited: false },
   publishSlots: 3,
+  // The server stores only deviations from the resolved baseline — see the
+  // notification-preferences handlers below. Both start empty, same as a
+  // fresh agent who has never touched a toggle.
+  notificationDefaults: defaultNotificationMap(),
+  notificationPreferences: [],
+  notificationOverrides: [],
   leads: seedLeads.map(
     ([id, contactId, code, title, stage, origin, score, slaDueAt, firstResponseAt, lastActivityAt]) => ({
       id,
@@ -619,6 +644,103 @@ export function handleCrm(method, path, params, body) {
     return {
       status: 200,
       body: { error: false, message: 'Action rail fetched', data: { buckets, total }, code: 200 },
+    }
+  }
+
+  // ----------------------------------------------------- notification prefs
+  //
+  // The one rule that matters here: the server stores only deviations from
+  // the resolved baseline. Writing a value back to its baseline deletes the
+  // row instead of storing it — this mock has already been bitten once by a
+  // fixture that taught the opposite (storing the default and calling that
+  // "off"), so both writers below check the baseline before touching state.
+  const notificationSnapshot = () => ({
+    defaults: state.notificationDefaults,
+    preferences: state.notificationPreferences,
+    overrides: state.notificationOverrides,
+  })
+
+  if (path === '/notification-preferences' && method === 'GET') {
+    return {
+      status: 200,
+      body: { error: false, message: 'Preferences fetched', data: notificationSnapshot(), code: 200 },
+    }
+  }
+
+  if (path === '/notification-preferences' && method === 'PUT') {
+    const eventType = body.event_type
+    const channel = body.channel
+    const enabled = body.enabled
+
+    if (
+      !NOTIFICATION_EVENT_TYPES.includes(eventType) ||
+      !NOTIFICATION_CHANNELS.includes(channel) ||
+      typeof enabled !== 'boolean'
+    ) {
+      return { status: 422, body: { error: true, message: 'Invalid preference', code: 422 } }
+    }
+
+    const baseline = state.notificationDefaults[eventType][channel]
+    const index = state.notificationPreferences.findIndex(
+      (p) => p.event_type === eventType && p.channel === channel,
+    )
+
+    if (enabled === baseline) {
+      // Back to the resolved default — nothing to store, so drop the row.
+      if (index !== -1) state.notificationPreferences.splice(index, 1)
+    } else if (index !== -1) {
+      state.notificationPreferences[index] = { event_type: eventType, channel, enabled }
+    } else {
+      state.notificationPreferences.push({ event_type: eventType, channel, enabled })
+    }
+
+    return {
+      status: 200,
+      body: { error: false, message: 'Preference updated', data: notificationSnapshot(), code: 200 },
+    }
+  }
+
+  if (path === '/notification-preferences/property' && method === 'PUT') {
+    const propertyId = Number(body.property_id)
+    const eventType = body.event_type
+    const enabled = body.enabled
+
+    if (
+      !Number.isFinite(propertyId) ||
+      !NOTIFICATION_EVENT_TYPES.includes(eventType) ||
+      typeof enabled !== 'boolean'
+    ) {
+      return { status: 422, body: { error: true, message: 'Invalid override', code: 422 } }
+    }
+
+    // A property override has no channel of its own — it mutes/unmutes an
+    // event type for one listing across whichever channels apply. Its
+    // baseline is "notified" (true); the same delete-on-default rule the
+    // global preference above uses applies here against that baseline.
+    const index = state.notificationOverrides.findIndex(
+      (o) => o.property_id === propertyId && o.event_type === eventType,
+    )
+
+    if (enabled === true) {
+      if (index !== -1) state.notificationOverrides.splice(index, 1)
+    } else if (index !== -1) {
+      state.notificationOverrides[index] = { property_id: propertyId, event_type: eventType, enabled }
+    } else {
+      state.notificationOverrides.push({ property_id: propertyId, event_type: eventType, enabled })
+    }
+
+    return {
+      status: 200,
+      body: { error: false, message: 'Override updated', data: notificationSnapshot(), code: 200 },
+    }
+  }
+
+  if (path === '/notification-preferences' && method === 'DELETE') {
+    state.notificationPreferences = []
+    state.notificationOverrides = []
+    return {
+      status: 200,
+      body: { error: false, message: 'Preferences reset', data: notificationSnapshot(), code: 200 },
     }
   }
 

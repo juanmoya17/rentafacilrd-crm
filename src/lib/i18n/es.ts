@@ -308,6 +308,16 @@ export const es = {
   'notifications.typeLead': 'Nuevo lead',
   'notifications.typeSla': 'SLA vencido',
 
+  'notifications.eventType.lead_alerts': 'Alertas de leads',
+  'notifications.eventType.listing_matches': 'Coincidencias de anuncios',
+  'notifications.eventType.subscription': 'Suscripción',
+  'notifications.eventType.reengagement': 'Reactivación',
+  'notifications.eventType.meeting_updates': 'Actualizaciones de citas',
+  'notifications.pref.reset': 'Restablecer preferencias',
+  'notifications.pref.resetConfirm': '¿Restablecer todas las preferencias a sus valores por defecto?',
+  'notifications.pref.saveFailed': 'No pudimos guardar este cambio. Lo revertimos.',
+  'notifications.pref.resetFailed': 'No pudimos restablecer tus preferencias.',
+
   'settings.title': 'Ajustes',
   'settings.profile': 'Perfil',
   'settings.name': 'Nombre',
@@ -315,6 +325,7 @@ export const es = {
   'settings.language': 'Idioma de la interfaz',
   'settings.session': 'Sesión',
   'settings.sessionNote': 'Sesión por cookie httpOnly contra el backend Laravel. No se guarda ningún token en el navegador.',
+  'settings.notifications': 'Preferencias de notificaciones',
 } as const
 
 export type TranslationKey = keyof typeof es

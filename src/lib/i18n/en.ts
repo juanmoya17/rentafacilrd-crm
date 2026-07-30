@@ -304,6 +304,16 @@ export const en: Record<TranslationKey, string> = {
   'notifications.typeLead': 'New lead',
   'notifications.typeSla': 'SLA breached',
 
+  'notifications.eventType.lead_alerts': 'Lead alerts',
+  'notifications.eventType.listing_matches': 'Listing matches',
+  'notifications.eventType.subscription': 'Subscription',
+  'notifications.eventType.reengagement': 'Re-engagement',
+  'notifications.eventType.meeting_updates': 'Meeting updates',
+  'notifications.pref.reset': 'Reset preferences',
+  'notifications.pref.resetConfirm': 'Reset every preference to its default value?',
+  'notifications.pref.saveFailed': 'We could not save this change. We reverted it.',
+  'notifications.pref.resetFailed': 'We could not reset your preferences.',
+
   'settings.title': 'Settings',
   'settings.profile': 'Profile',
   'settings.name': 'Name',
@@ -311,4 +321,5 @@ export const en: Record<TranslationKey, string> = {
   'settings.language': 'Interface language',
   'settings.session': 'Session',
   'settings.sessionNote': 'httpOnly cookie session against the Laravel backend. No token is stored in the browser.',
+  'settings.notifications': 'Notification preferences',
 }
