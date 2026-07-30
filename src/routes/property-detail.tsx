@@ -1,34 +1,47 @@
 import { Link, useParams } from 'react-router'
 import { motion } from 'motion/react'
 import { useI18n } from '@/lib/i18n/context'
-import {
-  Button,
-  Card,
-  EmptyState,
-  ErrorState,
-  LoadingState,
-  MockNotice,
-  ScoreDot,
-} from '@/components/ui'
+import { Button, Card, EmptyState, ErrorState, LoadingState, ScoreDot } from '@/components/ui'
 import { FactList, RecordHeader, RecordSectionHead } from '@/components/record'
 import { LifecycleBadge, OperationBadge, StageBadge } from '@/components/labels'
 import { useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { listLeads } from '@/lib/crm/api'
-import { PROPERTIES } from '@/lib/mock/data'
+import { listProperties } from '@/lib/crm/properties'
 
 export function PropertyDetailPage() {
   const { code } = useParams()
   const { t, formatCurrency, formatNumber, formatDate, formatRelativeTime } = useI18n()
   const reveal = useRowReveal()
 
-  // The listing itself is still placeholder data (A.1–A.8); its leads are real.
-  const property = PROPERTIES.find((item) => item.code === code)
+  // There is no detail-by-code endpoint yet. `search` already matches a code
+  // substring server-side (see propertyParams' tests), and RF codes are
+  // unique, so fetching by search and taking the exact match is the one row
+  // this page needs without a new endpoint.
+  const propertyResource = useResource(
+    (signal) => listProperties({ search: code, limit: 1 }, signal),
+    [code],
+  )
+  const property =
+    propertyResource.status === 'ready'
+      ? propertyResource.data.items.find((item) => item.code === code)
+      : undefined
 
   const leads = useResource(
     (signal) => listLeads({ property_id: property?.id, limit: 50 }, signal),
     [property?.id],
   )
+
+  if (propertyResource.status === 'loading') return <LoadingState label={t('common.loading')} />
+  if (propertyResource.status === 'error') {
+    return (
+      <ErrorState
+        message={propertyResource.message}
+        retryLabel={t('common.retry')}
+        onRetry={propertyResource.reload}
+      />
+    )
+  }
 
   if (property === undefined) {
     return (
@@ -43,13 +56,22 @@ export function PropertyDetailPage() {
     )
   }
 
+  // CrmProperty carries no bedrooms/bathrooms/parking — those live in an EAV
+  // table the endpoint does not surface yet (owner decision from Task 5:
+  // area-only for 2a). Showing fewer specs beats inventing ones the API
+  // never sent.
   const specs = [
-    { label: t('common.price'), value: formatCurrency(property.price), numeric: true },
-    { label: t('common.bedrooms'), value: String(property.bedrooms), numeric: true },
-    { label: t('common.bathrooms'), value: String(property.bathrooms), numeric: true },
-    { label: t('common.parking'), value: String(property.parking), numeric: true },
-    { label: t('common.area'), value: `${formatNumber(property.area)} m²`, numeric: true },
-    { label: t('common.city'), value: `${property.sector}, ${property.city}` },
+    {
+      label: t('common.price'),
+      value: property.price === null ? '—' : formatCurrency(property.price),
+      numeric: true,
+    },
+    {
+      label: t('common.area'),
+      value: property.area === null ? '—' : `${formatNumber(property.area)} m²`,
+      numeric: true,
+    },
+    { label: t('common.city'), value: property.city ?? '—' },
   ]
 
   return (
@@ -62,17 +84,16 @@ export function PropertyDetailPage() {
           <>
             <LifecycleBadge lifecycle={property.lifecycle} />
             <OperationBadge operation={property.operation} />
-            {property.featuredExpiresAt !== null && (
+            {property.featured_expires_at !== null && (
               <span className="font-mono text-xs text-muted">
                 {t('properties.featuredUntil', {
-                  date: formatDate(property.featuredExpiresAt),
+                  date: formatDate(property.featured_expires_at),
                 })}
               </span>
             )}
           </>
         }
       />
-      <MockNotice>{t('propertyDetail.partialLive')}</MockNotice>
 
       <div className="grid gap-4 lg:grid-cols-3">
         {/* The rail leads on this record: the specs are what an agent reads out

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { AnimatePresence, motion } from 'motion/react'
 import { useI18n } from '@/lib/i18n/context'
-import { Badge, Button, EmptyState, ErrorState, LoadingState, MockNotice, PageHeader } from '@/components/ui'
+import { Badge, Button, EmptyState, ErrorState, LoadingState, PageHeader } from '@/components/ui'
 import { FilterBar, Register, SearchField, Segmented, type Column } from '@/components/register'
 import { LifecycleBadge, ModerationBadge, OperationBadge } from '@/components/labels'
 import { KpiStrip } from '@/components/kpi-strip'
@@ -11,10 +11,13 @@ import { useRecordMorph } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { useToast } from '@/lib/toast-context'
 import {
+  classifyBatchError,
   getPropertySummary,
   listProperties,
+  messageFor,
   propertyParams,
   PROPERTY_SORTS,
+  runBatch,
   type PropertyFilters,
   type PropertySort,
 } from '@/lib/crm/properties'
@@ -59,14 +62,25 @@ function filtersFromParams(params: URLSearchParams): PropertyFilters {
 }
 
 /** A.7 — the one action this listing needs, without opening the detail. */
-function InlineAction({ property }: { property: CrmProperty }) {
+function InlineAction({
+  property,
+  onPublish,
+}: {
+  property: CrmProperty
+  onPublish: (id: number) => void
+}) {
   const { t } = useI18n()
 
   if (property.lifecycle === 'rejected') return <Button>{t('properties.inlineFix')}</Button>
-  if (property.lifecycle === 'paused') return <Button>{t('properties.inlinePublish')}</Button>
+  if (property.lifecycle === 'paused') {
+    return <Button onClick={() => onPublish(property.id)}>{t('properties.inlinePublish')}</Button>
+  }
   if (property.unanswered_leads > 0) {
+    // LeadFilters already accepts property_id, so this lands on the filtered
+    // lead list the button's label promises — not the listing's own detail
+    // page (that link is PropertyName's job, on the title column).
     return (
-      <Link to={`/properties/${property.code}`} viewTransition>
+      <Link to={`/leads?property_id=${property.id}`} viewTransition>
         <Button>{t('properties.inlineLeads', { count: property.unanswered_leads })}</Button>
       </Link>
     )
@@ -202,6 +216,29 @@ export function PropertiesPage() {
   // rows and this summary through the one `reload` below.
   const summaryResource = useResource((signal) => getPropertySummary(signal), [])
 
+  // A.8 — the chrome grows with the inventory. Gate on the UNFILTERED total
+  // (the summary's, not the filtered list's), so filtering down to two rows
+  // never strips the controls being used to filter. 0 while the summary is
+  // still loading — chrome appears a beat late rather than flashing early.
+  const summaryTotal = summaryResource.status === 'ready' ? summaryResource.data.total : 0
+  const showChrome = summaryTotal > 3
+
+  const hasAdvancedFilters =
+    filters.price_min !== undefined ||
+    filters.price_max !== undefined ||
+    filters.area_min !== undefined ||
+    filters.area_max !== undefined ||
+    filters.is_featured !== undefined
+
+  const clearAdvancedFilters = () => {
+    const updated = new URLSearchParams(params)
+    for (const key of ['price_min', 'price_max', 'area_min', 'area_max', 'is_featured']) {
+      updated.delete(key)
+    }
+    updated.delete('offset')
+    setParams(updated, { replace: true })
+  }
+
   const resource = useResource((signal) => listProperties(filters, signal), [serializedFilters])
 
   // useResource keeps the previous ready `data` in place while a deps-change
@@ -237,6 +274,23 @@ export function PropertiesPage() {
       else next.add(id)
       return next
     })
+  }
+
+  // A.7 — publishing one row reuses the same batch endpoint as the bulk bar
+  // (one id, not twenty), so an approval refusal behaves identically either
+  // way and the refusal words cannot drift between the two call sites.
+  const publishOne = async (id: number) => {
+    try {
+      await runBatch('publish', [id])
+      resource.reload()
+      summaryResource.reload()
+    } catch (failure: unknown) {
+      // Inline publish has no bulk bar to host an inline error, and the row is
+      // still on screen — a toast is the one exception to "no success toasts"
+      // (design.md:143): this reports a change the UI implied that the server
+      // then refused.
+      fail(messageFor(classifyBatchError(failure), t))
+    }
   }
 
   if (resource.status === 'loading') return <LoadingState label={t('common.loading')} />
@@ -345,7 +399,7 @@ export function PropertiesPage() {
     {
       key: 'actions',
       header: t('common.actions'),
-      render: (property) => <InlineAction property={property} />,
+      render: (property) => <InlineAction property={property} onPublish={publishOne} />,
     },
   ]
 
@@ -363,19 +417,22 @@ export function PropertiesPage() {
       <PageHeader
         title={t('properties.title')}
         actions={
-          <Segmented
-            group="property-density"
-            label={t('properties.density')}
-            value={compact ? 'compact' : 'comfortable'}
-            onChange={(next) => setCompact(next !== 'comfortable')}
-            options={[
-              { value: 'compact', label: t('properties.densityCompact') },
-              { value: 'comfortable', label: t('properties.densityComfortable') },
-            ]}
-          />
+          // A.8 — with 3 or fewer listings the density toggle has nothing to
+          // earn its keep against; it only appears once the list does.
+          showChrome ? (
+            <Segmented
+              group="property-density"
+              label={t('properties.density')}
+              value={compact ? 'compact' : 'comfortable'}
+              onChange={(next) => setCompact(next !== 'comfortable')}
+              options={[
+                { value: 'compact', label: t('properties.densityCompact') },
+                { value: 'comfortable', label: t('properties.densityComfortable') },
+              ]}
+            />
+          ) : undefined
         }
       />
-      <MockNotice>{t('mock.notice', { milestone: 'A.1 – A.8' })}</MockNotice>
 
       {summaryResource.status === 'loading' && (
         <div className="mb-4">
@@ -454,6 +511,96 @@ export function PropertiesPage() {
           {t('common.all')}
         </label>
       </FilterBar>
+
+      {/* A.8 — advanced filters (price/area/featured) only earn a spot once
+          the density toggle does, same threshold. Search, the lifecycle chips
+          and sort stay in FilterBar above regardless of size — those are
+          basic, not advanced. Native <details> for the disclosure: free
+          keyboard support and no state to wire up. */}
+      {showChrome && (
+        <details className="mb-3" open={hasAdvancedFilters}>
+          <summary className="cursor-pointer select-none text-sm font-medium text-ink-2 hover:text-ink">
+            {t('properties.filtersAdvanced')}
+          </summary>
+          {/* Keyed on the filter set so a KPI shortcut or "Limpiar filtros"
+              (which both change the URL, not these uncontrolled inputs) remounts
+              the fields with fresh defaultValues instead of leaving stale text
+              in a box the URL no longer agrees with. */}
+          <div
+            key={serializedFilters}
+            className="mt-2 flex flex-wrap items-end gap-3 rounded-md border border-rule bg-surface-raised p-3"
+          >
+            <div className="flex flex-col gap-1">
+              <label htmlFor="property-price-min" className="text-xs text-muted">
+                {t('properties.priceFrom')}
+              </label>
+              <input
+                id="property-price-min"
+                type="number"
+                defaultValue={filters.price_min ?? ''}
+                onBlur={(event) =>
+                  setParam('price_min', event.target.value === '' ? null : event.target.value)
+                }
+                className="min-h-9 w-28 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="property-price-max" className="text-xs text-muted">
+                {t('properties.priceTo')}
+              </label>
+              <input
+                id="property-price-max"
+                type="number"
+                defaultValue={filters.price_max ?? ''}
+                onBlur={(event) =>
+                  setParam('price_max', event.target.value === '' ? null : event.target.value)
+                }
+                className="min-h-9 w-28 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="property-area-min" className="text-xs text-muted">
+                {t('properties.areaFrom')}
+              </label>
+              <input
+                id="property-area-min"
+                type="number"
+                defaultValue={filters.area_min ?? ''}
+                onBlur={(event) =>
+                  setParam('area_min', event.target.value === '' ? null : event.target.value)
+                }
+                className="min-h-9 w-24 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="property-area-max" className="text-xs text-muted">
+                {t('properties.areaTo')}
+              </label>
+              <input
+                id="property-area-max"
+                type="number"
+                defaultValue={filters.area_max ?? ''}
+                onBlur={(event) =>
+                  setParam('area_max', event.target.value === '' ? null : event.target.value)
+                }
+                className="min-h-9 w-24 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+              />
+            </div>
+            <label className="flex items-center gap-1.5 pb-2 text-sm text-muted">
+              <input
+                type="checkbox"
+                checked={filters.is_featured === true}
+                onChange={(event) =>
+                  setParam('is_featured', event.target.checked ? 'true' : null)
+                }
+                className="accent-[var(--color-accent)]"
+              />
+              {t('properties.featuredOnly')}
+            </label>
+            <Button onClick={clearAdvancedFilters}>{t('properties.clearFilters')}</Button>
+          </div>
+        </details>
+      )}
 
       {/* A.4 — the bulk bar only exists while something is selected, and it
           slides rather than appears, so the table shifting down is explained.

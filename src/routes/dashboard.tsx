@@ -3,26 +3,23 @@ import { motion } from 'motion/react'
 import { useAuth } from '@/lib/auth-context'
 import { useI18n } from '@/lib/i18n/context'
 import type { TranslationKey } from '@/lib/i18n/es'
-import { Card, MockNotice, PageHeader } from '@/components/ui'
+import { Card, PageHeader } from '@/components/ui'
 import { CountUp } from '@/components/count-up'
 import { RecordSectionHead } from '@/components/record'
 import { useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { listLeads } from '@/lib/crm/api'
-import { PROPERTIES } from '@/lib/mock/data'
-
-const EXPIRY_WINDOW_MS = 3 * 86_400_000
+import { getPropertySummary } from '@/lib/crm/properties'
 
 export function DashboardPage() {
   const { state } = useAuth()
   const { t } = useI18n()
   const reveal = useRowReveal()
 
-  // Lead counts are real; the property ones wait for A.5. Showing a fake number
-  // beside a real one is worse than showing fewer numbers, so the notice below
-  // says exactly which half is which.
   const newLeads = useResource((signal) => listLeads({ stage: 'new', limit: 1 }, signal), [])
   const breached = useResource((signal) => listLeads({ sla: 'breached', limit: 1 }, signal), [])
+  // A.5 — same summary endpoint the properties screen's KPI strip uses.
+  const summary = useResource((signal) => getPropertySummary(signal), [])
 
   if (state.status !== 'authenticated') return null
 
@@ -30,32 +27,32 @@ export function DashboardPage() {
   const total = (resource: typeof newLeads): number | null =>
     resource.status === 'ready' ? resource.data.total : null
 
-  const published = PROPERTIES.filter((property) => property.lifecycle === 'published')
-  const expiring = PROPERTIES.filter(
-    (property) =>
-      property.featuredExpiresAt !== null &&
-      new Date(property.featuredExpiresAt).getTime() - Date.now() < EXPIRY_WINDOW_MS,
-  )
-
-  // A.5 — every KPI is a shortcut that lands on the filtered list, not a dead number.
-  const kpis: { label: TranslationKey; value: number | null; to: string; live: boolean }[] = [
-    { label: 'dashboard.kpi.total', value: PROPERTIES.length, to: '/properties', live: false },
+  // A.5 — every KPI is a shortcut that lands on the filtered list, not a dead
+  // number. `is_featured=true` mirrors KpiStrip's own mapping for
+  // "expiring" (kpi-strip.tsx) — there is no dedicated expiring-soon filter.
+  const kpis: { label: TranslationKey; value: number | null; to: string }[] = [
+    {
+      label: 'dashboard.kpi.total',
+      value: summary.status === 'ready' ? summary.data.total : null,
+      to: '/properties',
+    },
     {
       label: 'dashboard.kpi.published',
-      value: published.length,
+      value: summary.status === 'ready' ? summary.data.published : null,
       to: '/properties?lifecycle=published',
-      live: false,
     },
-    { label: 'dashboard.kpi.newLeads', value: total(newLeads), to: '/leads?stage=new', live: true },
+    { label: 'dashboard.kpi.newLeads', value: total(newLeads), to: '/leads?stage=new' },
     {
       label: 'dashboard.kpi.expiring',
-      value: expiring.length,
-      to: '/properties?featured=expiring',
-      live: false,
+      value: summary.status === 'ready' ? summary.data.expiring_featured : null,
+      to: '/properties?is_featured=true',
     },
   ]
 
-  // A.6 — the rail disappears when there is nothing pending.
+  // A.6 — the rail disappears when there is nothing pending. Two more rows
+  // ("unanswered leads", "rejected listings") belong here but need a cached
+  // backend aggregation that does not exist yet (phase 2b) — omitted rather
+  // than filled with a stale mock count now that PROPERTIES is gone.
   const railItems: { label: TranslationKey; value: number; to: string }[] = [
     {
       label: 'dashboard.slaBreached',
@@ -63,19 +60,9 @@ export function DashboardPage() {
       to: '/leads?sla=breached',
     },
     {
-      label: 'dashboard.unanswered',
-      value: PROPERTIES.filter((property) => property.unansweredLeads > 0).length,
-      to: '/properties?leads=unanswered',
-    },
-    {
       label: 'dashboard.featuredExpiring',
-      value: expiring.length,
-      to: '/properties?featured=expiring',
-    },
-    {
-      label: 'dashboard.rejected',
-      value: PROPERTIES.filter((property) => property.lifecycle === 'rejected').length,
-      to: '/properties?lifecycle=rejected',
+      value: summary.status === 'ready' ? summary.data.expiring_featured : 0,
+      to: '/properties?is_featured=true',
     },
   ]
   const rail = railItems.filter((item) => item.value > 0)
@@ -86,7 +73,6 @@ export function DashboardPage() {
         title={t('dashboard.greeting', { name: state.user.name })}
         subtitle={t('dashboard.title')}
       />
-      <MockNotice>{t('dashboard.partialLive')}</MockNotice>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((kpi, index) => (
@@ -96,14 +82,7 @@ export function DashboardPage() {
               viewTransition
               className="flex h-full flex-col rounded-lg border border-rule bg-surface-raised p-4 transition-colors duration-(--duration-base) ease-out hover:border-rule-2"
             >
-              <p className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-muted">
-                {t(kpi.label)}
-                {/* The live dot marks which half of this board is real data —
-                    the other half is still A.5 placeholder. */}
-                {kpi.live && (
-                  <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
-                )}
-              </p>
+              <p className="text-xs uppercase tracking-wider text-muted">{t(kpi.label)}</p>
               <p className="mt-1">
                 <CountUp value={kpi.value} />
               </p>

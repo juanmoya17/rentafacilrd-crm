@@ -1,37 +1,14 @@
 /**
  * What is still placeholder data.
  *
- * Leads, contacts, activities and tasks left this file when C.2 landed — they
- * now come from /api/crm, typed in `src/lib/crm/types.ts`. What remains has no
- * endpoint yet: properties (A.1–A.8), projects (E.1–E.8) and notifications
- * (B.2/B.3). Delete the matching slice as each one ships.
+ * Leads, contacts, activities and tasks left this file when C.2 landed, and
+ * properties left when A.1–A.8 landed — they now come from /api/crm, typed in
+ * `src/lib/crm/types.ts`. What remains has no endpoint yet: projects
+ * (E.1–E.8) and notifications (B.2/B.3). Delete the matching slice as each
+ * one ships.
  */
 
-export type Operation = 'sell' | 'rent'
-export type Lifecycle = 'draft' | 'published' | 'paused' | 'sold' | 'rejected'
-export type Moderation = 'pending' | 'approved' | 'rejected'
 export type UnitStatus = 'available' | 'reserved' | 'sold' | 'unavailable'
-
-export interface Property {
-  id: number
-  code: string
-  title: string
-  city: string
-  sector: string
-  operation: Operation
-  lifecycle: Lifecycle
-  moderation: Moderation
-  featured: boolean
-  featuredExpiresAt: string | null
-  price: number
-  bedrooms: number
-  bathrooms: number
-  parking: number
-  area: number
-  leadsCount: number
-  unansweredLeads: number
-  createdAt: string
-}
 
 export interface Typology {
   id: number
@@ -78,17 +55,6 @@ const HOUR = 3_600_000
 const DAY = 86_400_000
 const now = Date.now()
 const at = (offsetMs: number): string => new Date(now + offsetMs).toISOString()
-
-export const PROPERTIES: Property[] = [
-  { id: 1, code: 'RF0412', title: 'Apartamento en Piantini', city: 'Santo Domingo', sector: 'Piantini', operation: 'sell', lifecycle: 'published', moderation: 'approved', featured: true, featuredExpiresAt: at(2 * DAY), price: 14_500_000, bedrooms: 3, bathrooms: 3, parking: 2, area: 210, leadsCount: 2, unansweredLeads: 1, createdAt: at(-60 * DAY) },
-  { id: 2, code: 'RF0288', title: 'Local comercial en Naco', city: 'Santo Domingo', sector: 'Naco', operation: 'rent', lifecycle: 'published', moderation: 'approved', featured: false, featuredExpiresAt: null, price: 95_000, bedrooms: 0, bathrooms: 2, parking: 3, area: 180, leadsCount: 2, unansweredLeads: 2, createdAt: at(-45 * DAY) },
-  { id: 3, code: 'RF0913', title: 'Villa en Punta Cana', city: 'Punta Cana', sector: 'Cocotal', operation: 'sell', lifecycle: 'published', moderation: 'approved', featured: true, featuredExpiresAt: at(9 * DAY), price: 27_900_000, bedrooms: 4, bathrooms: 5, parking: 2, area: 420, leadsCount: 2, unansweredLeads: 0, createdAt: at(-90 * DAY) },
-  { id: 4, code: 'RF0755', title: 'Penthouse en Bella Vista', city: 'Santo Domingo', sector: 'Bella Vista', operation: 'sell', lifecycle: 'sold', moderation: 'approved', featured: false, featuredExpiresAt: null, price: 18_400_000, bedrooms: 3, bathrooms: 4, parking: 2, area: 265, leadsCount: 2, unansweredLeads: 0, createdAt: at(-120 * DAY) },
-  { id: 5, code: 'RF0640', title: 'Casa en Arroyo Hondo', city: 'Santo Domingo', sector: 'Arroyo Hondo', operation: 'sell', lifecycle: 'paused', moderation: 'approved', featured: false, featuredExpiresAt: null, price: 11_200_000, bedrooms: 4, bathrooms: 3, parking: 4, area: 310, leadsCount: 2, unansweredLeads: 0, createdAt: at(-75 * DAY) },
-  { id: 6, code: 'RF1024', title: 'Apartamento en Evaristo Morales', city: 'Santo Domingo', sector: 'Evaristo Morales', operation: 'rent', lifecycle: 'published', moderation: 'approved', featured: false, featuredExpiresAt: null, price: 68_000, bedrooms: 2, bathrooms: 2, parking: 1, area: 120, leadsCount: 2, unansweredLeads: 0, createdAt: at(-30 * DAY) },
-  { id: 7, code: 'RF1108', title: 'Solar en Santiago', city: 'Santiago', sector: 'Gurabo', operation: 'sell', lifecycle: 'rejected', moderation: 'rejected', featured: false, featuredExpiresAt: null, price: 4_800_000, bedrooms: 0, bathrooms: 0, parking: 0, area: 800, leadsCount: 0, unansweredLeads: 0, createdAt: at(-12 * DAY) },
-  { id: 8, code: 'RF1130', title: 'Apartamento en Bávaro', city: 'Punta Cana', sector: 'Bávaro', operation: 'rent', lifecycle: 'draft', moderation: 'pending', featured: false, featuredExpiresAt: null, price: 55_000, bedrooms: 2, bathrooms: 2, parking: 1, area: 96, leadsCount: 0, unansweredLeads: 0, createdAt: at(-3 * DAY) },
-]
 
 export const PROJECTS: Project[] = [
   {
