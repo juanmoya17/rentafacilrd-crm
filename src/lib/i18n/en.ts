@@ -146,8 +146,11 @@ export const en: Record<TranslationKey, string> = {
   'dashboard.needsAction': 'Needs action',
   'dashboard.needsActionEmpty': 'Nothing pending. This rail only shows up when there is work.',
   'dashboard.slaBreached': 'Leads past their SLA',
+  'dashboard.unanswered': 'Listings with unanswered leads',
   'dashboard.featuredExpiring': 'Featured slots expiring',
   'dashboard.rejected': 'Rejected listings',
+
+  'rail.overdueTasks': 'Overdue tasks',
 
   'pipeline.title': 'Pipeline',
   'pipeline.subtitle': 'Drag a lead between stages to move it. You can also change it from the lead page.',

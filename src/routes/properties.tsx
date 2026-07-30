@@ -7,11 +7,14 @@ import { FilterBar, Register, SearchField, Segmented, type Column } from '@/comp
 import { LifecycleBadge, ModerationBadge, OperationBadge } from '@/components/labels'
 import { KpiStrip } from '@/components/kpi-strip'
 import { BulkBar } from '@/components/bulk-bar'
+import { ActionRail } from '@/components/action-rail'
 import { useRecordMorph } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { useToast } from '@/lib/toast-context'
 import {
   classifyBatchError,
+  formatSpecs,
+  getActionRail,
   getPropertySummary,
   listProperties,
   messageFor,
@@ -219,6 +222,12 @@ export function PropertiesPage() {
   // rows and this summary through the one `reload` below.
   const summaryResource = useResource((signal) => getPropertySummary(signal), [])
 
+  // A.6 — fetched unconditionally alongside the summary. Whether it renders
+  // is a display decision (showChrome and total > 0, below); a batch action
+  // can change any of the four bucket counts, so a bulk-bar success or a
+  // stale (404) resync reloads this the same way it reloads the summary.
+  const railResource = useResource((signal) => getActionRail(signal), [])
+
   // A.8 — the chrome grows with the inventory. Gate on the UNFILTERED total
   // (the summary's, not the filtered list's), so filtering down to two rows
   // never strips the controls being used to filter. 0 while the summary is
@@ -408,9 +417,7 @@ export function PropertiesPage() {
       header: t('common.area'),
       numeric: true,
       render: (property) => (
-        <span className="text-xs text-muted">
-          {property.area === null ? '—' : `${formatNumber(property.area)} m²`}
-        </span>
+        <span className="text-xs text-muted">{formatSpecs(property, formatNumber)}</span>
       ),
     },
     {
@@ -480,6 +487,16 @@ export function PropertiesPage() {
       )}
       {summaryResource.status === 'ready' && (
         <KpiStrip summary={summaryResource.data} onPick={applyKpiFilter} />
+      )}
+
+      {/* A.6 — gated on showChrome (A.8: hidden below four listings) in
+          addition to the rail's own total > 0 (ActionRail renders nothing
+          itself when empty). A loading or failed rail fetch just shows
+          nothing here rather than a spinner or error banner — it is a
+          shortcut strip, not primary content, and the table below is
+          unaffected either way. */}
+      {showChrome && railResource.status === 'ready' && (
+        <ActionRail rail={railResource.data} />
       )}
 
       <FilterBar>
@@ -664,6 +681,10 @@ export function PropertiesPage() {
                 setSelected(new Set())
                 resource.reload()
                 summaryResource.reload()
+                // A batch can change any of the four rail buckets (delete a
+                // rejected row, feature one into its expiring window, ...) —
+                // phase 2a shipped exactly this gap with the summary.
+                railResource.reload()
               }}
               onStale={() => {
                 setSelected(new Set())
@@ -671,6 +692,7 @@ export function PropertiesPage() {
                 // A 404 means a row disappeared — the total is wrong too, and
                 // showChrome (the A.8 gate) reads it.
                 summaryResource.reload()
+                railResource.reload()
               }}
             />
           </motion.div>

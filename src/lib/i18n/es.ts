@@ -150,8 +150,11 @@ export const es = {
   'dashboard.needsAction': 'Requiere acción',
   'dashboard.needsActionEmpty': 'Nada pendiente. El riel aparece solo cuando hay trabajo.',
   'dashboard.slaBreached': 'Leads con SLA vencido',
+  'dashboard.unanswered': 'Anuncios con leads sin responder',
   'dashboard.featuredExpiring': 'Destacados por vencer',
   'dashboard.rejected': 'Anuncios rechazados',
+
+  'rail.overdueTasks': 'Tareas vencidas',
 
   'pipeline.title': 'Pipeline',
   'pipeline.subtitle': 'Arrastra un lead entre etapas para moverlo. También puedes cambiarla desde la ficha.',

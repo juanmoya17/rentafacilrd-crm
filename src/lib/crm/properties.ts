@@ -2,12 +2,14 @@ import { ApiError, api } from '@/lib/api'
 import type { Translate } from '@/lib/i18n/context'
 import type { Page } from './api'
 import type {
+  ActionRail,
   BulkAction,
   CrmProperty,
   Lifecycle,
   Moderation,
   Operation,
   PropertySummary,
+  RailBucketKey,
   Shortfall,
 } from './types'
 
@@ -59,6 +61,46 @@ export function propertyParams(filters: PropertyFilters): Record<string, string>
     params[key] = String(value)
   }
   return params
+}
+
+/**
+ * `3h · 2b · 210 m²` — drops any null part and its adjacent separator rather
+ * than rendering a zero. A missing bedroom/bathroom count means unknown, not
+ * "none", same discipline `LifecycleBadge` uses for a null lifecycle. All
+ * three null renders the register's own em dash.
+ *
+ * `formatNumber` is injected rather than imported so this stays pure and
+ * testable without an i18n provider — same pattern `messageFor` uses for `t`.
+ */
+export function formatSpecs(
+  property: Pick<CrmProperty, 'bedrooms' | 'bathrooms' | 'area'>,
+  formatNumber: (value: number) => string,
+): string {
+  const parts: string[] = []
+  if (property.bedrooms !== null) parts.push(`${formatNumber(property.bedrooms)}h`)
+  if (property.bathrooms !== null) parts.push(`${formatNumber(property.bathrooms)}b`)
+  if (property.area !== null) parts.push(`${formatNumber(property.area)} m²`)
+  return parts.length === 0 ? '—' : parts.join(' · ')
+}
+
+/**
+ * A.6 rail bucket -> route+query. Pure and exported so a unit test can walk
+ * every key. The exhaustive switch has no `default`: adding a RailBucketKey
+ * without adding a case here is a compile error (a function whose control
+ * flow can fall through without returning), not a silently dead link — the
+ * exact bug class that shipped twice already on this branch.
+ */
+export function railBucketTarget(key: RailBucketKey): string {
+  switch (key) {
+    case 'rejected':
+      return '/properties?lifecycle=rejected'
+    case 'expiring_featured':
+      return '/properties?featured_expiring=true'
+    case 'sla_breached':
+      return '/leads?sla=breached'
+    case 'overdue_tasks':
+      return '/tasks?status=overdue'
+  }
 }
 
 export type BatchFailure =
@@ -160,6 +202,11 @@ export async function listProperties(
 
 export async function getPropertySummary(signal?: AbortSignal): Promise<PropertySummary> {
   const response = await api<Envelope<PropertySummary>>('crm/properties/summary', { signal })
+  return response.data
+}
+
+export async function getActionRail(signal?: AbortSignal): Promise<ActionRail> {
+  const response = await api<Envelope<ActionRail>>('crm/action-rail', { signal })
   return response.data
 }
 

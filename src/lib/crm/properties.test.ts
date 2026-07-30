@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '@/lib/api'
 import type { Translate } from '@/lib/i18n/context'
-import { classifyBatchError, messageFor, propertyParams, type BatchFailure } from './properties'
+import type { RailBucketKey } from './types'
+import {
+  classifyBatchError,
+  formatSpecs,
+  messageFor,
+  propertyParams,
+  railBucketTarget,
+  type BatchFailure,
+} from './properties'
 
 describe('propertyParams', () => {
   it('drops empty and undefined values so the URL stays clean', () => {
@@ -28,6 +36,40 @@ describe('propertyParams', () => {
 
   it('keeps offset and limit, since the pager depends on them', () => {
     expect(propertyParams({ offset: 30, limit: 30 })).toEqual({ offset: '30', limit: '30' })
+  })
+})
+
+describe('railBucketTarget', () => {
+  it('maps every bucket key to a genuinely filtered destination', () => {
+    const targets: Record<RailBucketKey, string> = {
+      rejected: '/properties?lifecycle=rejected',
+      expiring_featured: '/properties?featured_expiring=true',
+      sla_breached: '/leads?sla=breached',
+      overdue_tasks: '/tasks?status=overdue',
+    }
+    for (const [key, expected] of Object.entries(targets) as [RailBucketKey, string][]) {
+      expect(railBucketTarget(key)).toBe(expected)
+    }
+  })
+})
+
+describe('formatSpecs', () => {
+  const identity = (value: number): string => String(value)
+
+  it('joins all three parts with the separator', () => {
+    expect(formatSpecs({ bedrooms: 3, bathrooms: 2, area: 210 }, identity)).toBe('3h · 2b · 210 m²')
+  })
+
+  it('omits a null bedroom count and its separator — never renders 0h', () => {
+    expect(formatSpecs({ bedrooms: null, bathrooms: 2, area: 210 }, identity)).toBe('2b · 210 m²')
+  })
+
+  it('omits a null area and its separator', () => {
+    expect(formatSpecs({ bedrooms: 3, bathrooms: 2, area: null }, identity)).toBe('3h · 2b')
+  })
+
+  it('renders the register em dash when all three are null', () => {
+    expect(formatSpecs({ bedrooms: null, bathrooms: null, area: null }, identity)).toBe('—')
   })
 })
 

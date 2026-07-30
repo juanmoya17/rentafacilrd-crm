@@ -9,7 +9,12 @@ import { RecordSectionHead } from '@/components/record'
 import { useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { listLeads } from '@/lib/crm/api'
-import { getPropertySummary, listProperties } from '@/lib/crm/properties'
+import {
+  getActionRail,
+  getPropertySummary,
+  listProperties,
+  railBucketTarget,
+} from '@/lib/crm/properties'
 
 export function DashboardPage() {
   const { state } = useAuth()
@@ -26,6 +31,8 @@ export function DashboardPage() {
     (signal) => listProperties({ lifecycle: 'rejected', limit: 1 }, signal),
     [],
   )
+  // A.6 — the aggregate "unanswered leads" needed. Its own row below.
+  const actionRail = useResource((signal) => getActionRail(signal), [])
 
   if (state.status !== 'authenticated') return null
 
@@ -57,14 +64,25 @@ export function DashboardPage() {
   ]
 
   // A.6 — the rail disappears when there is nothing pending. "Unanswered
-  // leads" is left out: unlike the other three, it has no expressible filter
-  // until the A.6 aggregate lands in phase 2b, so it stays dropped rather
-  // than filled with a stale mock count now that PROPERTIES is gone.
+  // leads" is back: the A.6 aggregate now exists, and `sla_breached` is the
+  // closest predicate to it (a lead whose SLA breached is, by definition,
+  // one nobody answered in time) — there is still no listing-level count of
+  // "properties with an unanswered lead" to source it from instead.
+  const unansweredCount =
+    actionRail.status === 'ready'
+      ? (actionRail.data.buckets.find((bucket) => bucket.key === 'sla_breached')?.count ?? 0)
+      : 0
+
   const railItems: { label: TranslationKey; value: number; to: string }[] = [
     {
       label: 'dashboard.slaBreached',
       value: breached.status === 'ready' ? breached.data.total : 0,
       to: '/leads?sla=breached',
+    },
+    {
+      label: 'dashboard.unanswered',
+      value: unansweredCount,
+      to: railBucketTarget('sla_breached'),
     },
     {
       label: 'dashboard.featuredExpiring',

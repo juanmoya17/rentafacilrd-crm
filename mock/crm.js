@@ -53,18 +53,18 @@ const seedLeads = [
 // exercises them. RF0821 also carries operation:null (a project-style
 // listing) to cover the render-nothing branch.
 const seedProperties = [
-  { id: 1, code: 'RF0412', title: 'Apartamento en Piantini', city: 'Santo Domingo', city_id: 1, price: 14_500_000, area: 210, bedrooms: 3, bathrooms: 3, parking: 2, lifecycle: 'published', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 1, featured_expires_at: at(2 * DAY), created_at: at(-60 * DAY) },
-  { id: 2, code: 'RF0288', title: 'Local comercial en Naco', city: 'Santo Domingo', city_id: 1, price: 95_000, area: 180, bedrooms: 0, bathrooms: 2, parking: 3, lifecycle: 'published', operation: 'rent', moderation: 'approved', leads_count: 2, unanswered_leads: 2, featured_expires_at: null, created_at: at(-45 * DAY) },
-  { id: 3, code: 'RF0913', title: 'Villa en Punta Cana', city: 'Punta Cana', city_id: 2, price: 27_900_000, area: 420, bedrooms: 4, bathrooms: 5, parking: 2, lifecycle: 'published', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: at(9 * DAY), created_at: at(-90 * DAY) },
-  { id: 4, code: 'RF0755', title: 'Penthouse en Bella Vista', city: 'Santo Domingo', city_id: 1, price: 18_400_000, area: 265, bedrooms: 3, bathrooms: 4, parking: 2, lifecycle: 'sold', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: null, created_at: at(-120 * DAY) },
-  { id: 5, code: 'RF0640', title: 'Casa en Arroyo Hondo', city: 'Santo Domingo', city_id: 1, price: 11_200_000, area: 310, bedrooms: 4, bathrooms: 3, parking: 4, lifecycle: 'paused', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: null, created_at: at(-75 * DAY) },
-  { id: 6, code: 'RF1024', title: 'Apartamento en Evaristo Morales', city: 'Santo Domingo', city_id: 1, price: 68_000, area: 120, bedrooms: 2, bathrooms: 2, parking: 1, lifecycle: 'rented', operation: 'rent', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: null, created_at: at(-30 * DAY) },
-  { id: 7, code: 'RF1108', title: 'Solar en Santiago', city: 'Santiago', city_id: 3, price: 4_800_000, area: 800, bedrooms: 0, bathrooms: 0, parking: 0, lifecycle: 'rejected', operation: 'sell', moderation: 'rejected', leads_count: 0, unanswered_leads: 0, featured_expires_at: null, created_at: at(-12 * DAY) },
+  { id: 1, code: 'RF0412', title: 'Apartamento en Piantini', city: 'Santo Domingo', city_id: 1, price: 14_500_000, area: 210, bedrooms: 3, bathrooms: 3, lifecycle: 'published', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 1, featured_expires_at: at(2 * DAY), created_at: at(-60 * DAY) },
+  { id: 2, code: 'RF0288', title: 'Local comercial en Naco', city: 'Santo Domingo', city_id: 1, price: 95_000, area: 180, bedrooms: 0, bathrooms: 2, lifecycle: 'published', operation: 'rent', moderation: 'approved', leads_count: 2, unanswered_leads: 2, featured_expires_at: null, created_at: at(-45 * DAY) },
+  { id: 3, code: 'RF0913', title: 'Villa en Punta Cana', city: 'Punta Cana', city_id: 2, price: 27_900_000, area: 420, bedrooms: 4, bathrooms: 5, lifecycle: 'published', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: at(9 * DAY), created_at: at(-90 * DAY) },
+  { id: 4, code: 'RF0755', title: 'Penthouse en Bella Vista', city: 'Santo Domingo', city_id: 1, price: 18_400_000, area: 265, bedrooms: 3, bathrooms: 4, lifecycle: 'sold', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: null, created_at: at(-120 * DAY) },
+  { id: 5, code: 'RF0640', title: 'Casa en Arroyo Hondo', city: 'Santo Domingo', city_id: 1, price: 11_200_000, area: 310, bedrooms: 4, bathrooms: 3, lifecycle: 'paused', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: null, created_at: at(-75 * DAY) },
+  { id: 6, code: 'RF1024', title: 'Apartamento en Evaristo Morales', city: 'Santo Domingo', city_id: 1, price: 68_000, area: 120, bedrooms: 2, bathrooms: 2, lifecycle: 'rented', operation: 'rent', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: null, created_at: at(-30 * DAY) },
+  { id: 7, code: 'RF1108', title: 'Solar en Santiago', city: 'Santiago', city_id: 3, price: 4_800_000, area: 800, bedrooms: 0, bathrooms: 0, lifecycle: 'rejected', operation: 'sell', moderation: 'rejected', leads_count: 0, unanswered_leads: 0, featured_expires_at: null, created_at: at(-12 * DAY) },
   // pending_ad (mock-only, not on the wire — see openAdPropertyIds below):
   // an ad was requested but is not yet approved, so it has no end_date and
   // no star, same as an unfeatured row from featured_expires_at alone.
-  { id: 8, code: 'RF1130', title: 'Apartamento en Bávaro', city: 'Punta Cana', city_id: 2, price: 55_000, area: 96, bedrooms: 2, bathrooms: 2, parking: 1, lifecycle: 'draft', operation: 'rent', moderation: 'pending', leads_count: 0, unanswered_leads: 0, featured_expires_at: null, pending_ad: true, created_at: at(-3 * DAY) },
-  { id: 9, code: 'RF0821', title: 'Apartamento en Gazcue', city: 'Santo Domingo', city_id: 1, price: 9_600_000, area: 140, bedrooms: 2, bathrooms: 2, parking: 1, lifecycle: 'expired', operation: null, moderation: 'approved', leads_count: 1, unanswered_leads: 0, featured_expires_at: null, created_at: at(-100 * DAY) },
+  { id: 8, code: 'RF1130', title: 'Apartamento en Bávaro', city: 'Punta Cana', city_id: 2, price: 55_000, area: 96, bedrooms: 2, bathrooms: 2, lifecycle: 'draft', operation: 'rent', moderation: 'pending', leads_count: 0, unanswered_leads: 0, featured_expires_at: null, pending_ad: true, created_at: at(-3 * DAY) },
+  { id: 9, code: 'RF0821', title: 'Apartamento en Gazcue', city: 'Santo Domingo', city_id: 1, price: 9_600_000, area: 140, bedrooms: 2, bathrooms: 2, lifecycle: 'expired', operation: null, moderation: 'approved', leads_count: 1, unanswered_leads: 0, featured_expires_at: null, created_at: at(-100 * DAY) },
 ]
 
 const state = {
@@ -112,6 +112,8 @@ const state = {
 const isBreached = (lead) =>
   lead.sla_due_at !== null && lead.first_response_at === null && new Date(lead.sla_due_at) < new Date()
 
+const isOverdueTask = (task) => task.done_at === null && new Date(task.due_at) < new Date()
+
 function shapeLead(lead, { withTimeline = false } = {}) {
   const contact = state.contacts.find((c) => c.id === lead.contact_id) ?? null
   const shaped = {
@@ -147,7 +149,7 @@ function shapeLead(lead, { withTimeline = false } = {}) {
 const shapeTask = (task) => ({
   ...task,
   is_done: task.done_at !== null,
-  is_overdue: task.done_at === null && new Date(task.due_at) < new Date(),
+  is_overdue: isOverdueTask(task),
 })
 
 const paginate = (rows, params) => {
@@ -176,7 +178,6 @@ function shapeProperty(property) {
     area: property.area,
     bedrooms: property.bedrooms,
     bathrooms: property.bathrooms,
-    parking: property.parking,
     lifecycle: property.lifecycle,
     operation: property.operation,
     moderation: property.moderation,
@@ -445,9 +446,7 @@ export function handleCrm(method, path, params, body) {
     const status = params.get('status')
     if (status === 'pending') rows = rows.filter((t) => t.done_at === null)
     if (status === 'done') rows = rows.filter((t) => t.done_at !== null)
-    if (status === 'overdue') {
-      rows = rows.filter((t) => t.done_at === null && new Date(t.due_at) < new Date())
-    }
+    if (status === 'overdue') rows = rows.filter(isOverdueTask)
     const leadId = params.get('lead_id')
     if (leadId) rows = rows.filter((t) => t.lead_id === Number(leadId))
 
@@ -482,6 +481,33 @@ export function handleCrm(method, path, params, body) {
     if ('is_done' in body) task.done_at = body.is_done ? (task.done_at ?? new Date().toISOString()) : null
 
     return { status: 200, body: { error: false, data: shapeTask(task) } }
+  }
+
+  // ------------------------------------------------------------ action rail
+  if (path === '/action-rail' && method === 'GET') {
+    // Same predicates and the same seed rows the properties/leads/tasks
+    // endpoints above already use, so the rail can never disagree with the
+    // lists its buckets link to.
+    const counts = {
+      rejected: state.properties.filter((p) => p.lifecycle === 'rejected').length,
+      expiring_featured: state.properties.filter(isExpiringFeatured).length,
+      sla_breached: state.leads.filter(isBreached).length,
+      overdue_tasks: state.tasks.filter(isOverdueTask).length,
+    }
+
+    // Omitted, not zeroed — the real endpoint's whole point.
+    const buckets = Object.entries(counts)
+      .filter(([, count]) => count > 0)
+      .map(([key, count]) => ({ key, count }))
+
+    // Sum of all four, including the omitted ones, so total > 0 is the one
+    // check a client needs for "is there anything pending at all".
+    const total = Object.values(counts).reduce((sum, count) => sum + count, 0)
+
+    return {
+      status: 200,
+      body: { error: false, message: 'Action rail fetched', data: { buckets, total }, code: 200 },
+    }
   }
 
   // --------------------------------------------------------------- contacts

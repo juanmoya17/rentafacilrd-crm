@@ -110,6 +110,9 @@ export interface CrmProperty {
   city_id: number | null
   price: number | null
   area: number | null
+  /** No parking figure exists in this installation — do not reintroduce one. */
+  bedrooms: number | null
+  bathrooms: number | null
   /** NULL means not yet derived (see migration 2026_07_29_000002's backfill note);
    *  render nothing, not a default — same discipline as `operation` below. */
   lifecycle: Lifecycle | null
@@ -130,6 +133,20 @@ export interface PropertySummary {
   new_leads: number
   expiring_featured: number
   featured_balance: { total: number; unlimited: boolean }
+}
+
+/** A.6 — four categories from two sources (Properties + CRM). */
+export type RailBucketKey = 'rejected' | 'expiring_featured' | 'sla_breached' | 'overdue_tasks'
+
+/**
+ * A bucket with `count === 0` is never sent — omitted entirely, not zeroed.
+ * `total` is the sum of all four underlying counts, including the omitted
+ * ones, so a client can decide whether to render the rail at all with one
+ * `total > 0` check regardless of which buckets are present.
+ */
+export interface ActionRail {
+  buckets: { key: RailBucketKey; count: number }[]
+  total: number
 }
 
 /** The 409 body when a batch does not fit. Exact shape of BulkPropertyAction::shortfall(). */

@@ -1,19 +1,33 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { AnimatePresence, motion } from 'motion/react'
 import { useI18n } from '@/lib/i18n/context'
 import { Badge, Card, EmptyState, ErrorState, LoadingState, PageHeader } from '@/components/ui'
 import { useToast } from '@/lib/toast-context'
 import { useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
-import { listTasks, setTaskDone } from '@/lib/crm/api'
+import { listTasks, setTaskDone, type TaskFilters } from '@/lib/crm/api'
 import type { CrmTask } from '@/lib/crm/types'
+
+/**
+ * An unrecognised `status` (a stale bookmark, a hand-edited URL) falls back
+ * to no filter rather than reaching the server as-is — same guard
+ * properties.tsx uses for `lifecycle` and leads.tsx uses for `stage`.
+ */
+function statusFromParam(raw: string | null): TaskFilters['status'] {
+  return raw === 'pending' || raw === 'done' || raw === 'overdue' ? raw : undefined
+}
 
 export function TasksPage() {
   const { t, formatDate, formatRelativeTime } = useI18n()
   const toast = useToast()
   const reveal = useRowReveal()
-  const resource = useResource((signal) => listTasks({ limit: 100 }, signal), [])
+  const [params] = useSearchParams()
+  // The A.6 rail's `overdue_tasks` bucket lands here via ?status=overdue —
+  // without reading it, that link showed every task instead of the filtered
+  // subset the bucket's count promised.
+  const status = statusFromParam(params.get('status'))
+  const resource = useResource((signal) => listTasks({ limit: 100, status }, signal), [status])
 
   const [tasks, setTasks] = useState<CrmTask[]>([])
 
