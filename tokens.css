@@ -126,6 +126,22 @@
    * elevation" — do not reach for it for cards. */
   --color-pin-shadow: oklch(0% 0 0 / 0.35);
 
+  /* ---- Radius -----------------------------------------------------------
+   * One step softer than the original instrument-panel spec, 2026-07-30.
+   * These OVERRIDE Tailwind's defaults, so every existing `rounded-md` /
+   * `rounded-lg` in the app moves with the scale instead of needing a
+   * find-and-replace — which is the whole reason this is a token and not a
+   * class sweep.
+   *
+   * The ladder is deliberate: a control is tighter than the card holding it,
+   * or the card's curve visually swallows the button in its corner. Keep at
+   * least a 4px gap between adjacent rungs. */
+  --radius-sm: 0.375rem; /* 6px — badge, chip, tag */
+  --radius-md: 0.5rem; /* 8px — button, input, select, photo */
+  --radius-lg: 0.75rem; /* 12px — card, panel, table shell */
+  --radius-xl: 1rem; /* 16px — modal, sheet, gallery frame */
+  /* `rounded-full` stays full: pills and dots are circles, not soft corners. */
+
   /* ---- Motion -----------------------------------------------------------
    * These three names deliberately OVERRIDE Tailwind's own `--ease-*`, so a
    * class of `ease-out` anywhere in the app resolves to the crafted curve.

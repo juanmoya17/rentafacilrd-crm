@@ -1,6 +1,20 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type ComponentType } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { motion } from 'motion/react'
+import {
+  Bell,
+  Boxes,
+  Building2,
+  CalendarCheck,
+  KanbanSquare,
+  LayoutDashboard,
+  Layers,
+  LogOut,
+  Menu,
+  Settings,
+  Users,
+  X,
+} from 'lucide-react'
 import { useScrollRestoration } from '@/lib/use-scroll-restoration'
 import { useAuth } from '@/lib/auth-context'
 import { useT } from '@/lib/i18n/context'
@@ -12,25 +26,33 @@ import { NOTIFICATIONS } from '@/lib/mock/data'
 interface NavItem {
   to: string
   label: TranslationKey
+  icon: ComponentType<{ className?: string; strokeWidth?: number }>
   badge?: number
 }
 
+/**
+ * Icons are navigational, not decorative: an agent in this tool all day
+ * reaches for a shape before a word, and the sections are short enough that a
+ * distinct silhouette per item is achievable — which is the only condition
+ * under which nav icons earn their space. Each label stays visible beside its
+ * icon; an icon-only rail would trade a learnable list for a guessing game.
+ */
 const SECTIONS: { title: TranslationKey; items: NavItem[] }[] = [
   {
     title: 'nav.section.crm',
     items: [
-      { to: '/', label: 'nav.dashboard' },
-      { to: '/pipeline', label: 'nav.pipeline' },
-      { to: '/leads', label: 'nav.leads' },
-      { to: '/tasks', label: 'nav.tasks' },
+      { to: '/', label: 'nav.dashboard', icon: LayoutDashboard },
+      { to: '/pipeline', label: 'nav.pipeline', icon: KanbanSquare },
+      { to: '/leads', label: 'nav.leads', icon: Users },
+      { to: '/tasks', label: 'nav.tasks', icon: CalendarCheck },
     ],
   },
   {
     title: 'nav.section.inventory',
     items: [
-      { to: '/properties', label: 'nav.properties' },
-      { to: '/projects', label: 'nav.projects' },
-      { to: '/inventory', label: 'nav.units' },
+      { to: '/properties', label: 'nav.properties', icon: Building2 },
+      { to: '/projects', label: 'nav.projects', icon: Layers },
+      { to: '/inventory', label: 'nav.units', icon: Boxes },
     ],
   },
   {
@@ -39,9 +61,10 @@ const SECTIONS: { title: TranslationKey; items: NavItem[] }[] = [
       {
         to: '/notifications',
         label: 'nav.notifications',
+        icon: Bell,
         badge: NOTIFICATIONS.filter((item) => !item.read).length,
       },
-      { to: '/settings', label: 'nav.settings' },
+      { to: '/settings', label: 'nav.settings', icon: Settings },
     ],
   },
 ]
@@ -97,12 +120,23 @@ export function CrmLayout() {
             aria-label={t('nav.toggle')}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((open) => !open)}
-            className="rounded-md p-1.5 text-ink-2 hover:bg-surface-sunken lg:hidden"
+            className="-ml-1 rounded-md p-2 text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken active:translate-y-px lg:hidden"
           >
-            <svg viewBox="0 0 20 20" className="size-5" aria-hidden="true" fill="currentColor">
-              <path d="M3 5h14v1.5H3V5Zm0 4.25h14v1.5H3v-1.5ZM3 13.5h14V15H3v-1.5Z" />
-            </svg>
+            {/* The glyph swaps to an × while the menu is open — a hamburger
+                that stays a hamburger over an open panel gives the user no
+                clue that pressing it again is what closes it. */}
+            {menuOpen ? (
+              <X className="size-5" aria-hidden="true" />
+            ) : (
+              <Menu className="size-5" aria-hidden="true" />
+            )}
           </button>
+
+          {/* The mark is artwork and keeps its own teal (#04AC9C); every UI
+              surface stays on the brand token. `alt=""` because the wordmark
+              beside it already names the product — a screen reader hearing
+              "RentaFácil CRM logo, RentaFácil CRM" is being told twice. */}
+          <img src="/logo.svg" alt="" className="size-7 shrink-0 sm:size-8" />
 
           {/* Mono is the outlier face, and the wordmark is one of its two
               sanctioned slots — it gives the chrome a different register from
@@ -116,8 +150,18 @@ export function CrmLayout() {
           <div className="ml-auto flex shrink-0 items-center gap-2">
             {user && <span className="hidden text-sm text-muted sm:inline">{user.name}</span>}
             <LanguageSwitcher />
-            <Button state={signingOut ? 'loading' : 'idle'} onClick={() => void handleSignOut()}>
-              {signingOut ? t('auth.signingOut') : t('auth.signOut')}
+            {/* Icon + label above sm, icon-only below — the label is the first
+                thing worth dropping when the header runs out of room, and an
+                icon-only control still carries its name via aria-label. */}
+            <Button
+              state={signingOut ? 'loading' : 'idle'}
+              onClick={() => void handleSignOut()}
+              aria-label={t('auth.signOut')}
+            >
+              {!signingOut && <LogOut className="size-4" aria-hidden="true" />}
+              <span className="hidden sm:inline">
+                {signingOut ? t('auth.signingOut') : t('auth.signOut')}
+              </span>
             </Button>
           </div>
         </div>
@@ -176,7 +220,21 @@ export function CrmLayout() {
                                 transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                               />
                             )}
-                            <span className="relative">{t(item.label)}</span>
+                            <span className="relative flex min-w-0 items-center gap-2.5">
+                              {/* strokeWidth rises on the active item rather
+                                  than the icon swapping to a filled variant:
+                                  weight is how this system carries hierarchy
+                                  everywhere else, and half the set has no
+                                  filled twin to swap to. */}
+                              <item.icon
+                                className={`size-4 shrink-0 ${
+                                  isActive ? 'text-brand-700' : 'text-muted'
+                                }`}
+                                strokeWidth={isActive ? 2.25 : 1.75}
+                                aria-hidden="true"
+                              />
+                              <span className="truncate">{t(item.label)}</span>
+                            </span>
                             {item.badge !== undefined && item.badge > 0 && (
                               <span className="relative rounded-full bg-accent px-1.5 font-mono text-xs font-semibold text-accent-ink">
                                 {item.badge}

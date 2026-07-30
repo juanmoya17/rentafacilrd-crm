@@ -47,7 +47,12 @@ export function KpiStrip({
   ]
 
   return (
-    <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    /* 2-up on phones, not 1-up. Five full-width cards at 375px was ~480px of
+       chrome — a screen and a half of scrolling before the agent reached the
+       list they opened the screen for. Two columns is the widest split that
+       still fits "FEATURED EXPIRING" without the label wrapping to three
+       lines at 320px. Padding steps down with it, for the same reason. */
+    <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
       {cards.map((card) => (
         <Card
           key={card.key}
@@ -56,7 +61,7 @@ export function KpiStrip({
           <button
             type="button"
             onClick={() => onPick(card.filter)}
-            className="flex w-full flex-col p-4 text-left active:translate-y-px"
+            className="flex w-full flex-col p-3 text-left active:translate-y-px sm:p-4"
           >
             <p className="text-xs uppercase tracking-wider text-muted">{card.label}</p>
             <p className="mt-1">
@@ -69,7 +74,7 @@ export function KpiStrip({
       {/* Not a filter — a balance. Static sunken fill (the four buttons above
           are raised white) and no button semantics, so it reads as a fifth
           number rather than a fifth shortcut. */}
-      <div className="rounded-lg border border-rule bg-surface-sunken px-4 py-4">
+      <div className="rounded-lg border border-rule bg-surface-sunken p-3 sm:p-4">
         <p className="text-xs uppercase tracking-wider text-muted">{t('kpi.featuredBalance')}</p>
         <p className="mt-1">
           {summary.featured_balance.unlimited ? (

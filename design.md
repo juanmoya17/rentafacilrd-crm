@@ -9,8 +9,9 @@ project: new screens must *share* this system, not differ from each other.
 ## System
 
 - Genre · modern-minimal (B2B dashboard — no hero, no display type above 20px)
-- Tone · utilitarian. Instrument panel: tight radii, hairline surface rules,
-  hierarchy by weight, state changes are quiet background shifts.
+- Tone · utilitarian. Instrument panel: **softened radii** (amended
+  2026-07-30 — see § Radius), hairline surface rules, hierarchy by weight,
+  state changes are quiet background shifts.
 - Theme · custom (vibe: "instrument panel for a brokerage floor")
 - Axes · light paper / grotesk-sans display / chromatic-other (teal 195°)
 - Audience · the brokerage's own agents, in the tool all day, in ES and EN
@@ -61,6 +62,66 @@ it is the boundary that identifies a control.
   18px because sub-pixel small text blurs off-retina.
 - No italic anywhere in headings or display. Emphasis is weight or accent.
 
+## Radius
+
+**Amended 2026-07-30, one step softer than the original spec.** Recorded rather
+than quietly changed, because the tone line above used to read "tight radii".
+
+The tokens live in `tokens.css` and deliberately **override Tailwind's
+defaults**, so the whole app moved with the scale instead of needing a
+find-and-replace across 45 `rounded-*` classes.
+
+| Token | Value | Used by |
+| --- | --- | --- |
+| `--radius-sm` | 6px | badge, chip, tag, segmented thumb |
+| `--radius-md` | 8px | button, input, select, photo, nav item |
+| `--radius-lg` | 12px | card, panel, table shell, KPI tile |
+| `--radius-xl` | 16px | modal, sheet, gallery frame |
+| `rounded-full` | — | pills, dots, count badges. Unchanged; these are circles, not soft corners. |
+
+One rule holds the ladder together: **a control is always tighter than the
+surface holding it.** A button at the card's own radius looks swallowed by the
+corner it sits in. Keep at least a 4px gap between adjacent rungs.
+
+Density did not move with the radius — padding and `min-h-9` are unchanged, so
+a screen still holds the same number of rows.
+
+## Iconography
+
+`lucide-react`, added 2026-07-30. Tree-shaken, so only imported glyphs ship.
+
+- **Size** `size-4` (16px) inline with text, `size-5` (20px) for a standalone
+  chrome control. `strokeWidth` 1.75 at rest; the nav's active item goes to
+  2.25 — weight carries hierarchy here exactly as it does in the type.
+- **Always `aria-hidden`.** The label beside it is the accessible name. When
+  the label is hidden at a breakpoint (the header's sign-out) or absent
+  entirely (the view switcher), the control carries an explicit `aria-label`
+  **and** a `title`.
+- **Icon-only is earned, not default.** Only where the glyph is genuinely
+  self-evident *and* the control is used often enough to be learned — view
+  mode, density, close. Never for domain values: a row of icons standing in
+  for "Draft / Published / Paused / Expired" is a quiz, not a filter.
+- **One glyph per meaning, app-wide.** A distinct silhouette per nav item is
+  the condition under which nav icons earn their space; two items sharing a
+  glyph is a bug, not a shortcut.
+- **`Map` must be imported aliased** (`Map as MapIcon`) — the bare name shadows
+  the global constructor and breaks any `new Map()` in the same module.
+
+## Logo
+
+`public/logo.svg` — the house/key mark, teal `#04AC9C`. It sits beside the mono
+wordmark in the header.
+
+**The mark's teal is not a UI token and must not become one.** `#04AC9C` is
+2.4:1 on white; it is artwork and legal as a mark, but it cannot carry text or
+act as a control boundary. Every UI surface stays on `--color-accent`
+(`#087c7c`, 5.0:1), which is also what keeps the CRM in step with
+rentafacilrd.com and the Flutter app. The two teals sitting side by side in the
+header is intentional, not drift.
+
+The `<img>` is `alt=""`: the wordmark next to it already names the product, and
+a screen reader announcing "RentaFácil CRM logo, RentaFácil CRM" says it twice.
+
 ## CTA voice
 
 - Primary · `--color-accent` fill, `--color-accent-ink` text, `rounded-md` (6px),
@@ -107,6 +168,32 @@ declare. A new screen picks a family; it does not invent a sixth.
 | **Record** | Title spine + labelled sections | lead-detail · property-detail · project-detail |
 | **Board** | Horizontal columns, drag between | pipeline |
 | **Preferences** | Labelled field groups | settings |
+
+### The toolbar — three regions, not one row
+
+`FilterBar` takes `children` (search), `filters` (narrowing) and `actions`
+(presentation). The split is by **job**, not by size:
+
+```
+┌──────────────────────────────────────────────────────┐
+│ [search        ] 9 results         [sort] [view] [☑] │  find + present
+├──────────────────────────────────────────────────────┤
+│ [All][Draft][Published]… [⚙ Advanced filters (2)]    │  narrow
+└──────────────────────────────────────────────────────┘
+```
+
+The one-row version wrapped differently at 1280 than at 1440 — the right-hand
+cluster jumped lines as the window resized, which is the one thing a toolbar
+must never do. Status chips get their own row because they are the widest
+element on every screen that has them and the only one whose count grows with
+the domain.
+
+The advanced-filters disclosure rides in `filters` rather than on a row of its
+own: closed it is a chip beside the status chips; open, the panel is wider than
+the remaining track so flex-wrap gives it a line — the moment it has earned
+one. Its badge shows the count of active advanced filters while shut, because
+a price floor set yesterday otherwise silently explains a short result list
+today.
 
 The Register shell is `components/register.tsx`. Its column definition drives
 both layouts, so the table and the card stack cannot drift apart. Below `lg` the

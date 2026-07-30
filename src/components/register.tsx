@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 import { motion } from 'motion/react'
 import { useRowReveal } from '@/lib/motion'
 
@@ -190,6 +190,8 @@ export function Register<Row>({
 export interface SegmentOption<T extends string> {
   value: T | null
   label: string
+  /** Lucide component. Required on every option when the group is `iconOnly`. */
+  icon?: ComponentType<{ className?: string; strokeWidth?: number }>
 }
 
 /**
@@ -209,12 +211,22 @@ export function Segmented<T extends string>({
   options,
   value,
   onChange,
+  iconOnly = false,
 }: {
   group: string
   label: string
   options: SegmentOption<T>[]
   value: T | null
   onChange: (next: T | null) => void
+  /**
+   * Render the glyph alone and move the label to `aria-label` + `title`.
+   *
+   * Only defensible when the glyph is genuinely self-evident *and* the control
+   * is used often enough to be learned — a view switcher, a density toggle.
+   * Never for domain values: a row of icons standing in for "Draft / Published
+   * / Paused / Expired" is a quiz, not a filter.
+   */
+  iconOnly?: boolean
 }) {
   return (
     <div
@@ -224,30 +236,43 @@ export function Segmented<T extends string>({
     >
       {options.map((option) => {
         const selected = option.value === value
+        const Icon = option.icon
         return (
           <button
             key={option.value ?? '__all'}
             type="button"
             aria-pressed={selected}
+            /* The label survives as the accessible name and as the tooltip
+               when the glyph is alone — an icon-only control that announces
+               as "button" is the usual way this pattern fails. */
+            aria-label={iconOnly ? option.label : undefined}
+            title={iconOnly ? option.label : undefined}
             onClick={() => onChange(option.value)}
             /* whitespace-nowrap: a filter chip that wraps to two lines is one
              * of the mobile gates — clickable text stays on one line.
              * min-h-8 + active: the press state is part of the eight, and a
-             * chip without one feels dead next to buttons that have it. */
-            className="relative min-h-8 whitespace-nowrap rounded px-2.5 py-1 text-sm font-medium transition-colors duration-(--duration-fast) ease-out active:translate-y-px"
+             * chip without one feels dead next to buttons that have it.
+             * Icon-only gets a square footprint so the row reads as a set of
+             * equal switches rather than ragged chips. */
+            className={`relative min-h-8 whitespace-nowrap rounded-sm text-sm font-medium transition-colors duration-(--duration-fast) ease-out active:translate-y-px ${
+              iconOnly ? 'grid size-8 place-items-center' : 'px-2.5 py-1'
+            }`}
           >
             {selected && (
               <motion.span
                 layoutId={`segmented-${group}`}
                 aria-hidden="true"
-                className="absolute inset-0 rounded bg-accent"
+                className="absolute inset-0 rounded-sm bg-accent"
                 transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
               />
             )}
             <span
-              className={`relative ${selected ? 'text-accent-ink' : 'text-ink-2 hover:text-ink'}`}
+              className={`relative flex items-center gap-1.5 ${
+                selected ? 'text-accent-ink' : 'text-ink-2 hover:text-ink'
+              }`}
             >
-              {option.label}
+              {Icon && <Icon className="size-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />}
+              {!iconOnly && option.label}
             </span>
           </button>
         )
@@ -309,7 +334,58 @@ export function SearchField({
   )
 }
 
-/** Toolbar row above a Register. Wraps on mobile, never scrolls sideways. */
-export function FilterBar({ children }: { children: ReactNode }) {
-  return <div className="mb-3 flex flex-wrap items-center gap-2">{children}</div>
+/**
+ * Toolbar above a Register — three regions, not one wrapping row.
+ *
+ * The single-row version put search, eight status chips and the view controls
+ * in one `flex-wrap`, so which line the right-hand cluster landed on depended
+ * on the viewport: at 1440 it sat beside the search, at 1280 it dropped to its
+ * own line leaving a long gap. The toolbar reshuffled as the window resized,
+ * which is exactly what a toolbar must not do.
+ *
+ * Now the rows are fixed:
+ *
+ *   ┌─────────────────────────────────────────────────────┐
+ *   │ [search        ] 9 results        [sort] [view] [☑] │  ← finding + presenting
+ *   ├─────────────────────────────────────────────────────┤
+ *   │ [All][Draft][Published][Paused][Expired][Sold] …    │  ← narrowing
+ *   └─────────────────────────────────────────────────────┘
+ *
+ * The split is by *job*, not by size: row one is how you find and how you look
+ * at it, row two is what you exclude. Status chips get their own row because
+ * they are the widest element on every screen that has them and the only one
+ * whose count grows with the domain.
+ *
+ * `filters` and `actions` are optional — a screen with neither (tasks) renders
+ * a single row and pays nothing for the structure.
+ */
+export function FilterBar({
+  children,
+  filters,
+  actions,
+}: {
+  /** Primary control — the search field. Always row one, always first. */
+  children?: ReactNode
+  /** Narrowing controls: status chips, toggles, active-filter pills. Row two. */
+  filters?: ReactNode
+  /** Presentation controls: sort, view mode, density, select-all. Row one, right. */
+  actions?: ReactNode
+}) {
+  return (
+    <div className="mb-4 space-y-2">
+      {(children || actions) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {children}
+          {actions && (
+            /* ml-auto on the cluster, not on its first child: with the search
+               field flex-growing on mobile the cluster wraps to its own line,
+               and an ml-auto on a lone chip there pushes it to a lonely right
+               edge instead of keeping the group left-aligned under the search. */
+            <div className="flex flex-wrap items-center gap-2 sm:ml-auto">{actions}</div>
+          )}
+        </div>
+      )}
+      {filters && <div className="flex flex-wrap items-center gap-2">{filters}</div>}
+    </div>
+  )
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
+import { TriangleAlert, X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n/context'
 import { Button, EmptyState, ErrorState, LoadingState, PageHeader, ScoreDot } from '@/components/ui'
 import { FilterBar, Register, SearchField, Segmented, type Column } from '@/components/register'
@@ -154,7 +155,57 @@ export function LeadsPage() {
         }
       />
 
-      <FilterBar>
+      <FilterBar
+        filters={
+          <>
+            <Segmented
+              group="lead-stage"
+              label={t('common.status')}
+              value={sla === 'breached' ? null : stage}
+              onChange={setStage}
+              options={[
+                { value: null, label: t('common.all') },
+                ...STAGES.map((option) => ({ value: option, label: t(`stage.${option}`) })),
+              ]}
+            />
+
+            {/* A separate axis from stage, so it is a toggle rather than a
+                segment — folding it into the group would imply it is one of
+                the stages. */}
+            <button
+              type="button"
+              aria-pressed={sla === 'breached'}
+              onClick={toggleBreached}
+              className={`inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1 text-sm font-medium transition-colors duration-(--duration-fast) ease-out active:translate-y-px ${
+                sla === 'breached'
+                  ? 'border-error bg-error text-white'
+                  : 'border-rule-2 text-error hover:bg-error-bg'
+              }`}
+            >
+              <TriangleAlert className="size-4" aria-hidden="true" />
+              {t('common.sla')} · {t('common.overdue')}
+            </button>
+
+            {/* property_id has no widget of its own (unlike stage/sla above) —
+                it only ever arrives via a link from the properties screen — so
+                this is the one affordance that shows it is active and lets it
+                be cleared, same border/pill styling the sla toggle uses. */}
+            {propertyId !== undefined && (
+              <button
+                type="button"
+                onClick={clearPropertyFilter}
+                aria-label={t('leads.clearPropertyFilter')}
+                className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken active:translate-y-px"
+              >
+                {t('leads.filteredByProperty')}
+                {/* A drawn × rather than the character: the glyph sat on the
+                    text baseline and read as punctuation in the label. */}
+                <X className="size-4 text-muted" aria-hidden="true" />
+              </button>
+            )}
+          </>
+        }
+      >
         <SearchField
           id="lead-search"
           label={t('common.search')}
@@ -166,48 +217,6 @@ export function LeadsPage() {
           }
           pending={query !== debounced}
         />
-
-        <Segmented
-          group="lead-stage"
-          label={t('common.status')}
-          value={sla === 'breached' ? null : stage}
-          onChange={setStage}
-          options={[
-            { value: null, label: t('common.all') },
-            ...STAGES.map((option) => ({ value: option, label: t(`stage.${option}`) })),
-          ]}
-        />
-
-        {/* A separate axis from stage, so it is a toggle rather than a segment —
-            folding it into the group would imply it is one of the stages. */}
-        <button
-          type="button"
-          aria-pressed={sla === 'breached'}
-          onClick={toggleBreached}
-          className={`min-h-9 whitespace-nowrap rounded-md border px-2.5 py-1 text-sm font-medium transition-colors duration-(--duration-fast) ease-out active:translate-y-px ${
-            sla === 'breached'
-              ? 'border-error bg-error text-white'
-              : 'border-rule-2 text-error hover:bg-error-bg'
-          }`}
-        >
-          {t('common.sla')} · {t('common.overdue')}
-        </button>
-
-        {/* property_id has no widget of its own (unlike stage/sla above) — it
-            only ever arrives via a link from the properties screen — so this
-            is the one affordance that shows it is active and lets it be
-            cleared, same border/pill styling the sla toggle uses. */}
-        {propertyId !== undefined && (
-          <button
-            type="button"
-            onClick={clearPropertyFilter}
-            aria-label={t('leads.clearPropertyFilter')}
-            className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken active:translate-y-px"
-          >
-            {t('leads.filteredByProperty')}
-            <span aria-hidden="true">×</span>
-          </button>
-        )}
       </FilterBar>
 
       {resource.status === 'loading' && <LoadingState label={t('common.loading')} />}

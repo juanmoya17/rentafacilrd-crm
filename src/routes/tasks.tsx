@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { AnimatePresence, motion } from 'motion/react'
+import { X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n/context'
 import { Badge, Card, EmptyState, ErrorState, LoadingState, PageHeader } from '@/components/ui'
 import { FilterBar } from '@/components/register'
@@ -124,18 +125,23 @@ export function TasksPage() {
     <>
       <PageHeader title={t('tasks.title')} subtitle={t('tasks.subtitle')} />
 
+      {/* The active-filter pill is a narrowing control, so it belongs in the
+          toolbar's `filters` row — the same slot leads.tsx puts its own
+          clearable pill in. */}
       {status !== undefined && (
-        <FilterBar>
-          <button
-            type="button"
-            onClick={clearStatusFilter}
-            aria-label={t('tasks.clearStatusFilter')}
-            className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken active:translate-y-px"
-          >
-            {t('tasks.filteredByStatus')}
-            <span aria-hidden="true">×</span>
-          </button>
-        </FilterBar>
+        <FilterBar
+          filters={
+            <button
+              type="button"
+              onClick={clearStatusFilter}
+              aria-label={t('tasks.clearStatusFilter')}
+              className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken active:translate-y-px"
+            >
+              {t('tasks.filteredByStatus')}
+              <X className="size-4 text-muted" aria-hidden="true" />
+            </button>
+          }
+        />
       )}
 
       {resource.status === 'loading' && <LoadingState label={t('common.loading')} />}

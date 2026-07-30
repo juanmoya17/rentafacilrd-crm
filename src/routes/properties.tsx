@@ -1,6 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { AnimatePresence, motion } from 'motion/react'
+import {
+  AlignJustify,
+  ArrowUpDown,
+  LayoutGrid,
+  // Aliased: an unqualified `Map` import shadows the global constructor, and
+  // the map view's own `new Map<number, HTMLLIElement>()` stops compiling.
+  Map as MapIcon,
+  MessageSquareDot,
+  PencilLine,
+  FilterX,
+  Rows3,
+  SlidersHorizontal,
+  Star,
+  StretchVertical,
+  Upload,
+} from 'lucide-react'
 import { useI18n } from '@/lib/i18n/context'
 import { Badge, Button, EmptyState, ErrorState, LoadingState, PageHeader } from '@/components/ui'
 import { FilterBar, Register, SearchField, Segmented, type Column } from '@/components/register'
@@ -79,9 +95,24 @@ function InlineAction({
 }) {
   const { t } = useI18n()
 
-  if (property.lifecycle === 'rejected') return <Button>{t('properties.inlineFix')}</Button>
+  // Each branch gets its own glyph, so the action a row is offering is legible
+  // from the shape before the label is read — which is the point of icons in a
+  // list where every row's button says something different.
+  if (property.lifecycle === 'rejected') {
+    return (
+      <Button>
+        <PencilLine className="size-4" aria-hidden="true" />
+        {t('properties.inlineFix')}
+      </Button>
+    )
+  }
   if (property.lifecycle === 'paused') {
-    return <Button onClick={() => onPublish(property.id)}>{t('properties.inlinePublish')}</Button>
+    return (
+      <Button onClick={() => onPublish(property.id)}>
+        <Upload className="size-4" aria-hidden="true" />
+        {t('properties.inlinePublish')}
+      </Button>
+    )
   }
   if (property.unanswered_leads > 0) {
     // LeadFilters already accepts property_id, so this lands on the filtered
@@ -89,7 +120,10 @@ function InlineAction({
     // page (that link is PropertyName's job, on the title column).
     return (
       <Link to={`/leads?property_id=${property.id}`} viewTransition>
-        <Button>{t('properties.inlineLeads', { count: property.unanswered_leads })}</Button>
+        <Button>
+          <MessageSquareDot className="size-4" aria-hidden="true" />
+          {t('properties.inlineLeads', { count: property.unanswered_leads })}
+        </Button>
       </Link>
     )
   }
@@ -100,7 +134,12 @@ function InlineAction({
     const remaining = new Date(property.featured_expires_at).getTime() - Date.now()
     if (remaining < EXPIRY_WINDOW_MS) {
       const days = Math.max(0, Math.ceil(remaining / 86_400_000))
-      return <Button variant="primary">{t('properties.inlineRenew', { days })}</Button>
+      return (
+        <Button variant="primary">
+          <Star className="size-4" aria-hidden="true" />
+          {t('properties.inlineRenew', { days })}
+        </Button>
+      )
     }
   }
   return null
@@ -490,12 +529,17 @@ export function PropertiesPage() {
   const summaryTotal = summaryResource.status === 'ready' ? summaryResource.data.total : 0
   const showChrome = summaryTotal > 3
 
-  const hasAdvancedFilters =
-    filters.price_min !== undefined ||
-    filters.price_max !== undefined ||
-    filters.area_min !== undefined ||
-    filters.area_max !== undefined ||
-    filters.is_featured !== undefined
+  // Counted, not just tested: the closed disclosure shows the number, so an
+  // agent can tell "one stale price floor" from "four filters I set on
+  // purpose" without opening it.
+  const advancedFilterCount = [
+    filters.price_min,
+    filters.price_max,
+    filters.area_min,
+    filters.area_max,
+    filters.is_featured,
+  ].filter((value) => value !== undefined).length
+  const hasAdvancedFilters = advancedFilterCount > 0
 
   // Bumped only on an external reset (this button, or a KPI shortcut) —
   // never by a field's own onBlur commit — so remounting the inputs to pick
@@ -633,8 +677,13 @@ export function PropertiesPage() {
       key: 'code',
       header: t('properties.code'),
       card: 'meta',
+      // nowrap on both this and the specs cell: an auto-layout table hands
+      // width to whichever column asks loudest, and these two were folding
+      // "RF1024 · Santo Domingo" and "2h · 2b · 120 m²" onto two lines while
+      // PRICE sat with slack. Refusing to wrap makes them bid for their real
+      // width, and the title column — which can wrap harmlessly — absorbs it.
       render: (property) => (
-        <span className="font-mono">
+        <span className="whitespace-nowrap font-mono">
           {property.city !== null ? `${property.code} · ${property.city}` : property.code}
         </span>
       ),
@@ -663,7 +712,9 @@ export function PropertiesPage() {
       header: t('propertyDetail.specs'),
       numeric: true,
       render: (property) => (
-        <span className="text-xs text-muted">{formatSpecs(property, formatNumber)}</span>
+        <span className="whitespace-nowrap text-xs text-muted">
+          {formatSpecs(property, formatNumber)}
+        </span>
       ),
     },
     {
@@ -686,6 +737,115 @@ export function PropertiesPage() {
       itemsCount={items.length}
       onOffsetChange={(next) => setParam('offset', String(next))}
     />
+  )
+
+  /* A.8 — advanced filters (price/area/featured) only earn a spot once the
+     density toggle does, same threshold. Search, the lifecycle chips and sort
+     stay in the toolbar regardless of size — those are basic, not advanced.
+     Native <details> for the disclosure: free keyboard support and no state
+     to wire up.
+
+     It rides in the toolbar's `filters` row rather than on a row of its own:
+     three stacked toolbar rows pushed the table a third of the way down the
+     screen. Closed, the trigger is a chip beside the status chips; open, the
+     panel is wider than the remaining track so flex-wrap gives it its own
+     line — which is the moment it has earned one. */
+  const advancedFilters = showChrome && (
+    <details open={advancedOpen} onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}>
+      {/* An affordance, not a bare text line: this used to be an unstyled
+          <summary> that read as a paragraph and gave no hint it opened. The
+          count tells the agent a filter is active while the panel is shut —
+          otherwise a price floor set yesterday silently explains a short
+          result list today. */}
+      <summary className="inline-flex min-h-9 cursor-pointer select-none list-none items-center gap-1.5 rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken [&::-webkit-details-marker]:hidden">
+        <SlidersHorizontal className="size-4 text-muted" aria-hidden="true" />
+        {t('properties.filtersAdvanced')}
+        {advancedFilterCount > 0 && (
+          <span className="rounded-full bg-accent px-1.5 font-mono text-xs font-semibold text-accent-ink">
+            {advancedFilterCount}
+          </span>
+        )}
+      </summary>
+      {/* Keyed on advancedResetKey, NOT the filter set: it only bumps on an
+          external reset (this panel's own "Limpiar filtros", or a KPI
+          shortcut), never on a field's own onBlur commit — remounting on every
+          commit destroyed the input mid-Tab and ate clicks on "Limpiar
+          filtros" (its mousedown blurs the focused field first). */}
+      <div
+        key={advancedResetKey}
+        className="mt-2 flex flex-wrap items-end gap-3 rounded-lg border border-rule bg-surface-raised p-3"
+      >
+        <div className="flex flex-col gap-1">
+          <label htmlFor="property-price-min" className="text-xs text-muted">
+            {t('properties.priceFrom')}
+          </label>
+          <input
+            id="property-price-min"
+            type="number"
+            defaultValue={filters.price_min ?? ''}
+            onBlur={(event) =>
+              setParam('price_min', event.target.value === '' ? null : event.target.value)
+            }
+            className="min-h-9 w-28 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="property-price-max" className="text-xs text-muted">
+            {t('properties.priceTo')}
+          </label>
+          <input
+            id="property-price-max"
+            type="number"
+            defaultValue={filters.price_max ?? ''}
+            onBlur={(event) =>
+              setParam('price_max', event.target.value === '' ? null : event.target.value)
+            }
+            className="min-h-9 w-28 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="property-area-min" className="text-xs text-muted">
+            {t('properties.areaFrom')}
+          </label>
+          <input
+            id="property-area-min"
+            type="number"
+            defaultValue={filters.area_min ?? ''}
+            onBlur={(event) =>
+              setParam('area_min', event.target.value === '' ? null : event.target.value)
+            }
+            className="min-h-9 w-24 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="property-area-max" className="text-xs text-muted">
+            {t('properties.areaTo')}
+          </label>
+          <input
+            id="property-area-max"
+            type="number"
+            defaultValue={filters.area_max ?? ''}
+            onBlur={(event) =>
+              setParam('area_max', event.target.value === '' ? null : event.target.value)
+            }
+            className="min-h-9 w-24 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+          />
+        </div>
+        <label className="flex items-center gap-1.5 pb-2 text-sm text-muted">
+          <input
+            type="checkbox"
+            checked={filters.is_featured === true}
+            onChange={(event) => setParam('is_featured', event.target.checked ? 'true' : null)}
+            className="accent-[var(--color-accent)]"
+          />
+          {t('properties.featuredOnly')}
+        </label>
+        <Button onClick={clearAdvancedFilters}>
+          <FilterX className="size-4" aria-hidden="true" />
+          {t('properties.clearFilters')}
+        </Button>
+      </div>
+    </details>
   )
 
   return (
@@ -725,7 +885,121 @@ export function PropertiesPage() {
           either way. */}
       {railResource.status === 'ready' && <ActionRail rail={railResource.data} />}
 
-      <FilterBar>
+      <FilterBar
+        actions={
+          <>
+            {/* The sort label is now the icon: "Orden" beside a select whose
+                options all read as orderings was naming the obvious. The
+                arrows carry it, and the select keeps its own <label> for
+                screen readers. */}
+            <div className="flex items-center gap-1.5">
+              <label htmlFor="property-sort" className="sr-only">
+                {t('properties.sort')}
+              </label>
+              <div className="relative flex items-center">
+                <ArrowUpDown
+                  className="pointer-events-none absolute left-2.5 size-4 text-muted"
+                  aria-hidden="true"
+                />
+                <select
+                  id="property-sort"
+                  value={filters.sort ?? 'newest'}
+                  onChange={(event) => setParam('sort', event.target.value)}
+                  className="min-h-9 rounded-md border border-rule-2 bg-surface-raised py-1.5 pl-8 pr-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+                >
+                  {PROPERTY_SORTS.map((option) => (
+                    <option key={option} value={option}>
+                      {t(`properties.sort.${option}`)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* A.8 — same threshold as the density toggle: with three listings
+                there is nothing to switch between. Icon-only: three view modes
+                whose names ("Tabla / Fichas / Mapa") each duplicate what their
+                glyph already says, in a control the agent uses constantly. */}
+            {showChrome && (
+              <Segmented
+                group="property-view"
+                label={t('properties.view')}
+                value={view}
+                onChange={(next) => setView(next ?? 'table')}
+                options={[
+                  { value: 'table', label: t('properties.viewTable'), icon: Rows3 },
+                  { value: 'cards', label: t('properties.viewCards'), icon: LayoutGrid },
+                  { value: 'map', label: t('properties.viewMap'), icon: MapIcon },
+                ]}
+                iconOnly
+              />
+            )}
+
+            {/* Density is a row-height control on the table only — in the card
+                grid it has nothing to act on, so it goes rather than sitting
+                there inert. */}
+            {showChrome && view === 'table' && (
+              <Segmented
+                group="property-density"
+                label={t('properties.density')}
+                value={compact ? 'compact' : 'comfortable'}
+                onChange={(next) => setCompact(next !== 'comfortable')}
+                options={[
+                  { value: 'compact', label: t('properties.densityCompact'), icon: AlignJustify },
+                  {
+                    value: 'comfortable',
+                    label: t('properties.densityComfortable'),
+                    icon: StretchVertical,
+                  },
+                ]}
+                iconOnly
+              />
+            )}
+
+            {/* Hidden below `lg` in table view because Register's card stack has
+                no checkboxes to select — but the card grid does, at every width,
+                so there it stays. The map view has no selection at all, so
+                nothing to select-all. */}
+            <label
+              className={`items-center gap-1.5 text-sm text-muted ${
+                view === 'map' ? 'hidden' : view === 'cards' ? 'flex' : 'hidden lg:flex'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={allShown}
+                onChange={() => (allShown ? setSelected(new Set()) : selectAllShown())}
+                className="accent-[var(--color-accent)]"
+              />
+              {t('common.all')}
+            </label>
+          </>
+        }
+        filters={
+          <>
+            <div
+              className={
+                isRefetching ? 'opacity-60 transition-opacity duration-(--duration-base)' : ''
+              }
+            >
+              <Segmented
+                group="property-lifecycle"
+                label={t('common.status')}
+                value={filters.lifecycle ?? null}
+                onChange={(next) => setParam('lifecycle', next)}
+                options={[
+                  { value: null, label: t('common.all') },
+                  ...LIFECYCLES.map((option) => ({
+                    value: option,
+                    label: t(`lifecycle.${option}`),
+                  })),
+                ]}
+              />
+            </div>
+            {advancedFilters}
+          </>
+        }
+      >
         <SearchField
           id="property-search"
           label={t('common.search')}
@@ -735,195 +1009,8 @@ export function PropertiesPage() {
           resultLabel={t('common.resultCount', { count: total })}
           pending={draftSearch !== (filters.search ?? '') || isRefetching}
         />
-
-        <div
-          className={
-            isRefetching ? 'opacity-60 transition-opacity duration-(--duration-base)' : ''
-          }
-        >
-          <Segmented
-            group="property-lifecycle"
-            label={t('common.status')}
-            value={filters.lifecycle ?? null}
-            onChange={(next) => setParam('lifecycle', next)}
-            options={[
-              { value: null, label: t('common.all') },
-              ...LIFECYCLES.map((option) => ({
-                value: option,
-                label: t(`lifecycle.${option}`),
-              })),
-            ]}
-          />
-        </div>
-
-        {/* Right cluster: everything that changes how the same rows are
-            presented, kept apart from the two controls above that change
-            which rows they are. */}
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5">
-            <label htmlFor="property-sort" className="text-sm text-muted">
-              {t('properties.sort')}
-            </label>
-            <select
-              id="property-sort"
-              value={filters.sort ?? 'newest'}
-              onChange={(event) => setParam('sort', event.target.value)}
-              className="min-h-9 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
-            >
-              {PROPERTY_SORTS.map((option) => (
-                <option key={option} value={option}>
-                  {t(`properties.sort.${option}`)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* A.8 — same threshold as the density toggle: with three listings
-              there is nothing to switch between. */}
-          {showChrome && (
-            <Segmented
-              group="property-view"
-              label={t('properties.view')}
-              value={view}
-              onChange={(next) => setView(next ?? 'table')}
-              options={[
-                { value: 'table', label: t('properties.viewTable') },
-                { value: 'cards', label: t('properties.viewCards') },
-                { value: 'map', label: t('properties.viewMap') },
-              ]}
-            />
-          )}
-
-          {/* Density is a row-height control on the table only — in the card
-              grid it has nothing to act on, so it goes rather than sitting
-              there inert. */}
-          {showChrome && view === 'table' && (
-            <Segmented
-              group="property-density"
-              label={t('properties.density')}
-              value={compact ? 'compact' : 'comfortable'}
-              onChange={(next) => setCompact(next !== 'comfortable')}
-              options={[
-                { value: 'compact', label: t('properties.densityCompact') },
-                { value: 'comfortable', label: t('properties.densityComfortable') },
-              ]}
-            />
-          )}
-
-          {/* Hidden below `lg` in table view because Register's card stack has
-              no checkboxes to select — but the card grid does, at every width,
-              so there it stays. The map view has no selection at all, so
-              nothing to select-all. */}
-          <label
-            className={`items-center gap-1.5 text-sm text-muted ${
-              view === 'map' ? 'hidden' : view === 'cards' ? 'flex' : 'hidden lg:flex'
-            }`}
-          >
-            <input
-              type="checkbox"
-              checked={allShown}
-              onChange={() => (allShown ? setSelected(new Set()) : selectAllShown())}
-              className="accent-[var(--color-accent)]"
-            />
-            {t('common.all')}
-          </label>
-        </div>
       </FilterBar>
 
-      {/* A.8 — advanced filters (price/area/featured) only earn a spot once
-          the density toggle does, same threshold. Search, the lifecycle chips
-          and sort stay in FilterBar above regardless of size — those are
-          basic, not advanced. Native <details> for the disclosure: free
-          keyboard support and no state to wire up. */}
-      {showChrome && (
-        <details
-          className="mb-3"
-          open={advancedOpen}
-          onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}
-        >
-          <summary className="cursor-pointer select-none text-sm font-medium text-ink-2 hover:text-ink">
-            {t('properties.filtersAdvanced')}
-          </summary>
-          {/* Keyed on advancedResetKey, NOT the filter set: it only bumps on
-              an external reset (this panel's own "Limpiar filtros", or a KPI
-              shortcut), never on a field's own onBlur commit — remounting on
-              every commit destroyed the input mid-Tab and ate clicks on
-              "Limpiar filtros" (its mousedown blurs the focused field first). */}
-          <div
-            key={advancedResetKey}
-            className="mt-2 flex flex-wrap items-end gap-3 rounded-md border border-rule bg-surface-raised p-3"
-          >
-            <div className="flex flex-col gap-1">
-              <label htmlFor="property-price-min" className="text-xs text-muted">
-                {t('properties.priceFrom')}
-              </label>
-              <input
-                id="property-price-min"
-                type="number"
-                defaultValue={filters.price_min ?? ''}
-                onBlur={(event) =>
-                  setParam('price_min', event.target.value === '' ? null : event.target.value)
-                }
-                className="min-h-9 w-28 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="property-price-max" className="text-xs text-muted">
-                {t('properties.priceTo')}
-              </label>
-              <input
-                id="property-price-max"
-                type="number"
-                defaultValue={filters.price_max ?? ''}
-                onBlur={(event) =>
-                  setParam('price_max', event.target.value === '' ? null : event.target.value)
-                }
-                className="min-h-9 w-28 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="property-area-min" className="text-xs text-muted">
-                {t('properties.areaFrom')}
-              </label>
-              <input
-                id="property-area-min"
-                type="number"
-                defaultValue={filters.area_min ?? ''}
-                onBlur={(event) =>
-                  setParam('area_min', event.target.value === '' ? null : event.target.value)
-                }
-                className="min-h-9 w-24 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="property-area-max" className="text-xs text-muted">
-                {t('properties.areaTo')}
-              </label>
-              <input
-                id="property-area-max"
-                type="number"
-                defaultValue={filters.area_max ?? ''}
-                onBlur={(event) =>
-                  setParam('area_max', event.target.value === '' ? null : event.target.value)
-                }
-                className="min-h-9 w-24 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
-              />
-            </div>
-            <label className="flex items-center gap-1.5 pb-2 text-sm text-muted">
-              <input
-                type="checkbox"
-                checked={filters.is_featured === true}
-                onChange={(event) =>
-                  setParam('is_featured', event.target.checked ? 'true' : null)
-                }
-                className="accent-[var(--color-accent)]"
-              />
-              {t('properties.featuredOnly')}
-            </label>
-            <Button onClick={clearAdvancedFilters}>{t('properties.clearFilters')}</Button>
-          </div>
-        </details>
-      )}
 
       {/* A.4 — the bulk bar only exists while something is selected, and it
           slides rather than appears, so the table shifting down is explained.

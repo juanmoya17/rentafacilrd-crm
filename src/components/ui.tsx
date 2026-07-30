@@ -68,6 +68,7 @@ export function Button({
   onClick,
   disabled,
   className = '',
+  'aria-label': ariaLabel,
 }: {
   children: ReactNode
   variant?: ButtonVariant
@@ -76,6 +77,12 @@ export function Button({
   onClick?: () => void
   disabled?: boolean
   className?: string
+  /**
+   * Required whenever the label is hidden at some breakpoint or the button is
+   * icon-only. An icon has no accessible name of its own — `<LogOut />` is
+   * `aria-hidden`, so without this the control announces as "button".
+   */
+  'aria-label'?: string
 }) {
   const loading = state === 'loading'
   // Error and success tint the *border*, never the fill — a button that turns
@@ -91,6 +98,7 @@ export function Button({
       type={type}
       onClick={onClick}
       disabled={disabled || loading}
+      aria-label={ariaLabel}
       aria-busy={loading || undefined}
       /* whitespace-nowrap is not cosmetic: a button label that wraps to two
          lines is the single most common mobile break, and it is a hard gate. */
