@@ -43,6 +43,7 @@ export function LeadsPage() {
 
   const stage = params.get('stage')
   const sla = params.get('sla')
+  const propertyId = params.get('property_id')
 
   // Typing filters server-side, so wait for a pause instead of a request per key.
   useEffect(() => {
@@ -56,13 +57,20 @@ export function LeadsPage() {
         {
           stage: (stage as Stage | null) ?? undefined,
           sla: sla === 'breached' ? 'breached' : undefined,
+          property_id: propertyId === null ? undefined : Number(propertyId),
           q: debounced.trim() === '' ? undefined : debounced.trim(),
           limit: 50,
         },
         signal,
       ),
-    [stage, sla, debounced],
+    [stage, sla, propertyId, debounced],
   )
+
+  const clearPropertyFilter = () => {
+    const updated = new URLSearchParams(params)
+    updated.delete('property_id')
+    setParams(updated, { replace: true })
+  }
 
   const setStage = (next: Stage | null) => {
     const updated = new URLSearchParams(params)
@@ -175,6 +183,21 @@ export function LeadsPage() {
         >
           {t('common.sla')} · {t('common.overdue')}
         </button>
+
+        {/* property_id has no widget of its own (unlike stage/sla above) — it
+            only ever arrives via a link from the properties screen — so this
+            is the one affordance that shows it is active and lets it be
+            cleared, same border/pill styling the sla toggle uses. */}
+        {propertyId !== null && (
+          <button
+            type="button"
+            onClick={clearPropertyFilter}
+            className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken active:translate-y-px"
+          >
+            {t('leads.filteredByProperty')}
+            <span aria-hidden="true">×</span>
+          </button>
+        )}
       </FilterBar>
 
       {resource.status === 'loading' && <LoadingState label={t('common.loading')} />}

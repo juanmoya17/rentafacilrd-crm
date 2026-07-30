@@ -62,9 +62,6 @@ export const es = {
   'common.price': 'Precio',
   'common.city': 'Ciudad',
   'common.area': 'Área',
-  'common.bedrooms': 'Habitaciones',
-  'common.bathrooms': 'Baños',
-  'common.parking': 'Parqueos',
   'common.status': 'Estado',
   'common.operation': 'Operación',
   'common.origin': 'Origen',
@@ -153,7 +150,6 @@ export const es = {
   'dashboard.needsAction': 'Requiere acción',
   'dashboard.needsActionEmpty': 'Nada pendiente. El riel aparece solo cuando hay trabajo.',
   'dashboard.slaBreached': 'Leads con SLA vencido',
-  'dashboard.unanswered': 'Anuncios con leads sin responder',
   'dashboard.featuredExpiring': 'Destacados por vencer',
   'dashboard.rejected': 'Anuncios rechazados',
 
@@ -168,6 +164,7 @@ export const es = {
   'leads.kanbanView': 'Ver como pipeline',
   'leads.empty': 'Ningún lead coincide con estos filtros.',
   'leads.emptyHint': 'Prueba a limpiar los filtros o amplía el rango de fechas.',
+  'leads.filteredByProperty': 'Filtrado por anuncio',
 
   'leadDetail.timeline': 'Actividad',
   'leadDetail.notes': 'Notas',
@@ -226,7 +223,6 @@ export const es = {
   'bulk.confirm': 'Sí, eliminar',
   'bulk.cancel': 'Cancelar',
   'bulk.applying': 'Aplicando…',
-  'bulk.applied': 'Listo: {count} anuncios actualizados.',
   'bulk.cappedAt': 'Se seleccionaron los primeros {max}. El servidor acepta {max} por lote.',
   'bulk.shortfall': 'Seleccionaste {need} y tienes {have}. Te faltan {short}.',
   'bulk.nothingChanged': 'No se cambió nada.',

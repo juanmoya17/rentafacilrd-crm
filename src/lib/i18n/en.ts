@@ -59,9 +59,6 @@ export const en: Record<TranslationKey, string> = {
   'common.price': 'Price',
   'common.city': 'City',
   'common.area': 'Area',
-  'common.bedrooms': 'Bedrooms',
-  'common.bathrooms': 'Bathrooms',
-  'common.parking': 'Parking',
   'common.status': 'Status',
   'common.operation': 'Operation',
   'common.origin': 'Source',
@@ -149,7 +146,6 @@ export const en: Record<TranslationKey, string> = {
   'dashboard.needsAction': 'Needs action',
   'dashboard.needsActionEmpty': 'Nothing pending. This rail only shows up when there is work.',
   'dashboard.slaBreached': 'Leads past their SLA',
-  'dashboard.unanswered': 'Listings with unanswered leads',
   'dashboard.featuredExpiring': 'Featured slots expiring',
   'dashboard.rejected': 'Rejected listings',
 
@@ -164,6 +160,7 @@ export const en: Record<TranslationKey, string> = {
   'leads.kanbanView': 'View as pipeline',
   'leads.empty': 'No lead matches these filters.',
   'leads.emptyHint': 'Try clearing the filters or widening the date range.',
+  'leads.filteredByProperty': 'Filtered by listing',
 
   'leadDetail.timeline': 'Activity',
   'leadDetail.notes': 'Notes',
@@ -222,7 +219,6 @@ export const en: Record<TranslationKey, string> = {
   'bulk.confirm': 'Yes, delete',
   'bulk.cancel': 'Cancel',
   'bulk.applying': 'Applying…',
-  'bulk.applied': 'Done: {count} listings updated.',
   'bulk.cappedAt': 'Selected the first {max}. The server accepts {max} per batch.',
   'bulk.shortfall': 'You selected {need} and you have {have}. You are {short} short.',
   'bulk.nothingChanged': 'Nothing changed.',

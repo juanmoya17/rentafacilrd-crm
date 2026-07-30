@@ -110,10 +110,13 @@ export interface CrmProperty {
   city_id: number | null
   price: number | null
   area: number | null
-  lifecycle: Lifecycle
+  /** NULL means not yet derived (see migration 2026_07_29_000002's backfill note);
+   *  render nothing, not a default — same discipline as `operation` below. */
+  lifecycle: Lifecycle | null
   /** Null for rows with no operation (projects); render nothing, not a default. */
   operation: Operation | null
-  moderation: Moderation
+  /** NULL means not yet derived — see `lifecycle` above. */
+  moderation: Moderation | null
   leads_count: number
   unanswered_leads: number
   /** When the active advertisement's window closes. Null when not featured, or pending approval. */

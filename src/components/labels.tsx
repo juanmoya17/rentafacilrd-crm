@@ -49,13 +49,19 @@ export function OperationBadge({ operation }: { operation: Operation | null }) {
   return <Badge tone={operation === 'sell' ? 'sell' : 'rent'}>{t(`operation.${operation}`)}</Badge>
 }
 
-export function LifecycleBadge({ lifecycle }: { lifecycle: Lifecycle }) {
+export function LifecycleBadge({ lifecycle }: { lifecycle: Lifecycle | null }) {
   const t = useT()
+  // Null means "not yet derived" (see CrmProperty.lifecycle) — the same
+  // discipline OperationBadge and ScoreDot use for an absent value: render
+  // nothing rather than a default that would read as a real state.
+  if (lifecycle === null) return null
   return <Badge tone={LIFECYCLE_TONE[lifecycle]}>{t(`lifecycle.${lifecycle}`)}</Badge>
 }
 
-export function ModerationBadge({ moderation }: { moderation: Moderation }) {
+export function ModerationBadge({ moderation }: { moderation: Moderation | null }) {
   const t = useT()
+  // Same "not yet derived" null as LifecycleBadge above.
+  if (moderation === null) return null
   return <Badge tone={MODERATION_TONE[moderation]}>{t(`moderation.${moderation}`)}</Badge>
 }
 

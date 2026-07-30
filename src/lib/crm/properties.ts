@@ -30,6 +30,10 @@ export interface PropertyFilters {
   operation?: Operation
   moderation?: Moderation
   is_featured?: boolean
+  /** The KPI/dashboard shortcut: active advertisement expiring within the
+   *  server's window (PropertyListQuery::applyFeaturedExpiringWindow), NOT
+   *  "featured" in general — is_featured stays the advanced-filter checkbox. */
+  featured_expiring?: boolean
   city_id?: number
   price_min?: number
   price_max?: number

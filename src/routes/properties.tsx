@@ -43,12 +43,14 @@ function filtersFromParams(params: URLSearchParams): PropertyFilters {
   const lifecycle = params.get('lifecycle')
   const sort = params.get('sort')
   const featured = params.get('is_featured')
+  const featuredExpiring = params.get('featured_expiring')
 
   return {
     search: params.get('search') ?? undefined,
     lifecycle: LIFECYCLES.includes(lifecycle as Lifecycle) ? (lifecycle as Lifecycle) : undefined,
     sort: PROPERTY_SORTS.includes(sort as PropertySort) ? (sort as PropertySort) : undefined,
     is_featured: featured === null ? undefined : featured === 'true',
+    featured_expiring: featuredExpiring === null ? undefined : featuredExpiring === 'true',
     city_id: num('city_id'),
     price_min: num('price_min'),
     price_max: num('price_max'),
@@ -307,7 +309,17 @@ export function PropertiesPage() {
       // still on screen — a toast is the one exception to "no success toasts"
       // (design.md:143): this reports a change the UI implied that the server
       // then refused.
-      fail(messageFor(classifyBatchError(failure), t))
+      const classified = classifyBatchError(failure)
+      fail(messageFor(classified, t))
+      // A 404 here means this row is gone — the same "stale selection" the
+      // bulk bar's onStale resyncs for. Reload both, or the row (and a total
+      // that still counts it) stays a phantom on screen. Other refusals (e.g.
+      // not-approved) leave the row exactly as it was, so there's nothing to
+      // resync.
+      if (classified.kind === 'stale') {
+        resource.reload()
+        summaryResource.reload()
+      }
     }
   }
 
@@ -656,6 +668,9 @@ export function PropertiesPage() {
               onStale={() => {
                 setSelected(new Set())
                 resource.reload()
+                // A 404 means a row disappeared — the total is wrong too, and
+                // showChrome (the A.8 gate) reads it.
+                summaryResource.reload()
               }}
             />
           </motion.div>

@@ -22,6 +22,10 @@ describe('propertyParams', () => {
     })
   })
 
+  it('serialises featured_expiring the same way as the other booleans', () => {
+    expect(propertyParams({ featured_expiring: true })).toEqual({ featured_expiring: 'true' })
+  })
+
   it('keeps offset and limit, since the pager depends on them', () => {
     expect(propertyParams({ offset: 30, limit: 30 })).toEqual({ offset: '30', limit: '30' })
   })

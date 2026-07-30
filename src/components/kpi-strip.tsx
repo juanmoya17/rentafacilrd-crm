@@ -38,7 +38,11 @@ export function KpiStrip({
       key: 'expiringFeatured',
       label: t('kpi.expiringFeatured'),
       value: summary.expiring_featured,
-      filter: { is_featured: true },
+      // Not is_featured: that's "has any active ad" with no date bound, which
+      // disagreed with this count (a listing expiring in 2 days is one of
+      // possibly several featured listings). featured_expiring is the exact
+      // predicate the count above uses.
+      filter: { featured_expiring: true },
     },
   ]
 

@@ -34,8 +34,9 @@ export function DashboardPage() {
     resource.status === 'ready' ? resource.data.total : null
 
   // A.5 — every KPI is a shortcut that lands on the filtered list, not a dead
-  // number. `is_featured=true` mirrors KpiStrip's own mapping for
-  // "expiring" (kpi-strip.tsx) — there is no dedicated expiring-soon filter.
+  // number. `featured_expiring=true` mirrors KpiStrip's own mapping for
+  // "expiring" (kpi-strip.tsx) — the exact active-ad-expiring-soon predicate
+  // the count itself uses, not the broader is_featured (any active ad).
   const kpis: { label: TranslationKey; value: number | null; to: string }[] = [
     {
       label: 'dashboard.kpi.total',
@@ -51,7 +52,7 @@ export function DashboardPage() {
     {
       label: 'dashboard.kpi.expiring',
       value: summary.status === 'ready' ? summary.data.expiring_featured : null,
-      to: '/properties?is_featured=true',
+      to: '/properties?featured_expiring=true',
     },
   ]
 
@@ -68,7 +69,7 @@ export function DashboardPage() {
     {
       label: 'dashboard.featuredExpiring',
       value: summary.status === 'ready' ? summary.data.expiring_featured : 0,
-      to: '/properties?is_featured=true',
+      to: '/properties?featured_expiring=true',
     },
     {
       label: 'dashboard.rejected',

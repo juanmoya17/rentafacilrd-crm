@@ -60,7 +60,10 @@ const seedProperties = [
   { id: 5, code: 'RF0640', title: 'Casa en Arroyo Hondo', city: 'Santo Domingo', city_id: 1, price: 11_200_000, area: 310, bedrooms: 4, bathrooms: 3, parking: 4, lifecycle: 'paused', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: null, created_at: at(-75 * DAY) },
   { id: 6, code: 'RF1024', title: 'Apartamento en Evaristo Morales', city: 'Santo Domingo', city_id: 1, price: 68_000, area: 120, bedrooms: 2, bathrooms: 2, parking: 1, lifecycle: 'rented', operation: 'rent', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: null, created_at: at(-30 * DAY) },
   { id: 7, code: 'RF1108', title: 'Solar en Santiago', city: 'Santiago', city_id: 3, price: 4_800_000, area: 800, bedrooms: 0, bathrooms: 0, parking: 0, lifecycle: 'rejected', operation: 'sell', moderation: 'rejected', leads_count: 0, unanswered_leads: 0, featured_expires_at: null, created_at: at(-12 * DAY) },
-  { id: 8, code: 'RF1130', title: 'Apartamento en Bávaro', city: 'Punta Cana', city_id: 2, price: 55_000, area: 96, bedrooms: 2, bathrooms: 2, parking: 1, lifecycle: 'draft', operation: 'rent', moderation: 'pending', leads_count: 0, unanswered_leads: 0, featured_expires_at: null, created_at: at(-3 * DAY) },
+  // pending_ad (mock-only, not on the wire — see openAdPropertyIds below):
+  // an ad was requested but is not yet approved, so it has no end_date and
+  // no star, same as an unfeatured row from featured_expires_at alone.
+  { id: 8, code: 'RF1130', title: 'Apartamento en Bávaro', city: 'Punta Cana', city_id: 2, price: 55_000, area: 96, bedrooms: 2, bathrooms: 2, parking: 1, lifecycle: 'draft', operation: 'rent', moderation: 'pending', leads_count: 0, unanswered_leads: 0, featured_expires_at: null, pending_ad: true, created_at: at(-3 * DAY) },
   { id: 9, code: 'RF0821', title: 'Apartamento en Gazcue', city: 'Santo Domingo', city_id: 1, price: 9_600_000, area: 140, bedrooms: 2, bathrooms: 2, parking: 1, lifecycle: 'expired', operation: null, moderation: 'approved', leads_count: 1, unanswered_leads: 0, featured_expires_at: null, created_at: at(-100 * DAY) },
 ]
 
@@ -211,6 +214,11 @@ export function handleCrm(method, path, params, body) {
     const data = {
       total: rows.length,
       published: rows.filter((p) => p.lifecycle === 'published').length,
+      // Real API: CrmLead::where('stage', 'new')->count() — a lead-stage
+      // count, unrelated to property.unanswered_leads (leads missing
+      // first_response_at, in any stage). Approximated here as a property
+      // sum for lack of a lead-level aggregate in this fixture; the two
+      // numbers will not match live.
       new_leads: rows.reduce((sum, p) => sum + p.unanswered_leads, 0),
       expiring_featured: rows.filter(isExpiringFeatured).length,
       featured_balance: { ...state.featureBalance },
@@ -246,7 +254,12 @@ export function handleCrm(method, path, params, body) {
       rows.forEach((p) => { p.lifecycle = 'published' })
       state.publishSlots -= ids.length
     } else if (action === 'feature') {
-      const alreadyFeatured = rows.filter((p) => p.featured_expires_at !== null).map((p) => p.id)
+      // Real guard: PropertyAdvertisementService::openAdPropertyIds — status
+      // IN (0,1), i.e. active OR pending. A pending ad has a null end_date
+      // and no star, so featured_expires_at alone misses it.
+      const alreadyFeatured = rows
+        .filter((p) => p.featured_expires_at !== null || p.pending_ad === true)
+        .map((p) => p.id)
       if (alreadyFeatured.length > 0) {
         return {
           status: 409,
@@ -280,14 +293,25 @@ export function handleCrm(method, path, params, body) {
   if (path === '/properties' && method === 'GET') {
     let rows = [...state.properties]
 
-    const q = (params.get('search') ?? '').trim().toLowerCase()
-    if (q !== '') {
-      rows = rows.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          (p.city ?? '').toLowerCase().includes(q) ||
-          p.code.toLowerCase().includes(q),
-      )
+    const search = (params.get('search') ?? '').trim()
+    if (search !== '') {
+      // Real PropertyListQuery::parseCode matches only ^RF\d+$ exactly (then
+      // looks the number up by id) and otherwise searches title/city and
+      // never code — so a partial like "RF04" or a bare "0412" must NOT
+      // match code as a substring. The mock's `code` isn't id-derived (it's
+      // a fixture literal, not `RF`+padded id like the real API computes at
+      // read time), so an exact RF#### search matches it by exact string
+      // instead of by parsed id — same "exact, not substring" behaviour,
+      // adapted to data that has no id<->code relationship to parse against.
+      if (/^RF\d+$/i.test(search)) {
+        const code = search.toUpperCase()
+        rows = rows.filter((p) => p.code.toUpperCase() === code)
+      } else {
+        const q = search.toLowerCase()
+        rows = rows.filter(
+          (p) => p.title.toLowerCase().includes(q) || (p.city ?? '').toLowerCase().includes(q),
+        )
+      }
     }
 
     const lifecycle = params.get('lifecycle')
