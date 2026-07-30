@@ -165,6 +165,7 @@ export const es = {
   'leads.empty': 'Ningún lead coincide con estos filtros.',
   'leads.emptyHint': 'Prueba a limpiar los filtros o amplía el rango de fechas.',
   'leads.filteredByProperty': 'Filtrado por anuncio',
+  'leads.clearPropertyFilter': 'Quitar el filtro por anuncio',
 
   'leadDetail.timeline': 'Actividad',
   'leadDetail.notes': 'Notas',

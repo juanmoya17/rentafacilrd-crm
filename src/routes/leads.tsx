@@ -41,9 +41,18 @@ export function LeadsPage() {
   const [query, setQuery] = useState(params.get('q') ?? '')
   const [debounced, setDebounced] = useState(query)
 
-  const stage = params.get('stage')
+  // An unrecognised `stage` (a stale/hand-edited bookmark) falls back to no
+  // filter rather than being sent to the server as-is — same reason
+  // properties.tsx validates `lifecycle` against LIFECYCLES.
+  const stageParam = params.get('stage')
+  const stage = STAGES.includes(stageParam as Stage) ? (stageParam as Stage) : null
   const sla = params.get('sla')
-  const propertyId = params.get('property_id')
+  // Same guard properties.tsx's `num()` uses: a non-numeric property_id (a
+  // typo'd or hand-edited URL) must not reach the server, where it 422s the
+  // whole list instead of just not filtering.
+  const propertyIdParam = params.get('property_id')
+  const propertyIdValue = propertyIdParam === null ? NaN : Number(propertyIdParam)
+  const propertyId = Number.isFinite(propertyIdValue) ? propertyIdValue : undefined
 
   // Typing filters server-side, so wait for a pause instead of a request per key.
   useEffect(() => {
@@ -55,9 +64,9 @@ export function LeadsPage() {
     (signal) =>
       listLeads(
         {
-          stage: (stage as Stage | null) ?? undefined,
+          stage: stage ?? undefined,
           sla: sla === 'breached' ? 'breached' : undefined,
-          property_id: propertyId === null ? undefined : Number(propertyId),
+          property_id: propertyId,
           q: debounced.trim() === '' ? undefined : debounced.trim(),
           limit: 50,
         },
@@ -161,7 +170,7 @@ export function LeadsPage() {
         <Segmented
           group="lead-stage"
           label={t('common.status')}
-          value={sla === 'breached' ? null : (stage as Stage | null)}
+          value={sla === 'breached' ? null : stage}
           onChange={setStage}
           options={[
             { value: null, label: t('common.all') },
@@ -188,10 +197,11 @@ export function LeadsPage() {
             only ever arrives via a link from the properties screen — so this
             is the one affordance that shows it is active and lets it be
             cleared, same border/pill styling the sla toggle uses. */}
-        {propertyId !== null && (
+        {propertyId !== undefined && (
           <button
             type="button"
             onClick={clearPropertyFilter}
+            aria-label={t('leads.clearPropertyFilter')}
             className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken active:translate-y-px"
           >
             {t('leads.filteredByProperty')}

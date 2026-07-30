@@ -327,6 +327,10 @@ export function handleCrm(method, path, params, body) {
     if (isFeatured === 'true') rows = rows.filter((p) => p.featured_expires_at !== null)
     if (isFeatured === 'false') rows = rows.filter((p) => p.featured_expires_at === null)
 
+    // The KPI shortcut — same isExpiringFeatured() predicate the summary
+    // count above uses, so the tile and this list agree under the mock too.
+    if (params.get('featured_expiring') === 'true') rows = rows.filter(isExpiringFeatured)
+
     const cityId = params.get('city_id')
     if (cityId) rows = rows.filter((p) => p.city_id === Number(cityId))
 
@@ -360,6 +364,9 @@ export function handleCrm(method, path, params, body) {
 
     const stage = params.get('stage')
     if (stage) rows = rows.filter((l) => l.stage === stage)
+
+    const propertyId = params.get('property_id')
+    if (propertyId) rows = rows.filter((l) => l.property_id === Number(propertyId))
 
     const origin = params.get('origin')
     if (origin) rows = rows.filter((l) => l.origin === origin)

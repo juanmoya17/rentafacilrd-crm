@@ -161,6 +161,7 @@ export const en: Record<TranslationKey, string> = {
   'leads.empty': 'No lead matches these filters.',
   'leads.emptyHint': 'Try clearing the filters or widening the date range.',
   'leads.filteredByProperty': 'Filtered by listing',
+  'leads.clearPropertyFilter': 'Remove the listing filter',
 
   'leadDetail.timeline': 'Activity',
   'leadDetail.notes': 'Notes',
