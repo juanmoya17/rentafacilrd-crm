@@ -45,8 +45,32 @@ const seedLeads = [
   [12, 12, 'RF1024', 'Apartamento en Evaristo Morales', 'contacted', 'direct', 58, null, at(-7 * DAY), at(-2 * DAY)],
 ]
 
+// Reuses the titles/cities/sectors/prices from src/lib/mock/data.ts's PROPERTIES
+// (the old camelCase mock), reshaped to the real snake_case API response —
+// see CrmProperty in src/lib/crm/types.ts. Two rows (RF1024, RF0821) are
+// pushed into `rented` and `expired`: those two lifecycle states are new in
+// the 7-value union and exist nowhere in the old mock, so nothing else
+// exercises them. RF0821 also carries operation:null (a project-style
+// listing) to cover the render-nothing branch.
+const seedProperties = [
+  { id: 1, code: 'RF0412', title: 'Apartamento en Piantini', city: 'Santo Domingo', city_id: 1, price: 14_500_000, area: 210, bedrooms: 3, bathrooms: 3, parking: 2, lifecycle: 'published', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 1, featured_expires_at: at(2 * DAY), created_at: at(-60 * DAY) },
+  { id: 2, code: 'RF0288', title: 'Local comercial en Naco', city: 'Santo Domingo', city_id: 1, price: 95_000, area: 180, bedrooms: 0, bathrooms: 2, parking: 3, lifecycle: 'published', operation: 'rent', moderation: 'approved', leads_count: 2, unanswered_leads: 2, featured_expires_at: null, created_at: at(-45 * DAY) },
+  { id: 3, code: 'RF0913', title: 'Villa en Punta Cana', city: 'Punta Cana', city_id: 2, price: 27_900_000, area: 420, bedrooms: 4, bathrooms: 5, parking: 2, lifecycle: 'published', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: at(9 * DAY), created_at: at(-90 * DAY) },
+  { id: 4, code: 'RF0755', title: 'Penthouse en Bella Vista', city: 'Santo Domingo', city_id: 1, price: 18_400_000, area: 265, bedrooms: 3, bathrooms: 4, parking: 2, lifecycle: 'sold', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: null, created_at: at(-120 * DAY) },
+  { id: 5, code: 'RF0640', title: 'Casa en Arroyo Hondo', city: 'Santo Domingo', city_id: 1, price: 11_200_000, area: 310, bedrooms: 4, bathrooms: 3, parking: 4, lifecycle: 'paused', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: null, created_at: at(-75 * DAY) },
+  { id: 6, code: 'RF1024', title: 'Apartamento en Evaristo Morales', city: 'Santo Domingo', city_id: 1, price: 68_000, area: 120, bedrooms: 2, bathrooms: 2, parking: 1, lifecycle: 'rented', operation: 'rent', moderation: 'approved', leads_count: 2, unanswered_leads: 0, featured_expires_at: null, created_at: at(-30 * DAY) },
+  { id: 7, code: 'RF1108', title: 'Solar en Santiago', city: 'Santiago', city_id: 3, price: 4_800_000, area: 800, bedrooms: 0, bathrooms: 0, parking: 0, lifecycle: 'rejected', operation: 'sell', moderation: 'rejected', leads_count: 0, unanswered_leads: 0, featured_expires_at: null, created_at: at(-12 * DAY) },
+  { id: 8, code: 'RF1130', title: 'Apartamento en Bávaro', city: 'Punta Cana', city_id: 2, price: 55_000, area: 96, bedrooms: 2, bathrooms: 2, parking: 1, lifecycle: 'draft', operation: 'rent', moderation: 'pending', leads_count: 0, unanswered_leads: 0, featured_expires_at: null, created_at: at(-3 * DAY) },
+  { id: 9, code: 'RF0821', title: 'Apartamento en Gazcue', city: 'Santo Domingo', city_id: 1, price: 9_600_000, area: 140, bedrooms: 2, bathrooms: 2, parking: 1, lifecycle: 'expired', operation: null, moderation: 'approved', leads_count: 1, unanswered_leads: 0, featured_expires_at: null, created_at: at(-100 * DAY) },
+]
+
 const state = {
   contacts,
+  properties: seedProperties,
+  // Small on purpose (spec: "keep a small mock balance") — nine seed rows is
+  // enough ids to exceed either quota in one batch call and hit the 409s.
+  featureBalance: { total: 3, unlimited: false },
+  publishSlots: 3,
   leads: seedLeads.map(
     ([id, contactId, code, title, stage, origin, score, slaDueAt, firstResponseAt, lastActivityAt]) => ({
       id,
@@ -129,11 +153,183 @@ const paginate = (rows, params) => {
   return rows.slice(offset, offset + limit)
 }
 
+// ----------------------------------------------------------------- properties
+const EXPIRY_WINDOW = 3 * DAY
+
+const isExpiringFeatured = (property) => {
+  if (property.featured_expires_at === null) return false
+  const remaining = new Date(property.featured_expires_at).getTime() - Date.now()
+  return remaining >= 0 && remaining < EXPIRY_WINDOW
+}
+
+function shapeProperty(property) {
+  return {
+    id: property.id,
+    code: property.code,
+    title: property.title,
+    city: property.city,
+    city_id: property.city_id,
+    price: property.price,
+    area: property.area,
+    bedrooms: property.bedrooms,
+    bathrooms: property.bathrooms,
+    parking: property.parking,
+    lifecycle: property.lifecycle,
+    operation: property.operation,
+    moderation: property.moderation,
+    leads_count: property.leads_count,
+    unanswered_leads: property.unanswered_leads,
+    featured_expires_at: property.featured_expires_at,
+    created_at: property.created_at,
+  }
+}
+
+const PROPERTY_SORTERS = {
+  newest: (a, b) => new Date(b.created_at) - new Date(a.created_at),
+  oldest: (a, b) => new Date(a.created_at) - new Date(b.created_at),
+  price_asc: (a, b) => (a.price ?? 0) - (b.price ?? 0),
+  price_desc: (a, b) => (b.price ?? 0) - (a.price ?? 0),
+  // No page-view counter in the fixture; leads_count is the closest proxy.
+  most_viewed: (a, b) => b.leads_count - a.leads_count,
+}
+
+const paginateProperties = (rows, params) => {
+  const offset = Math.max(0, Number(params.get('offset') ?? 0) || 0)
+  const rawLimit = Number(params.get('limit') ?? 30)
+  const limit = Math.min(100, Math.max(1, Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : 30))
+  return rows.slice(offset, offset + limit)
+}
+
 /**
  * Returns {status, body} for a CRM path, or null when the path is not ours.
  * `path` has the /api/crm prefix already stripped.
  */
 export function handleCrm(method, path, params, body) {
+  // -------------------------------------------------------------- properties
+  if (path === '/properties/summary' && method === 'GET') {
+    const rows = state.properties
+    const data = {
+      total: rows.length,
+      published: rows.filter((p) => p.lifecycle === 'published').length,
+      new_leads: rows.reduce((sum, p) => sum + p.unanswered_leads, 0),
+      expiring_featured: rows.filter(isExpiringFeatured).length,
+      featured_balance: { ...state.featureBalance },
+    }
+    return { status: 200, body: { error: false, message: 'Data fetched', data, code: 200 } }
+  }
+
+  if (path === '/properties/batch' && method === 'POST') {
+    const action = body.action
+    const ids = Array.isArray(body.ids) ? body.ids : []
+
+    const rows = ids.map((id) => state.properties.find((p) => p.id === id))
+    if (rows.some((row) => row === undefined)) {
+      return { status: 404, body: { error: true, message: 'Property not found', code: 404 } }
+    }
+
+    // All four refusals are all-or-nothing: return before mutating anything.
+    if (action === 'publish') {
+      const notApproved = rows.filter((p) => p.moderation !== 'approved').map((p) => p.id)
+      if (notApproved.length > 0) {
+        return {
+          status: 409,
+          body: { error: true, message: 'Some properties are not approved', data: { not_approved: notApproved }, code: 409 },
+        }
+      }
+      const have = state.publishSlots
+      if (ids.length > have) {
+        return {
+          status: 409,
+          body: { error: true, message: 'Not enough publish slots', data: { need: ids.length, have, short: ids.length - have }, code: 409 },
+        }
+      }
+      rows.forEach((p) => { p.lifecycle = 'published' })
+      state.publishSlots -= ids.length
+    } else if (action === 'feature') {
+      const alreadyFeatured = rows.filter((p) => p.featured_expires_at !== null).map((p) => p.id)
+      if (alreadyFeatured.length > 0) {
+        return {
+          status: 409,
+          body: { error: true, message: 'Some properties are already featured', data: { already_featured: alreadyFeatured }, code: 409 },
+        }
+      }
+      const have = state.featureBalance.total
+      if (ids.length > have) {
+        return {
+          status: 409,
+          body: { error: true, message: 'Not enough featured credits', data: { need: ids.length, have, short: ids.length - have }, code: 409 },
+        }
+      }
+      rows.forEach((p) => { p.featured_expires_at = at(30 * DAY) })
+      state.featureBalance.total -= ids.length
+    } else if (action === 'pause') {
+      rows.forEach((p) => { p.lifecycle = 'paused' })
+    } else if (action === 'close') {
+      // BulkAction::close — a sale closes as sold, a rental closes as rented.
+      rows.forEach((p) => { p.lifecycle = p.operation === 'rent' ? 'rented' : 'sold' })
+    } else if (action === 'delete') {
+      const idSet = new Set(ids)
+      state.properties = state.properties.filter((p) => !idSet.has(p.id))
+    } else {
+      return { status: 422, body: { error: true, message: `Unknown action "${action}"`, code: 422 } }
+    }
+
+    return { status: 200, body: { error: false, message: 'Batch applied', data: { action, affected: ids.length }, code: 200 } }
+  }
+
+  if (path === '/properties' && method === 'GET') {
+    let rows = [...state.properties]
+
+    const q = (params.get('search') ?? '').trim().toLowerCase()
+    if (q !== '') {
+      rows = rows.filter(
+        (p) =>
+          p.title.toLowerCase().includes(q) ||
+          (p.city ?? '').toLowerCase().includes(q) ||
+          p.code.toLowerCase().includes(q),
+      )
+    }
+
+    const lifecycle = params.get('lifecycle')
+    if (lifecycle) rows = rows.filter((p) => p.lifecycle === lifecycle)
+
+    const operation = params.get('operation')
+    if (operation) rows = rows.filter((p) => p.operation === operation)
+
+    const moderation = params.get('moderation')
+    if (moderation) rows = rows.filter((p) => p.moderation === moderation)
+
+    const isFeatured = params.get('is_featured')
+    if (isFeatured === 'true') rows = rows.filter((p) => p.featured_expires_at !== null)
+    if (isFeatured === 'false') rows = rows.filter((p) => p.featured_expires_at === null)
+
+    const cityId = params.get('city_id')
+    if (cityId) rows = rows.filter((p) => p.city_id === Number(cityId))
+
+    const priceMin = params.get('price_min')
+    if (priceMin !== null) rows = rows.filter((p) => p.price !== null && p.price >= Number(priceMin))
+    const priceMax = params.get('price_max')
+    if (priceMax !== null) rows = rows.filter((p) => p.price !== null && p.price <= Number(priceMax))
+
+    const areaMin = params.get('area_min')
+    if (areaMin !== null) rows = rows.filter((p) => p.area !== null && p.area >= Number(areaMin))
+    const areaMax = params.get('area_max')
+    if (areaMax !== null) rows = rows.filter((p) => p.area !== null && p.area <= Number(areaMax))
+
+    rows.sort(PROPERTY_SORTERS[params.get('sort')] ?? PROPERTY_SORTERS.newest)
+
+    return {
+      status: 200,
+      body: {
+        error: false,
+        message: 'Data fetched',
+        data: paginateProperties(rows, params).map(shapeProperty),
+        code: 200,
+        total: rows.length,
+      },
+    }
+  }
+
   // ------------------------------------------------------------------ leads
   if (path === '/leads' && method === 'GET') {
     let rows = [...state.leads]
