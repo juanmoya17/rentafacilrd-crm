@@ -493,15 +493,16 @@ export function PropertiesPage() {
         <KpiStrip summary={summaryResource.data} onPick={applyKpiFilter} />
       )}
 
-      {/* A.6 — gated on showChrome (A.8: hidden below four listings) in
-          addition to the rail's own total > 0 (ActionRail renders nothing
-          itself when empty). A loading or failed rail fetch just shows
-          nothing here rather than a spinner or error banner — it is a
-          shortcut strip, not primary content, and the table below is
-          unaffected either way. */}
-      {showChrome && railResource.status === 'ready' && (
-        <ActionRail rail={railResource.data} />
-      )}
+      {/* A.6 — gated on the rail's own total > 0 alone (ActionRail renders
+          nothing itself when empty). NOT showChrome: that gate is A.8's
+          listing-density threshold, about growing the density toggle and
+          advanced filters with inventory — it was never meant to hide
+          pending work. An agent with 3 listings and 4 overdue tasks must
+          still see this. A loading or failed rail fetch just shows nothing
+          here rather than a spinner or error banner — it is a shortcut
+          strip, not primary content, and the table below is unaffected
+          either way. */}
+      {railResource.status === 'ready' && <ActionRail rail={railResource.data} />}
 
       <FilterBar>
         <SearchField
