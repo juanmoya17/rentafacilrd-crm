@@ -1,8 +1,7 @@
 import { Link } from 'react-router'
 import { useI18n } from '@/lib/i18n/context'
-import type { TranslationKey } from '@/lib/i18n/es'
-import { railBucketTarget } from '@/lib/crm/properties'
-import type { ActionRail as ActionRailData, RailBucketKey } from '@/lib/crm/types'
+import { BUCKET_LABEL, railBucketTarget } from '@/lib/crm/properties'
+import type { ActionRail as ActionRailData } from '@/lib/crm/types'
 
 /**
  * A.6 — "Requiere acción". Four shortcuts from two sources, same idiom as
@@ -11,14 +10,11 @@ import type { ActionRail as ActionRailData, RailBucketKey } from '@/lib/crm/type
  *
  * Three labels reuse the dashboard's existing copy — they name the exact same
  * thing (a rejected listing is a rejected listing, whichever screen says so).
- * Only `overdue_tasks` has no prior copy to reuse.
+ * Only `overdue_tasks` has no prior copy to reuse. BUCKET_LABEL itself lives
+ * in lib/crm/properties.ts, not here — dashboard.tsx needs the identical
+ * mapping, and a data constant re-exported from a component file trips the
+ * react-refresh lint rule.
  */
-const BUCKET_LABEL: Record<RailBucketKey, TranslationKey> = {
-  rejected: 'dashboard.rejected',
-  expiring_featured: 'dashboard.featuredExpiring',
-  sla_breached: 'dashboard.slaBreached',
-  overdue_tasks: 'rail.overdueTasks',
-}
 
 /**
  * Renders nothing at all when `total === 0` — no container, no heading, no

@@ -1,5 +1,6 @@
 import { ApiError, api } from '@/lib/api'
 import type { Translate } from '@/lib/i18n/context'
+import type { TranslationKey } from '@/lib/i18n/es'
 import type { Page } from './api'
 import type {
   ActionRail,
@@ -90,6 +91,20 @@ export function formatSpecs(
  * flow can fall through without returning), not a silently dead link — the
  * exact bug class that shipped twice already on this branch.
  */
+/**
+ * A.6 bucket -> label. A plain data map (not a component), so it lives here
+ * rather than in action-rail.tsx: exporting a non-component constant from a
+ * component file trips the react-refresh only-export-components lint rule,
+ * and dashboard.tsx needs the same mapping action-rail.tsx uses so the two
+ * screens' rails cannot drift out of sync.
+ */
+export const BUCKET_LABEL: Record<RailBucketKey, TranslationKey> = {
+  rejected: 'dashboard.rejected',
+  expiring_featured: 'dashboard.featuredExpiring',
+  sla_breached: 'dashboard.slaBreached',
+  overdue_tasks: 'rail.overdueTasks',
+}
+
 export function railBucketTarget(key: RailBucketKey): string {
   switch (key) {
     case 'rejected':

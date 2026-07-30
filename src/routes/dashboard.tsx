@@ -9,7 +9,12 @@ import { RecordSectionHead } from '@/components/record'
 import { useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { listLeads } from '@/lib/crm/api'
-import { getPropertySummary, listProperties } from '@/lib/crm/properties'
+import {
+  BUCKET_LABEL,
+  getActionRail,
+  getPropertySummary,
+  railBucketTarget,
+} from '@/lib/crm/properties'
 
 export function DashboardPage() {
   const { state } = useAuth()
@@ -17,15 +22,14 @@ export function DashboardPage() {
   const reveal = useRowReveal()
 
   const newLeads = useResource((signal) => listLeads({ stage: 'new', limit: 1 }, signal), [])
-  const breached = useResource((signal) => listLeads({ sla: 'breached', limit: 1 }, signal), [])
   // A.5 — same summary endpoint the properties screen's KPI strip uses.
   const summary = useResource((signal) => getPropertySummary(signal), [])
-  // Unlike "unanswered leads," rejected listings ARE expressible as a filter
-  // today — same idiom as newLeads/breached above, just against properties.
-  const rejected = useResource(
-    (signal) => listProperties({ lifecycle: 'rejected', limit: 1 }, signal),
-    [],
-  )
+  // A.6 — the same cached rail /properties uses (getActionRail, GET
+  // /api/crm/action-rail). A second, hand-rolled version used to live here —
+  // three uncached list calls, missing overdue_tasks entirely — and could
+  // show a different count than the properties screen under the identical
+  // "Requiere acción" heading. One source of truth, four buckets.
+  const railResource = useResource((signal) => getActionRail(signal), [])
 
   if (state.status !== 'authenticated') return null
 
@@ -56,32 +60,18 @@ export function DashboardPage() {
     },
   ]
 
-  // A.6 — the rail disappears when there is nothing pending. "Unanswered
-  // leads" (no first response, regardless of SLA) stays out on purpose: the
-  // only aggregate that exists is `sla_breached` — a strict subset (also
-  // past due) — and that's exactly what the row below already shows. A
-  // second row reading "unanswered" over the same number and the same
-  // /leads?sla=breached link would be copy that lies about what it counts,
-  // and two rows for one number is the noise A.6 exists to remove. Add a
-  // real "unanswered" row only once a superset aggregate exists to back it.
-  const railItems: { label: TranslationKey; value: number; to: string }[] = [
-    {
-      label: 'dashboard.slaBreached',
-      value: breached.status === 'ready' ? breached.data.total : 0,
-      to: '/leads?sla=breached',
-    },
-    {
-      label: 'dashboard.featuredExpiring',
-      value: summary.status === 'ready' ? summary.data.expiring_featured : 0,
-      to: '/properties?featured_expiring=true',
-    },
-    {
-      label: 'dashboard.rejected',
-      value: rejected.status === 'ready' ? rejected.data.total : 0,
-      to: '/properties?lifecycle=rejected',
-    },
-  ]
-  const rail = railItems.filter((item) => item.value > 0)
+  // A.6 — the cached rail's buckets, mapped to this screen's own row layout.
+  // Zero-count buckets are already omitted server-side, so nothing to filter
+  // here. A loading or failed fetch just shows the empty state below rather
+  // than a spinner or error banner — same as the properties screen's rail.
+  const rail: { label: TranslationKey; value: number; to: string }[] =
+    railResource.status === 'ready'
+      ? railResource.data.buckets.map((bucket) => ({
+          label: BUCKET_LABEL[bucket.key],
+          value: bucket.count,
+          to: railBucketTarget(bucket.key),
+        }))
+      : []
 
   return (
     <>
