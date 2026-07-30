@@ -2,10 +2,13 @@ import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { AnimatePresence, motion } from 'motion/react'
 import { useI18n } from '@/lib/i18n/context'
-import { Badge, Button, EmptyState, MockNotice, PageHeader } from '@/components/ui'
+import { Badge, Button, EmptyState, ErrorState, LoadingState, MockNotice, PageHeader } from '@/components/ui'
 import { FilterBar, Register, SearchField, Segmented, type Column } from '@/components/register'
 import { LifecycleBadge, OperationBadge } from '@/components/labels'
+import { KpiStrip } from '@/components/kpi-strip'
 import { useRecordMorph } from '@/lib/motion'
+import { useResource } from '@/lib/use-resource'
+import { getPropertySummary, propertyParams, type PropertyFilters } from '@/lib/crm/properties'
 import { PROPERTIES, type Lifecycle, type Property } from '@/lib/mock/data'
 
 const LIFECYCLES: Lifecycle[] = ['draft', 'published', 'paused', 'sold', 'rejected']
@@ -58,6 +61,16 @@ export function PropertiesPage() {
   const [query, setQuery] = useState('')
   const [compact, setCompact] = useState(true)
   const [selected, setSelected] = useState<Set<number>>(new Set())
+
+  // A.5 — the screen owns this fetch, not the strip: Task 6's bulk bar reads
+  // the same featured_balance, and a batch action has to refresh both the
+  // rows and this summary through the one `reload` below.
+  const summaryResource = useResource((signal) => getPropertySummary(signal), [])
+
+  const handleKpiPick = (filter: PropertyFilters) => {
+    setParams(propertyParams(filter), { replace: true })
+    setSelected(new Set())
+  }
 
   const status = params.get('status')
   const leadsFilter = params.get('leads')
@@ -204,6 +217,24 @@ export function PropertiesPage() {
         }
       />
       <MockNotice>{t('mock.notice', { milestone: 'A.1 – A.8' })}</MockNotice>
+
+      {summaryResource.status === 'loading' && (
+        <div className="mb-4">
+          <LoadingState label={t('common.loading')} />
+        </div>
+      )}
+      {summaryResource.status === 'error' && (
+        <div className="mb-4">
+          <ErrorState
+            message={summaryResource.message}
+            retryLabel={t('common.retry')}
+            onRetry={summaryResource.reload}
+          />
+        </div>
+      )}
+      {summaryResource.status === 'ready' && (
+        <KpiStrip summary={summaryResource.data} onPick={handleKpiPick} />
+      )}
 
       <FilterBar>
         <SearchField
