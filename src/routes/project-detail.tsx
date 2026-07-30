@@ -67,14 +67,15 @@ export function ProjectDetailPage() {
         backTo="/projects"
         title={project.name}
         subtitle={`${project.sector}, ${project.city}`}
-        badges={
-          <>
-            <Badge tone="brand">{t(`projectStatus.${project.status}`)}</Badge>
-            <span className="font-mono text-sm font-semibold text-ink">
-              {formatCurrency(project.priceFrom)} – {formatCurrency(project.priceTo)}
-            </span>
-          </>
+        // The price range was in `badges`, which made a fact look like a
+        // status chip beside a real one. `meta` is the same slot the property
+        // record puts its spec line in — the glanceable line under the title.
+        meta={
+          <p className="font-mono text-sm text-ink-2">
+            {formatCurrency(project.priceFrom)} – {formatCurrency(project.priceTo)}
+          </p>
         }
+        badges={<Badge tone="brand">{t(`projectStatus.${project.status}`)}</Badge>}
         actions={<Button variant="primary">{t('projectDetail.closeSale')}</Button>}
       />
       <MockNotice>{t('mock.notice', { milestone: 'E.1 – E.4 / E.7' })}</MockNotice>

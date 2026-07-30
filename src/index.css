@@ -78,6 +78,53 @@ body {
   inset: 0;
 }
 
+/* ------------------------------------------------------------- map pins
+ *
+ * Leaflet builds its markers as bare DOM, outside anything Tailwind scans, so
+ * the pin has to be styled here. Every value is a token — a pin is the one
+ * place a stray hex would be least visible and most permanent.
+ *
+ * Leaflet also hard-codes `margin-left`/`margin-top` on the icon from
+ * `iconAnchor`, and sets `width`/`height` inline unless `iconSize` is
+ * undefined. With it undefined the label sizes to its own text, which is what
+ * lets a pin read "14.5 M" and another "95 mil" without one of them clipping.
+ */
+.rf-pin {
+  width: auto !important;
+  height: auto !important;
+}
+
+.rf-pin__label {
+  display: block;
+  transform: translate(-50%, -100%);
+  white-space: nowrap;
+  /* Literal spacing and radius, matching Tailwind's `px-2` / `rounded-md`:
+   * this project has colour, type and motion tokens but leans on Tailwind's
+   * own scale for space and radius, so there is no --space-* to reference. */
+  padding: 2px 0.5rem;
+  border: 1px solid var(--color-rule-2);
+  border-radius: 0.375rem;
+  background: var(--color-surface-raised);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 1px 3px var(--color-pin-shadow);
+}
+
+.rf-pin--active .rf-pin__label {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+/* Leaflet's own focus outline is a browser default it resets away. */
+.rf-pin:focus-visible .rf-pin__label {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
 /* -------------------------------------------------------- view transitions
 
  * react-router calls document.startViewTransition() for any navigation from a

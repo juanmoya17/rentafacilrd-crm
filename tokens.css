@@ -119,6 +119,13 @@
   --color-band-mild: oklch(82% 0.13 85);
   --color-band-cold: oklch(64% 0.014 195); /* = rule-2; absence of heat */
 
+  /* The map pin's drop shadow, and the only elevation token in the system.
+   * A pin sits on third-party photographic tiles, not on our paper, so the
+   * hairline that separates every other surface has nothing predictable to
+   * separate against. This is the documented exception to "hairlines, not
+   * elevation" — do not reach for it for cards. */
+  --color-pin-shadow: oklch(0% 0 0 / 0.35);
+
   /* ---- Motion -----------------------------------------------------------
    * These three names deliberately OVERRIDE Tailwind's own `--ease-*`, so a
    * class of `ease-out` anywhere in the app resolves to the crafted curve.

@@ -104,7 +104,7 @@ declare. A new screen picks a family; it does not invent a sixth.
 | --- | --- | --- |
 | **Console** | Stat row → action queue | dashboard |
 | **Register** | Filter bar → sticky-head table (≥lg) / card stack (<lg) | leads · properties · inventory · notifications · tasks · projects |
-| **Record** | Title spine + detail rail | lead-detail · property-detail · project-detail |
+| **Record** | Title spine + labelled sections | lead-detail · property-detail · project-detail |
 | **Board** | Horizontal columns, drag between | pipeline |
 | **Preferences** | Labelled field groups | settings |
 
@@ -112,6 +112,69 @@ The Register shell is `components/register.tsx`. Its column definition drives
 both layouts, so the table and the card stack cannot drift apart. Below `lg` the
 table becomes cards — these screens used to be a 56rem table in a horizontal
 scroller, which at 375px was a 3-inch window onto it.
+
+**Properties offers three user-chosen views** — Table / Fichas / Mapa, in the
+toolbar's right cluster. Exactly one may be mounted at a time. Register already
+keeps both of *its own* layouts in the DOM and relies on `display: none` to
+stop the hidden copy claiming `view-transition-name: record-title`; a second
+visible view would give two elements the same name and silently kill the record
+morph. The card grid and the map's list column are property-shaped rather than
+column projections, so they live in `routes/properties.tsx`; the anti-drift
+guarantee comes from `StatusBadges`, `LeadCount`, `PriceCell` and
+`InlineAction`, which every view renders through.
+
+### Photography and the map
+
+`CrmProperty` carries `images: string[]` (always an array, `[]` for an
+unphotographed draft), `description`, and `lat`/`lng` (both or neither).
+`PropertyPhoto` owns the no-photo block so the empty state is decided once and
+cards keep their height. `PropertyGallery` — one large frame plus up to four
+thumbs, the last carrying `+N` — is the record's browsing surface; the list's
+`PhotoDots` are indicators only, because twelve per-card carousels would put
+twelve focus stops between an agent and the record they are opening.
+
+The map is Leaflet on OpenStreetMap tiles. Three things constrain edits to it:
+
+- **Tiles are third-party requests** from the agent's browser to
+  `tile.openstreetmap.org`. Swap `TILE_URL` in `property-map.tsx` for a
+  self-hosted endpoint if that ever has to stop; nothing else changes.
+- **Pins are `divIcon`s, never Leaflet's default marker**, so the
+  `marker-icon.png` 404 that bundlers produce cannot happen. Their styling
+  lives in `index.css` (Leaflet builds them outside anything Tailwind scans)
+  and `--color-pin-shadow` is the single elevation token in the system — the
+  documented exception to "hairlines, not elevation", because a pin sits on
+  photographic tiles rather than on our paper.
+- **Selection syncs both ways and there is no popup bubble.** A bubble would
+  cover the neighbouring pins, which are the reason to be looking at a map.
+- `scrollWheelZoom` is off. The page scrolls; ⌘/Ctrl + wheel and the buttons
+  still zoom.
+
+Un-geocoded listings are never dropped — they sit under a labelled divider in
+the list column, because an agent who filtered to eight rows and counts six
+pins needs to know where the other two went.
+
+**Record — one shape, two body layouts.** Every record is `RecordHeader`
+(back link · optional `media` · title · `meta` line · badges · actions) followed
+by `RecordSectionHead`-labelled sections. What varies is whether the sections
+stack full-width or split into a 2/3 + 1/3 rail, and the rule is the body:
+
+- **Stack** when the sections are peers — `property-detail` (gallery, About,
+  Details, Publicación, Leads).
+- **Rail** when one section is a long chronological body that would bury its
+  neighbours — `lead-detail`, whose timeline grows without bound while the
+  tasks beside it must stay reachable.
+- **Tabs** when the sections are alternative views of the same thing rather
+  than parts of it — `project-detail` (models / units).
+
+`FactGrid` is the labelled-fact block in all three; `FactList` is the narrow
+label-value rail, and its only remaining consumer is `settings.tsx` under the
+Preferences family.
+
+Two slots on `RecordHeader` exist to stop facts being dressed as status:
+`meta` is the glanceable line under the title (a property's specs, a project's
+price range), `badges` is for actual state chips. A price range in `badges`
+reads as a status pill beside a real one — that was the bug that motivated the
+slot.
 
 ## Motion stance
 
@@ -247,8 +310,12 @@ Known-incomplete, in priority order. None is a blocker.
    for that refetch (which is what its retry loop is for), so the cost shows up
    as a brief pause before the list lands at the right offset rather than as a
    wrong offset. A short-lived cache would remove the pause.
-2. **Bundle is one 507kB chunk** (156kB gzipped). Vite is warning about it. The
-   obvious split is `motion` + the route components via `React.lazy`.
+2. **Bundle is one 685kB chunk** (208kB gzipped). Vite is warning about it, and
+   Leaflet made it louder — it is only needed by one of three views on one
+   screen and is currently in the entry chunk. The split, in order of payoff:
+   `React.lazy` the route components, then dynamic-`import()` `property-map.tsx`
+   so the map is fetched when an agent picks the Mapa view rather than on
+   first paint.
 3. **`ScoreDot` bands are colour + number, with no third channel.** The number
    carries the value so nothing is lost, but a shape or letter per band would
    make the heat readable without relying on the figure.

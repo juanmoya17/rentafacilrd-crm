@@ -5,6 +5,7 @@ import type { RailBucketKey } from './types'
 import {
   classifyBatchError,
   formatSpecs,
+  isLocated,
   messageFor,
   propertyParams,
   railBucketTarget,
@@ -50,6 +51,33 @@ describe('railBucketTarget', () => {
     for (const [key, expected] of Object.entries(targets) as [RailBucketKey, string][]) {
       expect(railBucketTarget(key)).toBe(expected)
     }
+  })
+})
+
+describe('isLocated', () => {
+  const at = (lat: number | null, lng: number | null) =>
+    ({ lat, lng }) as unknown as Parameters<typeof isLocated>[0]
+
+  it('accepts a row with both coordinates', () => {
+    expect(isLocated(at(18.4861, -69.9312))).toBe(true)
+  })
+
+  it('rejects a row with neither', () => {
+    expect(isLocated(at(null, null))).toBe(false)
+  })
+
+  // The wire contract says both-or-neither, but a partial backfill would send
+  // one. Leaflet throws on a null in a LatLng, so this has to be caught here
+  // rather than inside the map.
+  it('rejects a half-geocoded row rather than letting it reach the map', () => {
+    expect(isLocated(at(18.4861, null))).toBe(false)
+    expect(isLocated(at(null, -69.9312))).toBe(false)
+  })
+
+  // 0,0 is in the Atlantic, but it is a legal coordinate and the guard's job
+  // is presence, not plausibility — a falsy check here would drop it.
+  it('accepts zero, which a falsy check would wrongly reject', () => {
+    expect(isLocated(at(0, 0))).toBe(true)
   })
 })
 

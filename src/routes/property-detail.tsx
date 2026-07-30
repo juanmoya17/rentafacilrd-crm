@@ -2,12 +2,13 @@ import { Link, useParams } from 'react-router'
 import { motion } from 'motion/react'
 import { useI18n } from '@/lib/i18n/context'
 import { Button, Card, EmptyState, ErrorState, LoadingState, ScoreDot } from '@/components/ui'
-import { FactList, RecordHeader, RecordSectionHead } from '@/components/record'
+import { FactGrid, RecordHeader, RecordSectionHead } from '@/components/record'
+import { PropertyGallery } from '@/components/property-gallery'
 import { LifecycleBadge, OperationBadge, StageBadge } from '@/components/labels'
 import { useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { listLeads, type Page } from '@/lib/crm/api'
-import { listProperties } from '@/lib/crm/properties'
+import { formatSpecs, listProperties } from '@/lib/crm/properties'
 import type { CrmLead } from '@/lib/crm/types'
 
 const EMPTY_LEADS: Page<CrmLead> = { items: [], total: 0 }
@@ -66,10 +67,14 @@ export function PropertyDetailPage() {
     )
   }
 
+  // Two labelled groups rather than one list: the specs are what an agent
+  // reads out on the phone, the listing facts are what they check before
+  // acting on it. Splitting them is what let the record go full-width — the
+  // old single rail sat in a 1/3 column and could only hold five facts.
+  //
   // No parking figure — not a parameter in this installation (owner decision
-  // from Task 5). bedrooms/bathrooms/area are all on CrmProperty now; each
-  // renders '—' for a null value rather than inventing a zero, same
-  // discipline the list row's formatSpecs() uses.
+  // from Task 5). Every field renders '—' for a null value rather than
+  // inventing a zero, same discipline the list row's formatSpecs() uses.
   const specs = [
     {
       label: t('common.price'),
@@ -91,7 +96,33 @@ export function PropertyDetailPage() {
       value: property.bathrooms === null ? '—' : formatNumber(property.bathrooms),
       numeric: true,
     },
+  ]
+
+  const listing = [
     { label: t('common.city'), value: property.city ?? '—' },
+    { label: t('common.code'), value: property.code, numeric: true },
+    {
+      label: t('common.created'),
+      value: property.created_at === null ? '—' : formatDate(property.created_at),
+      numeric: true,
+    },
+    {
+      label: t('propertyDetail.moderation'),
+      // Null means "not yet derived" (types.ts) — a dash, never a default
+      // status, for the same reason the badges render nothing for it.
+      value: property.moderation === null ? '—' : t(`moderation.${property.moderation}`),
+    },
+    {
+      label: t('propertyDetail.featured'),
+      value:
+        property.featured_expires_at === null ? '—' : formatDate(property.featured_expires_at),
+      numeric: true,
+    },
+    {
+      label: t('common.leads'),
+      value: formatNumber(property.leads_count),
+      numeric: true,
+    },
   ]
 
   return (
@@ -100,32 +131,60 @@ export function PropertyDetailPage() {
         backTo="/properties"
         title={property.title}
         subtitle={property.code}
+        media={<PropertyGallery images={property.images} />}
+        meta={
+          // The glanceable line — what an agent reads out on the phone. The
+          // Details grid below carries the same figures labelled and exact;
+          // this one is for the two seconds before that.
+          <p className="font-mono text-sm text-ink-2">
+            {formatSpecs(property, formatNumber)}
+            {property.city !== null && <span className="text-muted"> · {property.city}</span>}
+          </p>
+        }
         badges={
           <>
             <LifecycleBadge lifecycle={property.lifecycle} />
             <OperationBadge operation={property.operation} />
-            {property.featured_expires_at !== null && (
-              <span className="font-mono text-xs text-muted">
-                {t('properties.featuredUntil', {
-                  date: formatDate(property.featured_expires_at),
-                })}
-              </span>
-            )}
           </>
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* The rail leads on this record: the specs are what an agent reads out
-            on the phone, so they sit first in DOM order and first on mobile. */}
-        <div className="lg:col-span-1">
+      {/* Stacked labelled sections, each full-width. The featured date used to
+          sit in the badge row above; it is a labelled fact in Publicación now,
+          and repeating it in both places would be the same value twice. */}
+      <div className="space-y-5">
+        {/* Hidden rather than emptied when there is no copy: a labelled
+            section holding a dash tells the agent the field exists and is
+            blank, which on a draft they are mid-way through writing is noise
+            they cannot act on from here. */}
+        {property.description !== null && (
+          <section>
+            <RecordSectionHead label={t('propertyDetail.about')} />
+            <Card className="p-4">
+              {/* max-w on the measure, not the card: 150-character lines are
+                  unreadable, but the card still aligns with the grids below. */}
+              <p className="max-w-[70ch] text-sm leading-relaxed text-ink-2">
+                {property.description}
+              </p>
+            </Card>
+          </section>
+        )}
+
+        <section>
           <RecordSectionHead label={t('propertyDetail.specs')} />
           <Card className="p-4">
-            <FactList facts={specs} />
+            <FactGrid facts={specs} />
           </Card>
-        </div>
+        </section>
 
-        <div className="lg:col-span-2">
+        <section>
+          <RecordSectionHead label={t('propertyDetail.listing')} />
+          <Card className="p-4">
+            <FactGrid facts={listing} />
+          </Card>
+        </section>
+
+        <section>
           <RecordSectionHead
             label={t('propertyDetail.leads')}
             count={leads.status === 'ready' ? leads.data.total : undefined}
@@ -174,7 +233,7 @@ export function PropertyDetailPage() {
                 ))}
               </ul>
             ))}
-        </div>
+        </section>
       </div>
     </>
   )

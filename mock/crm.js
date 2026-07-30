@@ -52,6 +52,67 @@ const seedLeads = [
 // the 7-value union and exist nowhere in the old mock, so nothing else
 // exercises them. RF0821 also carries operation:null (a project-style
 // listing) to cover the render-nothing branch.
+/**
+ * Placeholder photos.
+ *
+ * There is no photo store in the fixture, and dropping real estate
+ * photography in here would make the mock look like a finished product — the
+ * layout would be validated against pictures that will never exist. So each
+ * "photo" is a generated SVG that says what it is: same aspect ratio, same
+ * loading behaviour, no pretence. Deterministic off the code, so a listing's
+ * gallery does not reshuffle on reload.
+ *
+ * Production sends real URLs from the media store; nothing downstream cares
+ * which it got.
+ */
+function placeholderPhotos(code, count) {
+  // A plain char-code sum collapses: every code is RF plus four digits, so the
+  // sums land within a few dozen of each other and every listing came out the
+  // same shade of pink. Weighting by position spreads them across the wheel.
+  const seed = [...code].reduce(
+    (hash, character, position) => hash + character.charCodeAt(0) * (position + 1) * 7,
+    0,
+  )
+  return Array.from({ length: count }, (_, index) => {
+    const hue = (seed + index * 53) % 360
+    // The label is centred, not corner-set, because these are rendered with
+    // `object-cover` into 16/9 cards, 4/3 frames and square thumbs — a
+    // corner-anchored caption is cropped away by two of the three. Centre
+    // survives any centre-crop.
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">` +
+      `<rect width="800" height="600" fill="hsl(${hue} 24% 87%)"/>` +
+      `<rect y="400" width="800" height="200" fill="hsl(${hue} 22% 80%)"/>` +
+      `<circle cx="150" cy="130" r="52" fill="hsl(${hue} 30% 92%)"/>` +
+      `<text x="400" y="292" text-anchor="middle" font-family="ui-monospace,monospace"` +
+      ` font-size="46" fill="hsl(${hue} 20% 38%)">${code}</text>` +
+      `<text x="400" y="336" text-anchor="middle" font-family="ui-monospace,monospace"` +
+      ` font-size="26" fill="hsl(${hue} 16% 48%)">${index + 1} / ${count} · placeholder</text>` +
+      `</svg>`
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+  })
+}
+
+/**
+ * City centres, WGS84, with a deterministic per-listing offset so pins do not
+ * stack on one point. ±0.02° is roughly ±2km — enough to read as "spread
+ * across the city" at the zoom the map view opens on.
+ */
+const CITY_CENTRES = {
+  1: [18.4861, -69.9312], // Santo Domingo
+  2: [18.5601, -68.3725], // Punta Cana
+  3: [19.4517, -70.697], // Santiago
+}
+
+function seedCoordinates(id, cityId) {
+  const centre = CITY_CENTRES[cityId]
+  if (centre === undefined) return { lat: null, lng: null }
+  return {
+    lat: centre[0] + (((id * 37) % 41) - 20) / 1000,
+    lng: centre[1] + (((id * 53) % 41) - 20) / 1000,
+  }
+}
+
 const seedProperties = [
   { id: 1, code: 'RF0412', title: 'Apartamento en Piantini', city: 'Santo Domingo', city_id: 1, price: 14_500_000, area: 210, bedrooms: 3, bathrooms: 3, lifecycle: 'published', operation: 'sell', moderation: 'approved', leads_count: 2, unanswered_leads: 1, featured_expires_at: at(2 * DAY), created_at: at(-60 * DAY) },
   { id: 2, code: 'RF0288', title: 'Local comercial en Naco', city: 'Santo Domingo', city_id: 1, price: 95_000, area: 180, bedrooms: null, bathrooms: 2, lifecycle: 'published', operation: 'rent', moderation: 'approved', leads_count: 2, unanswered_leads: 2, featured_expires_at: null, created_at: at(-45 * DAY) },
@@ -171,7 +232,50 @@ const isExpiringFeatured = (property) => {
   return remaining >= 0 && remaining < EXPIRY_WINDOW
 }
 
+/**
+ * Photo count per listing. Default 5; the two exceptions are the point.
+ * RF1130 is a draft with none — a listing with no photos yet is the normal
+ * state, not an error, and it is what the empty-gallery branch is for.
+ * RF1108 is a plot, which realistically gets two shots of dirt.
+ */
+const PHOTO_COUNTS = { RF1130: 0, RF1108: 2 }
+
+/**
+ * RF0821 is deliberately un-geocoded — an agent withholding the address until
+ * a lead qualifies is a real case, so something has to exercise the null pin
+ * branch on the map and the "no location" branch on the record.
+ */
+const UNGEOCODED = new Set(['RF0821'])
+
+/**
+ * Listing copy. Fixture prose, same standing as the fixture's titles and
+ * prices. RF1130 has none — a draft the agent has not written up yet, which
+ * is what the record's hidden-section branch is for.
+ */
+const DESCRIPTIONS = {
+  RF0412:
+    'Apartamento de tres habitaciones en torre con dos ascensores, planta eléctrica full y área social en el nivel 12. Piso en porcelanato, cocina modular con tope de cuarzo y dos parqueos techados. A cinco minutos de la Av. Winston Churchill.',
+  RF0288:
+    'Local a nivel de calle sobre avenida de alto tránsito, con vitrina corrida y baño independiente. Se entrega en obra gris terminada; el inquilino define la distribución interior. Incluye un parqueo asignado.',
+  RF0913:
+    'Villa de cuatro habitaciones dentro de complejo cerrado con vigilancia 24 horas, a ocho minutos de la playa. Piscina privada, gazebo con cocina exterior y cuarto de servicio independiente. Amueblada.',
+  RF0755:
+    'Penthouse de dos niveles con terraza propia y vista abierta al sur. Doble altura en la sala, cocina italiana y ascensor privado hasta el nivel. Cuatro parqueos y depósito en sótano.',
+  RF0640:
+    'Casa unifamiliar en calle cerrada, con patio de 120 m² y árboles frutales. Cuatro habitaciones, una en primer nivel con baño propio. Requiere actualización de baños; el precio ya lo refleja.',
+  RF1024:
+    'Apartamento de dos habitaciones en tercer nivel sin ascensor, recién pintado. Incluye línea blanca y aire acondicionado en ambas habitaciones. Un parqueo. Disponible de inmediato.',
+  RF1108:
+    'Solar esquinero de 800 m² con dos frentes, en zona de uso mixto. Topografía plana, sin construcciones que demoler. Servicios de agua y energía disponibles en la acera.',
+  RF0821:
+    'Apartamento de dos habitaciones en sector residencial consolidado, cerca de la Universidad. Edificio de cuatro niveles sin ascensor. La dirección exacta se comparte con clientes calificados.',
+}
+
 function shapeProperty(property) {
+  const coordinates = UNGEOCODED.has(property.code)
+    ? { lat: null, lng: null }
+    : seedCoordinates(property.id, property.city_id)
+
   return {
     id: property.id,
     code: property.code,
@@ -189,6 +293,10 @@ function shapeProperty(property) {
     unanswered_leads: property.unanswered_leads,
     featured_expires_at: property.featured_expires_at,
     created_at: property.created_at,
+    description: DESCRIPTIONS[property.code] ?? null,
+    images: placeholderPhotos(property.code, PHOTO_COUNTS[property.code] ?? 5),
+    lat: coordinates.lat,
+    lng: coordinates.lng,
   }
 }
 

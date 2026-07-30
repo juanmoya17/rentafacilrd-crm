@@ -125,6 +125,22 @@ export interface CrmProperty {
   /** When the active advertisement's window closes. Null when not featured, or pending approval. */
   featured_expires_at: string | null
   created_at: string | null
+  /** The agent's own listing copy. Null on a draft nobody has written yet. */
+  description: string | null
+  /**
+   * Photo URLs, listing order, cover first. Always an array — a listing with
+   * no photos sends `[]`, never null, so every consumer can `.length` it
+   * without a guard. The UI must still render something for the empty case:
+   * a draft with no photos is normal, not an error.
+   */
+  images: string[]
+  /**
+   * WGS84. Both null together or both set together — a listing is geocoded or
+   * it is not, and a half-located pin is worse than no pin. Null is common:
+   * the address may be deliberately withheld until a lead qualifies.
+   */
+  lat: number | null
+  lng: number | null
 }
 
 export interface PropertySummary {

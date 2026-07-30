@@ -12,7 +12,7 @@ import {
   LoadingState,
   ScoreDot,
 } from '@/components/ui'
-import { RecordHeader, RecordSectionHead } from '@/components/record'
+import { FactGrid, RecordHeader, RecordSectionHead } from '@/components/record'
 import { OriginBadge, StageBadge } from '@/components/labels'
 import { useToast } from '@/lib/toast-context'
 import { useRowReveal } from '@/lib/motion'
@@ -100,6 +100,47 @@ export function LeadDetailPage() {
   const activities = lead.activities ?? []
   const tasks = lead.tasks ?? []
 
+  // Dates are mono/tabular so a column of them lines up. Null is an em dash,
+  // never a substituted "now" or a zero — an unanswered lead has no first
+  // response, and rendering one would erase the exact fact the SLA is about.
+  const leadFacts = [
+    { label: t('common.origin'), value: t(`origin.${lead.origin}`) },
+    {
+      label: t('common.created'),
+      value: lead.created_at === null ? '—' : formatDate(lead.created_at),
+      numeric: true,
+    },
+    {
+      label: t('leadDetail.firstResponse'),
+      value: lead.first_response_at === null ? '—' : formatDate(lead.first_response_at),
+      numeric: true,
+    },
+    {
+      label: t('common.sla'),
+      value:
+        lead.sla_due_at === null ? (
+          '—'
+        ) : lead.is_sla_breached ? (
+          // The breach is already a badge in the header; this is the date it
+          // happened, which the badge cannot carry.
+          <span className="text-error">{formatDate(lead.sla_due_at)}</span>
+        ) : (
+          formatDate(lead.sla_due_at)
+        ),
+      numeric: true,
+    },
+    {
+      label: t('common.lastActivity'),
+      value: lead.last_activity_at === null ? '—' : formatRelativeTime(lead.last_activity_at),
+      numeric: true,
+    },
+    {
+      label: t('leadDetail.closed'),
+      value: lead.closed_at === null ? '—' : formatDate(lead.closed_at),
+      numeric: true,
+    },
+  ]
+
   return (
     <>
       <RecordHeader
@@ -144,6 +185,18 @@ export function LeadDetailPage() {
           </div>
         }
       />
+
+      {/* Same labelled fact section property-detail carries, and for the same
+          reason: CrmLead has always sent the SLA clock, the first response and
+          the close date, and until now no screen rendered any of them. The
+          rail below stays a rail — a lead's body is a chronological timeline,
+          and stacking the tasks under it would bury them. */}
+      <section className="mb-5">
+        <RecordSectionHead label={t('leadDetail.details')} />
+        <Card className="p-4">
+          <FactGrid facts={leadFacts} />
+        </Card>
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">

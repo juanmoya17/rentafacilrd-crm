@@ -5,10 +5,12 @@ import { useI18n } from '@/lib/i18n/context'
 import { Badge, Button, EmptyState, ErrorState, LoadingState, PageHeader } from '@/components/ui'
 import { FilterBar, Register, SearchField, Segmented, type Column } from '@/components/register'
 import { LifecycleBadge, ModerationBadge, OperationBadge } from '@/components/labels'
+import { PhotoDots, PropertyPhoto } from '@/components/property-photo'
+import { PropertyMap } from '@/components/property-map'
 import { KpiStrip } from '@/components/kpi-strip'
 import { BulkBar } from '@/components/bulk-bar'
 import { ActionRail } from '@/components/action-rail'
-import { useRecordMorph } from '@/lib/motion'
+import { useRecordMorph, useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { useToast } from '@/lib/toast-context'
 import {
@@ -16,6 +18,7 @@ import {
   formatSpecs,
   getActionRail,
   getPropertySummary,
+  isLocated,
   listProperties,
   messageFor,
   propertyParams,
@@ -119,6 +122,254 @@ function PropertyName({ property }: { property: CrmProperty }) {
   )
 }
 
+/* The three cells below are shared by the table columns and the card grid.
+   They exist as components rather than inline JSX for one reason: a second
+   copy of the "don't stack two badges saying the same thing" rule, or of the
+   unanswered-leads threshold, would drift the moment either changes. Same
+   discipline as Register driving both its layouts off one column list. */
+
+function StatusBadges({ property }: { property: CrmProperty }) {
+  // A row rejected at both lifecycle and moderation would otherwise show
+  // "Rechazada" twice.
+  const moderationAddsNothing =
+    property.lifecycle === 'rejected' && property.moderation === 'rejected'
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      <LifecycleBadge lifecycle={property.lifecycle} />
+      <OperationBadge operation={property.operation} />
+      {!moderationAddsNothing && <ModerationBadge moderation={property.moderation} />}
+      {property.featured_expires_at !== null && <Badge tone="warning">★</Badge>}
+    </div>
+  )
+}
+
+function LeadCount({ property }: { property: CrmProperty }) {
+  return (
+    <span className="inline-flex items-center justify-end gap-1.5">
+      <span className="text-ink-2">{property.leads_count}</span>
+      {property.unanswered_leads > 0 && <Badge tone="danger">{property.unanswered_leads}</Badge>}
+    </span>
+  )
+}
+
+function PriceCell({ property }: { property: CrmProperty }) {
+  const { formatCurrency } = useI18n()
+  return <>{property.price === null ? '—' : formatCurrency(property.price)}</>
+}
+
+/**
+ * Card grid — the second view of the same rows.
+ *
+ * Deliberately not a third layout inside `Register`: Register projects an
+ * abstract column list, and this card is property-shaped (a price line, a spec
+ * line, a badge row, one contextual action). Generalising Register for one
+ * caller would have meant a knob per slot. The anti-drift guarantee comes from
+ * the cells instead — every value here renders through the same component the
+ * table column does.
+ *
+ * Unlike Register's sub-`lg` card stack, this one carries a real checkbox.
+ * There the checkbox column is hidden because tapping selects; here the whole
+ * card is a link to the record, so selection needs its own target — and it is
+ * the only way to reach the bulk bar below `lg`.
+ */
+function PropertyCardGrid({
+  items,
+  selected,
+  onToggle,
+  onPublish,
+}: {
+  items: CrmProperty[]
+  selected: Set<number>
+  onToggle: (id: number) => void
+  onPublish: (id: number) => void
+}) {
+  const { t, formatNumber } = useI18n()
+  const reveal = useRowReveal()
+
+  return (
+    <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {items.map((property, index) => (
+        <motion.li
+          key={property.id}
+          {...reveal(index)}
+          /* relative: `.rf-cardlink` stretches the title's anchor across this
+             element, so anything else clickable inside it needs to paint
+             above that overlay — hence `relative` on the checkbox and on the
+             footer row, not here alone. */
+          className="relative flex flex-col rounded-lg border border-rule bg-surface-raised p-3 transition-colors duration-(--duration-base) ease-out hover:border-rule-2"
+        >
+          {/* The photo carries the checkbox rather than the title row: over an
+              image it is always on the same surface, and it keeps the identity
+              line's left edge flush with everything below it. */}
+          <figure
+            className="relative mb-3"
+            aria-label={
+              property.images.length === 0
+                ? t('properties.noPhotos')
+                : t('properties.photoCount', { count: property.images.length })
+            }
+          >
+            <PropertyPhoto
+              src={property.images[0]}
+              alt=""
+              eager={index < 6}
+              className="aspect-[16/9] w-full"
+            />
+            <PhotoDots count={property.images.length} />
+            <input
+              type="checkbox"
+              checked={selected.has(property.id)}
+              onChange={() => onToggle(property.id)}
+              aria-label={property.title}
+              /* size-4 + the tinted plate: a bare checkbox on photography is
+                 invisible against a light sky and lost against a dark roof. */
+              className="absolute left-1.5 top-1.5 size-4 rounded-sm bg-surface-raised accent-[var(--color-accent)] shadow-[0_0_0_3px_var(--color-surface-raised)]"
+            />
+          </figure>
+
+          <div className="min-w-0">
+            <div className="rf-cardlink text-sm [overflow-wrap:anywhere]">
+              <PropertyName property={property} />
+            </div>
+            <p className="mt-0.5 font-mono text-xs text-muted">
+              {property.city !== null ? `${property.code} · ${property.city}` : property.code}
+            </p>
+          </div>
+
+          <div className="mt-3 flex items-baseline justify-between gap-3">
+            <span className="font-mono text-sm font-medium text-ink">
+              <PriceCell property={property} />
+            </span>
+            <span className="font-mono text-xs text-muted">
+              {formatSpecs(property, formatNumber)}
+            </span>
+          </div>
+
+          <div className="mt-2.5">
+            <StatusBadges property={property} />
+          </div>
+
+          {/* mt-auto so a card whose neighbour wrapped to two title lines still
+              lines its action row up with theirs. */}
+          <div className="relative mt-auto flex items-center justify-between gap-2 pt-3">
+            <span className="text-xs text-muted">
+              {t('common.leads')} <LeadCount property={property} />
+            </span>
+            <InlineAction property={property} onPublish={onPublish} />
+          </div>
+        </motion.li>
+      ))}
+    </ul>
+  )
+}
+
+/**
+ * Map view — a list column synced to a pin field.
+ *
+ * The two panes select each other: clicking a pin scrolls its card into view
+ * and marks it, clicking a card moves the pin's z-order and colour. That is
+ * the whole reason both panes exist; a map beside an unrelated list is two
+ * widgets, not a view.
+ *
+ * Listings with no coordinates cannot be drawn but must not vanish — an agent
+ * who filtered to eight rows and sees six pins needs to be told where the
+ * other two went, so they stay in the column below a labelled divider.
+ */
+function PropertyMapView({
+  items,
+  onPublish,
+}: {
+  items: CrmProperty[]
+  onPublish: (id: number) => void
+}) {
+  const { t, formatNumber } = useI18n()
+  const [activeId, setActiveId] = useState<number | null>(null)
+  const cardRefs = useRef(new Map<number, HTMLLIElement>())
+
+  const located = items.filter(isLocated)
+  const unlocated = items.filter((property) => !isLocated(property))
+
+  const select = (id: number) => {
+    setActiveId(id)
+    // `nearest` rather than `center`: the column is short, and yanking a card
+    // the agent can already see into the middle of the pane loses their place
+    // for no gain.
+    cardRefs.current.get(id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }
+
+  if (located.length === 0) {
+    return <EmptyState title={t('properties.mapEmpty')} hint={t('properties.emptyHint')} />
+  }
+
+  return (
+    <div className="grid gap-3 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+      {/* DOM order puts the list first so keyboard and screen-reader users
+          reach the listings without traversing the map's controls. */}
+      <ul className="order-2 space-y-2 lg:order-1 lg:max-h-[calc(100vh-16rem)] lg:min-h-[32rem] lg:overflow-y-auto lg:pr-1">
+        {located.map((property) => (
+          <li
+            key={property.id}
+            ref={(node) => {
+              if (node === null) cardRefs.current.delete(property.id)
+              else cardRefs.current.set(property.id, node)
+            }}
+            onClick={() => setActiveId(property.id)}
+            className={`relative flex gap-3 rounded-lg border bg-surface-raised p-2.5 transition-colors duration-(--duration-base) ease-out ${
+              activeId === property.id
+                ? 'border-accent [box-shadow:inset_2px_0_0_0_var(--color-accent)]'
+                : 'border-rule hover:border-rule-2'
+            }`}
+          >
+            <PropertyPhoto
+              src={property.images[0]}
+              alt=""
+              className="size-20 shrink-0 sm:size-24"
+            />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <div className="rf-cardlink text-sm [overflow-wrap:anywhere]">
+                <PropertyName property={property} />
+              </div>
+              <p className="mt-0.5 font-mono text-xs text-muted">{property.code}</p>
+              <p className="mt-1 font-mono text-sm font-medium text-ink">
+                <PriceCell property={property} />
+              </p>
+              <p className="font-mono text-xs text-muted">
+                {formatSpecs(property, formatNumber)}
+              </p>
+              <div className="relative mt-auto flex justify-end pt-1.5">
+                <InlineAction property={property} onPublish={onPublish} />
+              </div>
+            </div>
+          </li>
+        ))}
+
+        {unlocated.length > 0 && (
+          <li className="pt-2">
+            <p className="border-t border-rule pt-2 text-xs text-muted">
+              {t('properties.mapUnlocated', { count: unlocated.length })}
+            </p>
+            <ul className="mt-2 space-y-1">
+              {unlocated.map((property) => (
+                <li
+                  key={property.id}
+                  className="rf-cardlink relative rounded-md border border-dashed border-rule px-2.5 py-2 text-sm"
+                >
+                  <PropertyName property={property} />
+                  <span className="ml-2 font-mono text-xs text-muted">{property.code}</span>
+                </li>
+              ))}
+            </ul>
+          </li>
+        )}
+      </ul>
+
+      <div className="order-1 lg:order-2">
+        <PropertyMap properties={located} activeId={activeId} onSelect={select} />
+      </div>
+    </div>
+  )
+}
+
 /** Offset pager. One component, used in the desktop `<tfoot>` and the mobile fallback. */
 function Pager({
   offset,
@@ -157,10 +408,14 @@ function Pager({
 }
 
 export function PropertiesPage() {
-  const { t, formatCurrency, formatNumber } = useI18n()
+  const { t, formatNumber } = useI18n()
   const { fail } = useToast()
   const [params, setParams] = useSearchParams()
   const [compact, setCompact] = useState(true)
+  // Local, not in the URL, for the same reason `compact` is: this is a display
+  // preference, not a filter, and the URL is reserved for the filter set that
+  // has to survive a share or a bookmark.
+  const [view, setView] = useState<'table' | 'cards' | 'map'>('table')
   const [selected, setSelected] = useState<Set<number>>(new Set())
 
   // URL is the single source of filter truth — no filter is ever mirrored
@@ -387,20 +642,7 @@ export function PropertiesPage() {
     {
       key: 'status',
       header: t('common.status'),
-      render: (property) => {
-        // Don't stack two badges saying the same thing: a row rejected at both
-        // lifecycle and moderation would otherwise show "Rechazada" twice.
-        const moderationAddsNothing =
-          property.lifecycle === 'rejected' && property.moderation === 'rejected'
-        return (
-          <div className="flex flex-wrap items-center gap-1">
-            <LifecycleBadge lifecycle={property.lifecycle} />
-            <OperationBadge operation={property.operation} />
-            {!moderationAddsNothing && <ModerationBadge moderation={property.moderation} />}
-            {property.featured_expires_at !== null && <Badge tone="warning">★</Badge>}
-          </div>
-        )
-      },
+      render: (property) => <StatusBadges property={property} />,
     },
     {
       key: 'price',
@@ -408,7 +650,7 @@ export function PropertiesPage() {
       numeric: true,
       render: (property) => (
         <span className="text-ink">
-          {property.price === null ? '—' : formatCurrency(property.price)}
+          <PriceCell property={property} />
         </span>
       ),
     },
@@ -428,14 +670,7 @@ export function PropertiesPage() {
       key: 'leads',
       header: t('common.leads'),
       numeric: true,
-      render: (property) => (
-        <span className="inline-flex items-center justify-end gap-1.5">
-          <span className="text-ink-2">{property.leads_count}</span>
-          {property.unanswered_leads > 0 && (
-            <Badge tone="danger">{property.unanswered_leads}</Badge>
-          )}
-        </span>
-      ),
+      render: (property) => <LeadCount property={property} />,
     },
     {
       key: 'actions',
@@ -455,25 +690,11 @@ export function PropertiesPage() {
 
   return (
     <>
-      <PageHeader
-        title={t('properties.title')}
-        actions={
-          // A.8 — with 3 or fewer listings the density toggle has nothing to
-          // earn its keep against; it only appears once the list does.
-          showChrome ? (
-            <Segmented
-              group="property-density"
-              label={t('properties.density')}
-              value={compact ? 'compact' : 'comfortable'}
-              onChange={(next) => setCompact(next !== 'comfortable')}
-              options={[
-                { value: 'compact', label: t('properties.densityCompact') },
-                { value: 'comfortable', label: t('properties.densityComfortable') },
-              ]}
-            />
-          ) : undefined
-        }
-      />
+      {/* The view and density controls used to live here. They sit in the
+          toolbar's right cluster now, next to sort — the header states what
+          the page is, the toolbar holds everything that changes what it
+          shows. */}
+      <PageHeader title={t('properties.title')} />
 
       {summaryResource.status === 'loading' && (
         <div className="mb-4">
@@ -535,33 +756,78 @@ export function PropertiesPage() {
           />
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <label htmlFor="property-sort" className="text-sm text-muted">
-            {t('properties.sort')}
-          </label>
-          <select
-            id="property-sort"
-            value={filters.sort ?? 'newest'}
-            onChange={(event) => setParam('sort', event.target.value)}
-            className="min-h-9 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
-          >
-            {PROPERTY_SORTS.map((option) => (
-              <option key={option} value={option}>
-                {t(`properties.sort.${option}`)}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Right cluster: everything that changes how the same rows are
+            presented, kept apart from the two controls above that change
+            which rows they are. */}
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <label htmlFor="property-sort" className="text-sm text-muted">
+              {t('properties.sort')}
+            </label>
+            <select
+              id="property-sort"
+              value={filters.sort ?? 'newest'}
+              onChange={(event) => setParam('sort', event.target.value)}
+              className="min-h-9 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+            >
+              {PROPERTY_SORTS.map((option) => (
+                <option key={option} value={option}>
+                  {t(`properties.sort.${option}`)}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <label className="ml-auto hidden items-center gap-1.5 text-sm text-muted lg:flex">
-          <input
-            type="checkbox"
-            checked={allShown}
-            onChange={() => (allShown ? setSelected(new Set()) : selectAllShown())}
-            className="accent-[var(--color-accent)]"
-          />
-          {t('common.all')}
-        </label>
+          {/* A.8 — same threshold as the density toggle: with three listings
+              there is nothing to switch between. */}
+          {showChrome && (
+            <Segmented
+              group="property-view"
+              label={t('properties.view')}
+              value={view}
+              onChange={(next) => setView(next ?? 'table')}
+              options={[
+                { value: 'table', label: t('properties.viewTable') },
+                { value: 'cards', label: t('properties.viewCards') },
+                { value: 'map', label: t('properties.viewMap') },
+              ]}
+            />
+          )}
+
+          {/* Density is a row-height control on the table only — in the card
+              grid it has nothing to act on, so it goes rather than sitting
+              there inert. */}
+          {showChrome && view === 'table' && (
+            <Segmented
+              group="property-density"
+              label={t('properties.density')}
+              value={compact ? 'compact' : 'comfortable'}
+              onChange={(next) => setCompact(next !== 'comfortable')}
+              options={[
+                { value: 'compact', label: t('properties.densityCompact') },
+                { value: 'comfortable', label: t('properties.densityComfortable') },
+              ]}
+            />
+          )}
+
+          {/* Hidden below `lg` in table view because Register's card stack has
+              no checkboxes to select — but the card grid does, at every width,
+              so there it stays. The map view has no selection at all, so
+              nothing to select-all. */}
+          <label
+            className={`items-center gap-1.5 text-sm text-muted ${
+              view === 'map' ? 'hidden' : view === 'cards' ? 'flex' : 'hidden lg:flex'
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={allShown}
+              onChange={() => (allShown ? setSelected(new Set()) : selectAllShown())}
+              className="accent-[var(--color-accent)]"
+            />
+            {t('common.all')}
+          </label>
+        </div>
       </FilterBar>
 
       {/* A.8 — advanced filters (price/area/featured) only earn a spot once
@@ -715,23 +981,49 @@ export function PropertiesPage() {
         </>
       ) : (
         <div className={isRefetching ? 'opacity-60 transition-opacity duration-(--duration-base)' : ''}>
-          <Register
-            label={t('properties.title')}
-            columns={columns}
-            rows={items}
-            rowKey={(property) => property.id}
-            density={compact ? 'compact' : 'comfortable'}
-            footer={
-              <tr>
-                <td colSpan={columns.length} className="px-3 py-2">
-                  {pager}
-                </td>
-              </tr>
-            }
-          />
-          {/* The card layout below `lg` has no `<tfoot>` — without this, mobile
-              sees page 1 and nothing else. */}
-          <div className="mt-3 lg:hidden">{pager}</div>
+          {/* Exactly one of the two renders. That is load-bearing, not a
+              formality: Register already keeps two layouts in the DOM at once
+              and relies on `display: none` to stop the hidden copy claiming
+              `view-transition-name: record-title`. A card grid mounted
+              alongside it would be a *visible* third copy of every title, two
+              elements would claim the name, and the record morph would stop
+              working with no error (design.md § Layout invariants). */}
+          {view === 'map' ? (
+            <>
+              <PropertyMapView items={items} onPublish={publishOne} />
+              <div className="mt-3">{pager}</div>
+            </>
+          ) : view === 'cards' ? (
+            <>
+              <PropertyCardGrid
+                items={items}
+                selected={selected}
+                onToggle={toggle}
+                onPublish={publishOne}
+              />
+              <div className="mt-3">{pager}</div>
+            </>
+          ) : (
+            <>
+              <Register
+                label={t('properties.title')}
+                columns={columns}
+                rows={items}
+                rowKey={(property) => property.id}
+                density={compact ? 'compact' : 'comfortable'}
+                footer={
+                  <tr>
+                    <td colSpan={columns.length} className="px-3 py-2">
+                      {pager}
+                    </td>
+                  </tr>
+                }
+              />
+              {/* The card layout below `lg` has no `<tfoot>` — without this,
+                  mobile sees page 1 and nothing else. */}
+              <div className="mt-3 lg:hidden">{pager}</div>
+            </>
+          )}
         </div>
       )}
     </>

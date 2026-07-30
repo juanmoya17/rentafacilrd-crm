@@ -73,6 +73,24 @@ export function propertyParams(filters: PropertyFilters): Record<string, string>
  * `formatNumber` is injected rather than imported so this stays pure and
  * testable without an i18n provider — same pattern `messageFor` uses for `t`.
  */
+/** A listing the map can actually draw — both coordinates present. */
+export interface LocatedProperty extends CrmProperty {
+  lat: number
+  lng: number
+}
+
+/**
+ * Narrows to the drawable rows.
+ *
+ * Both-or-neither is the wire contract (types.ts), but the guard checks both
+ * anyway: a half-geocoded row from a partial backfill would otherwise reach
+ * Leaflet as `[18.4, null]` and throw inside the map rather than being
+ * counted as unlocated in the column beside it.
+ */
+export function isLocated(property: CrmProperty): property is LocatedProperty {
+  return property.lat !== null && property.lng !== null
+}
+
 export function formatSpecs(
   property: Pick<CrmProperty, 'bedrooms' | 'bathrooms' | 'area'>,
   formatNumber: (value: number) => string,
