@@ -74,31 +74,37 @@ export async function getNotificationPreferences(
   return response.data
 }
 
+/** Resolves to the full refreshed snapshot — the caller adopts it rather than re-deriving locally. */
 export async function setNotificationPreference(
   eventType: NotificationEventType,
   channel: NotificationChannel,
   enabled: boolean,
-): Promise<void> {
-  await api('crm/notification-preferences', {
+): Promise<NotificationPreferencesData> {
+  const response = await api<Envelope<NotificationPreferencesData>>('crm/notification-preferences', {
     method: 'PUT',
     body: { event_type: eventType, channel, enabled },
   })
+  return response.data
 }
 
 export async function setPropertyOverride(
   propertyId: number,
   eventType: NotificationEventType,
   enabled: boolean,
-): Promise<void> {
-  await api('crm/notification-preferences/property', {
-    method: 'PUT',
-    body: { property_id: propertyId, event_type: eventType, enabled },
-  })
+): Promise<NotificationPreferencesData> {
+  const response = await api<Envelope<NotificationPreferencesData>>(
+    'crm/notification-preferences/property',
+    { method: 'PUT', body: { property_id: propertyId, event_type: eventType, enabled } },
+  )
+  return response.data
 }
 
 /** Clears every stored deviation — preferences and property overrides alike. */
-export async function resetNotificationPreferences(): Promise<void> {
-  await api('crm/notification-preferences', { method: 'DELETE' })
+export async function resetNotificationPreferences(): Promise<NotificationPreferencesData> {
+  const response = await api<Envelope<NotificationPreferencesData>>('crm/notification-preferences', {
+    method: 'DELETE',
+  })
+  return response.data
 }
 
 /**

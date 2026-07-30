@@ -294,6 +294,7 @@ export const en: Record<TranslationKey, string> = {
 
   'notifications.title': 'Notifications',
   'notifications.preferences': 'Preferences',
+  'notifications.managePreferences': 'Manage your notification preferences in Settings.',
   'notifications.markRead': 'Mark as read',
   'notifications.empty': 'You have no notifications.',
   'notifications.channelPush': 'Push',
@@ -304,6 +305,7 @@ export const en: Record<TranslationKey, string> = {
   'notifications.typeLead': 'New lead',
   'notifications.typeSla': 'SLA breached',
 
+  'notifications.pref.eventType': 'Notification type',
   'notifications.eventType.lead_alerts': 'Lead alerts',
   'notifications.eventType.listing_matches': 'Listing matches',
   'notifications.eventType.subscription': 'Subscription',

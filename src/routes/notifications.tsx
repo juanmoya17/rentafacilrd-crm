@@ -1,7 +1,8 @@
 import { motion } from 'motion/react'
+import { Link } from 'react-router'
 import { useI18n } from '@/lib/i18n/context'
 import type { TranslationKey } from '@/lib/i18n/es'
-import { Badge, Card, EmptyState, MockNotice, PageHeader } from '@/components/ui'
+import { Badge, Button, Card, EmptyState, MockNotice, PageHeader } from '@/components/ui'
 import { useRowReveal } from '@/lib/motion'
 import { NOTIFICATIONS, type NotificationItem } from '@/lib/mock/data'
 
@@ -11,12 +12,6 @@ const TYPE_LABEL: Record<NotificationItem['type'], TranslationKey> = {
   lead_created: 'notifications.typeLead',
   sla_breached: 'notifications.typeSla',
 }
-
-const CHANNELS: TranslationKey[] = [
-  'notifications.channelPush',
-  'notifications.channelEmail',
-  'notifications.channelInApp',
-]
 
 export function NotificationsPage() {
   const { t, formatRelativeTime } = useI18n()
@@ -65,47 +60,21 @@ export function NotificationsPage() {
           )}
         </div>
 
-        {/* B.3 — channel and opt-in per event type. */}
+        {/* B.3's real matrix now lives on Settings — this card points there
+            instead of duplicating it. A second, unwired copy here (the old
+            `defaultChecked` placeholder) let an agent toggle something that
+            saved nothing, which is worse than no control at all. */}
         {/* top-0, not a measured offset: <main> is the scrollport, so there is
             no header height to subtract — the same trap that had the sidebar
             8px out of alignment. */}
         <Card className="h-fit p-4 lg:sticky lg:top-0">
-          <h2 className="mb-3 text-sm font-semibold text-ink">
+          <h2 className="mb-2 text-sm font-semibold text-ink">
             {t('notifications.preferences')}
           </h2>
-          <table className="w-full text-left text-xs">
-            <thead className="text-muted">
-              <tr>
-                <th scope="col" className="pb-2 font-medium">
-                  {t('common.status')}
-                </th>
-                {CHANNELS.map((channel) => (
-                  <th key={channel} scope="col" className="px-2 pb-2 text-center font-medium">
-                    {t(channel)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {Object.values(TYPE_LABEL).map((label) => (
-                <tr key={label} className="border-t border-rule">
-                  <th scope="row" className="py-2 pr-2 text-left font-normal text-ink-2">
-                    {t(label)}
-                  </th>
-                  {CHANNELS.map((channel) => (
-                    <td key={channel} className="px-2 py-2 text-center">
-                      <input
-                        type="checkbox"
-                        defaultChecked
-                        aria-label={`${t(label)} — ${t(channel)}`}
-                        className="size-4 accent-[var(--color-accent)]"
-                      />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <p className="text-sm text-ink-2">{t('notifications.managePreferences')}</p>
+          <Link to="/settings" viewTransition className="mt-3 inline-flex">
+            <Button variant="secondary">{t('nav.settings')}</Button>
+          </Link>
         </Card>
       </div>
     </>

@@ -114,7 +114,12 @@ function NotificationPreferencesSection() {
     setPending((current) => new Set(current).add(key))
 
     try {
-      await setNotificationPreference(eventType, channel, nextEnabled)
+      // The write echoes the full refreshed snapshot — adopt it instead of
+      // re-deriving locally, same as pipeline.tsx / lead-detail.tsx adopting
+      // the server's returned object. Less local state that can drift.
+      const updated = await setNotificationPreference(eventType, channel, nextEnabled)
+      setDefaults(updated.defaults)
+      setPreferences(updated.preferences)
     } catch (error: unknown) {
       // The checkbox has already flipped, which on its own reads as the
       // control just not working. The toast is what makes the rollback
@@ -140,7 +145,9 @@ function NotificationPreferencesSection() {
     setPreferences([])
 
     try {
-      await resetNotificationPreferences()
+      const updated = await resetNotificationPreferences()
+      setDefaults(updated.defaults)
+      setPreferences(updated.preferences)
     } catch (error: unknown) {
       setPreferences(previous)
       toast.fail(error instanceof Error ? error.message : t('notifications.pref.resetFailed'), {
@@ -185,7 +192,7 @@ function NotificationPreferencesSection() {
   const columns: Column<NotificationEventType>[] = [
     {
       key: 'eventType',
-      header: t('notifications.preferences'),
+      header: t('notifications.pref.eventType'),
       card: 'primary',
       render: (eventType) => t(`notifications.eventType.${eventType}`),
     },

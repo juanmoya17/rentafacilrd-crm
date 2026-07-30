@@ -298,6 +298,7 @@ export const es = {
 
   'notifications.title': 'Notificaciones',
   'notifications.preferences': 'Preferencias',
+  'notifications.managePreferences': 'Administra tus preferencias de notificación en Ajustes.',
   'notifications.markRead': 'Marcar como leída',
   'notifications.empty': 'No tienes notificaciones.',
   'notifications.channelPush': 'Push',
@@ -308,6 +309,7 @@ export const es = {
   'notifications.typeLead': 'Nuevo lead',
   'notifications.typeSla': 'SLA vencido',
 
+  'notifications.pref.eventType': 'Tipo de notificación',
   'notifications.eventType.lead_alerts': 'Alertas de leads',
   'notifications.eventType.listing_matches': 'Coincidencias de anuncios',
   'notifications.eventType.subscription': 'Suscripción',

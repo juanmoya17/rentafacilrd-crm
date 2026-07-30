@@ -660,6 +660,15 @@ export function handleCrm(method, path, params, body) {
     overrides: state.notificationOverrides,
   })
 
+  // Same cascade resolvePreference() runs client-side: an explicit row beats
+  // the resolved default, per channel.
+  const resolvedPreference = (eventType, channel) => {
+    const explicit = state.notificationPreferences.find(
+      (p) => p.event_type === eventType && p.channel === channel,
+    )
+    return explicit ? explicit.enabled : state.notificationDefaults[eventType][channel]
+  }
+
   if (path === '/notification-preferences' && method === 'GET') {
     return {
       status: 200,
@@ -714,14 +723,19 @@ export function handleCrm(method, path, params, body) {
     }
 
     // A property override has no channel of its own — it mutes/unmutes an
-    // event type for one listing across whichever channels apply. Its
-    // baseline is "notified" (true); the same delete-on-default rule the
-    // global preference above uses applies here against that baseline.
+    // event type for one listing across every channel. Its "baseline" is
+    // therefore not a constant: it is unanimity with the per-channel cascade.
+    // Delete the row only when the write agrees with what every channel in
+    // NOTIFICATION_CHANNELS already resolves to; if even one channel
+    // disagrees, the override is still doing real work and must stay.
     const index = state.notificationOverrides.findIndex(
       (o) => o.property_id === propertyId && o.event_type === eventType,
     )
+    const unanimous = NOTIFICATION_CHANNELS.every(
+      (channel) => resolvedPreference(eventType, channel) === enabled,
+    )
 
-    if (enabled === true) {
+    if (unanimous) {
       if (index !== -1) state.notificationOverrides.splice(index, 1)
     } else if (index !== -1) {
       state.notificationOverrides[index] = { property_id: propertyId, event_type: eventType, enabled }
