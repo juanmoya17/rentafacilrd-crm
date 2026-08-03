@@ -11,6 +11,7 @@ import {
   MessageSquareDot,
   PencilLine,
   FilterX,
+  Plus,
   Rows3,
   SlidersHorizontal,
   Star,
@@ -18,7 +19,15 @@ import {
   Upload,
 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n/context'
-import { Badge, Button, EmptyState, ErrorState, LoadingState, PageHeader } from '@/components/ui'
+import {
+  Badge,
+  Button,
+  EmptyState,
+  ErrorState,
+  LinkButton,
+  LoadingState,
+  PageHeader,
+} from '@/components/ui'
 import { FilterBar, Register, SearchField, Segmented, type Column } from '@/components/register'
 import { LifecycleBadge, ModerationBadge, OperationBadge } from '@/components/labels'
 import { PhotoDots, PropertyPhoto } from '@/components/property-photo'
@@ -854,7 +863,15 @@ export function PropertiesPage() {
           toolbar's right cluster now, next to sort — the header states what
           the page is, the toolbar holds everything that changes what it
           shows. */}
-      <PageHeader title={t('properties.title')} />
+      <PageHeader
+        title={t('properties.title')}
+        actions={
+          <LinkButton to="/properties/new" variant="primary">
+            <Plus aria-hidden="true" className="size-4" />
+            {t('newProperty.new')}
+          </LinkButton>
+        }
+      />
 
       {summaryResource.status === 'loading' && (
         <div className="mb-4">

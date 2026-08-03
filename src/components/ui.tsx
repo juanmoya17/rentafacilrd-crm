@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from 'react'
 import type { ChangeEvent, ReactNode } from 'react'
+import { Link } from 'react-router'
 import { resolveControl, type ControlState, type ControlTone } from '@/lib/control-state'
 
 /**
@@ -230,6 +231,187 @@ export function Field({
       {/* One line stays reserved even while empty, so an error appearing later
           shifts nothing below it. */}
       {canMessage && (
+        <p
+          id={`${id}-msg`}
+          className={`mt-1 min-h-[1lh] text-xs ${c.messageIsError ? 'text-error' : 'text-muted'}`}
+        >
+          {c.message}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * A `Button` that is actually a link. Anything that navigates has to be an
+ * `<a>` — middle-click, ⌘-click and "copy link address" are not behaviours a
+ * button with an onClick can fake.
+ */
+export function LinkButton({
+  to,
+  children,
+  variant = 'secondary',
+}: {
+  to: string
+  children: ReactNode
+  variant?: ButtonVariant
+}) {
+  return (
+    <Link
+      to={to}
+      className={`inline-flex min-h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-(--duration-fast) ease-out active:translate-y-px ${BUTTON_VARIANTS[variant]}`}
+    >
+      {children}
+    </Link>
+  )
+}
+
+/* ---------------------------------------------------------------- textarea */
+
+/**
+ * Same label / message geometry as `Field`, for the two places a listing needs
+ * real prose: the description and the SEO blurb. `rows` rather than autogrow —
+ * a box that resizes while you type moves the buttons under your cursor.
+ */
+export function TextArea({
+  id,
+  label,
+  value,
+  onChange,
+  rows = 5,
+  state = 'idle',
+  disabled,
+  helper,
+  error,
+  required,
+  placeholder,
+}: {
+  id: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+  rows?: number
+  state?: ControlState
+  disabled?: boolean
+  helper?: string
+  error?: string
+  required?: boolean
+  placeholder?: string
+}) {
+  const c = resolveControl({ id, state, disabled, helper, error })
+
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium text-ink-2">
+        {label}
+      </label>
+
+      <textarea
+        id={id}
+        name={id}
+        rows={rows}
+        value={value}
+        onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value)}
+        disabled={disabled}
+        required={required}
+        placeholder={placeholder}
+        aria-invalid={c.invalid || undefined}
+        aria-describedby={c.describedBy}
+        className={`mt-1 w-full resize-y rounded-md border bg-surface-raised px-3 py-2 text-sm text-ink transition-colors duration-(--duration-fast) ease-(--ease-out) placeholder:text-muted focus:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-55 ${
+          c.invalid ? 'border-error' : FIELD_BORDERS[c.tone]
+        }`}
+      />
+
+      {(helper !== undefined || error !== undefined) && (
+        <p
+          id={`${id}-msg`}
+          className={`mt-1 min-h-[1lh] text-xs ${c.messageIsError ? 'text-error' : 'text-muted'}`}
+        >
+          {c.message}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------- file field */
+
+/**
+ * A native file input, restyled but never replaced: the file picker cannot be
+ * opened from script without a real `<input type="file">`, and its own button
+ * is the only control a screen reader announces as one.
+ *
+ * `onChange` receives the picked files, never the event — callers store `File`
+ * objects and the input's own `value` stays untouched (it is read-only in every
+ * browser, so there is nothing to control).
+ */
+export function FileField({
+  id,
+  label,
+  accept,
+  multiple,
+  files,
+  onChange,
+  helper,
+  error,
+  state = 'idle',
+  disabled,
+  required,
+}: {
+  id: string
+  label: string
+  /** Mirrors the server's `mimes:` rule — a hint to the picker, not a check. */
+  accept: string
+  multiple?: boolean
+  /** What is currently selected, so the list survives a step change. */
+  files: File[]
+  onChange: (files: File[]) => void
+  helper?: string
+  error?: string
+  state?: ControlState
+  disabled?: boolean
+  required?: boolean
+}) {
+  const c = resolveControl({ id, state, disabled, helper, error })
+
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium text-ink-2">
+        {label}
+      </label>
+
+      <input
+        id={id}
+        name={id}
+        type="file"
+        accept={accept}
+        multiple={multiple}
+        disabled={disabled}
+        required={required && files.length === 0}
+        onChange={(event: ChangeEvent<HTMLInputElement>) => {
+          const picked = Array.from(event.target.files ?? [])
+          // Appending would make re-picking the same file a duplicate, and
+          // there is no way to deselect one from the native control.
+          onChange(multiple === true ? picked : picked.slice(0, 1))
+        }}
+        aria-invalid={c.invalid || undefined}
+        aria-describedby={c.describedBy}
+        className={`mt-1 block w-full cursor-pointer rounded-md border bg-surface-raised text-sm text-ink-2 transition-colors duration-(--duration-fast) ease-(--ease-out) file:mr-3 file:cursor-pointer file:border-0 file:border-r file:border-rule file:bg-surface-sunken file:px-3 file:py-2 file:text-sm file:font-medium file:text-ink-2 disabled:cursor-not-allowed disabled:opacity-55 ${
+          c.invalid ? 'border-error' : FIELD_BORDERS[c.tone]
+        }`}
+      />
+
+      {files.length > 0 && (
+        <ul className="mt-1.5 grid gap-0.5">
+          {files.map((file) => (
+            <li key={`${file.name}-${file.size}`} className="truncate font-mono text-xs text-muted">
+              {file.name}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {(helper !== undefined || error !== undefined) && (
         <p
           id={`${id}-msg`}
           className={`mt-1 min-h-[1lh] text-xs ${c.messageIsError ? 'text-error' : 'text-muted'}`}

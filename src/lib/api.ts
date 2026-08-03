@@ -68,6 +68,10 @@ function primeCsrf(force = false): Promise<void> {
 
 export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+  /**
+   * JSON by default. A `FormData` goes out untouched: `post_property` validates
+   * `title_image` as an uploaded file, which only multipart can carry.
+   */
   body?: unknown
   signal?: AbortSignal
   /** Skip the global sign-out on 401. Used by the boot probe, where 401 just means "not logged in". */
@@ -98,9 +102,14 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   const mutates = method !== 'GET'
   const url = `${ORIGIN}${PREFIX}${path.replace(/^\//, '')}`
 
+  const multipart = body instanceof FormData
+
   const send = (): Promise<Response> => {
     const headers: Record<string, string> = { Accept: 'application/json' }
-    if (body !== undefined) headers['Content-Type'] = 'application/json'
+    // Never set Content-Type for a FormData: the browser has to append the
+    // multipart boundary itself, and a hand-written header has none — PHP
+    // would parse zero fields out of a body that looks perfectly fine here.
+    if (body !== undefined && !multipart) headers['Content-Type'] = 'application/json'
     if (locale !== null) headers['Content-Language'] = locale
 
     const token = readCookie(CSRF_COOKIE)
@@ -110,7 +119,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
       method,
       credentials: 'include',
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : multipart ? body : JSON.stringify(body),
       signal,
     })
   }

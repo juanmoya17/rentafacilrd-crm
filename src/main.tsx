@@ -14,8 +14,10 @@ import { PipelinePage } from '@/routes/pipeline'
 import { LeadsPage } from '@/routes/leads'
 import { LeadDetailPage } from '@/routes/lead-detail'
 import { PropertiesPage } from '@/routes/properties'
+import { PropertyNewPage } from '@/routes/property-new'
 import { PropertyDetailPage } from '@/routes/property-detail'
 import { ProjectsPage } from '@/routes/projects'
+import { ProjectNewPage } from '@/routes/project-new'
 import { ProjectDetailPage } from '@/routes/project-detail'
 import { InventoryPage } from '@/routes/inventory'
 import { TasksPage } from '@/routes/tasks'
@@ -39,8 +41,12 @@ const router = createBrowserRouter([
           { path: '/leads', element: <LeadsPage /> },
           { path: '/leads/:id', element: <LeadDetailPage /> },
           { path: '/properties', element: <PropertiesPage /> },
+          // Above /properties/:code — `new` is a literal segment and would
+          // otherwise be read as an RF code and 404 against the list.
+          { path: '/properties/new', element: <PropertyNewPage /> },
           { path: '/properties/:code', element: <PropertyDetailPage /> },
           { path: '/projects', element: <ProjectsPage /> },
+          { path: '/projects/new', element: <ProjectNewPage /> },
           { path: '/projects/:id', element: <ProjectDetailPage /> },
           { path: '/inventory', element: <InventoryPage /> },
           { path: '/tasks', element: <TasksPage /> },

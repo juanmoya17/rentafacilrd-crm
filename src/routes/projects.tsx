@@ -1,7 +1,8 @@
 import { Link } from 'react-router'
 import { motion } from 'motion/react'
+import { Plus } from 'lucide-react'
 import { useI18n } from '@/lib/i18n/context'
-import { Badge, EmptyState, ErrorState, LoadingState, PageHeader } from '@/components/ui'
+import { Badge, EmptyState, ErrorState, LinkButton, LoadingState, PageHeader } from '@/components/ui'
 import { useLift, useRecordMorph, useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { fetchProjects, inventoryState, type CrmProject } from '@/lib/crm/projects'
@@ -103,18 +104,30 @@ export function ProjectsPage() {
     )
   }
 
+  const newProject = (
+    <LinkButton to="/projects/new" variant="primary">
+      <Plus aria-hidden="true" className="size-4" />
+      {t('newProject.new')}
+    </LinkButton>
+  )
+
   if (projects.data.length === 0) {
     return (
       <>
         <PageHeader title={t('projects.title')} />
-        <EmptyState title={t('projects.empty')} hint={t('projects.emptyHint')} />
+        {/* The empty state names the next action, and here that action exists. */}
+        <EmptyState title={t('projects.empty')} hint={t('projects.emptyHint')} action={newProject} />
       </>
     )
   }
 
   return (
     <>
-      <PageHeader title={t('projects.title')} subtitle={t('projects.subtitle')} />
+      <PageHeader
+        title={t('projects.title')}
+        subtitle={t('projects.subtitle')}
+        actions={newProject}
+      />
 
       {/* minmax(0,1fr), not 1fr: a bare 1fr track refuses to shrink below its
           content and pushes the grid past the viewport on mobile. */}
