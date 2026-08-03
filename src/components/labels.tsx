@@ -4,7 +4,7 @@ import { useT } from '@/lib/i18n/context'
 // contract — one definition, so a change in the API cannot silently disagree
 // with the badge that renders it.
 import type { Lifecycle, Moderation, Operation, Origin, Stage } from '@/lib/crm/types'
-import type { UnitStatus } from '@/lib/mock/data'
+import type { UnitStatus } from '@/lib/crm/projects'
 
 /** One place decides which tone every domain value wears, so screens stay consistent. */
 

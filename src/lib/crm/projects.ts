@@ -141,15 +141,117 @@ export async function fetchTypologies(
   return body.data ?? []
 }
 
+/** CrmProjectController::MAX_UNIT_LIMIT. Asking for more silently gets this. */
+export const UNITS_PAGE = 200
+
+/**
+ * Returns the total alongside the page. The screen has no pager, so `total`
+ * is the only thing standing between an agent and a table that shows 200 of
+ * 250 units while looking complete.
+ */
 export async function fetchUnits(
   projectId: number,
   filters: { status?: UnitStatus } = {},
   signal?: AbortSignal,
-): Promise<CrmUnit[]> {
-  const query = filters.status ? `?status=${filters.status}` : ''
-  const body = await api<Envelope<CrmUnit[]>>(`crm/projects/${projectId}/units${query}`, { signal })
+): Promise<{ items: CrmUnit[]; total: number }> {
+  const query = new URLSearchParams({ limit: String(UNITS_PAGE) })
+  if (filters.status !== undefined) query.set('status', filters.status)
 
-  return body.data ?? []
+  const body = await api<Envelope<CrmUnit[]>>(
+    `crm/projects/${projectId}/units?${query.toString()}`,
+    { signal },
+  )
+  const items = body.data ?? []
+
+  return { items, total: body.total ?? items.length }
+}
+
+export interface ProjectDetail {
+  project: CrmProject
+  typologies: CrmTypology[]
+  units: CrmUnit[]
+  /** Every unit in the project, which is not `units.length` past 200. */
+  unitsTotal: number
+}
+
+/**
+ * There is no GET /crm/projects/{id}: the list is deliberately unpaginated
+ * (an agent has a handful of projects), so the record reads its header off
+ * the same call the list screen uses.
+ *
+ * One resource for all three, on purpose. A typology write moves the
+ * project's price range through ProjectPlansObserver and a unit batch moves
+ * the typology counts — with separate resources the header would keep
+ * describing the state before the write until something else reloaded it.
+ */
+export async function fetchProjectDetail(
+  projectId: number,
+  signal?: AbortSignal,
+): Promise<ProjectDetail | null> {
+  const [projects, typologies, units] = await Promise.all([
+    fetchProjects(signal),
+    fetchTypologies(projectId, signal),
+    fetchUnits(projectId, {}, signal),
+  ])
+
+  const project = projects.find((item) => item.id === projectId)
+  if (project === undefined) return null
+
+  return { project, typologies, units: units.items, unitsTotal: units.total }
+}
+
+/** The editor's raw state: strings, because an emptied field has to stay
+ *  distinguishable from a zero all the way to the payload. */
+export interface TypologyForm {
+  title: string
+  bedrooms: string
+  bathrooms: string
+  area: string
+  base_price: string
+  sort_order: string
+}
+
+export type TypologyField = keyof TypologyForm
+
+const WHOLE = /^\d+$/
+const DECIMAL = /^\d+(\.\d+)?$/
+
+/**
+ * Mirrors CrmProjectController::typologyRules() so the agent sees the problem
+ * before the round trip. Convenience only — the server rule is the boundary,
+ * and it is the one that matters, because config/database.php sets
+ * strict => false and MySQL would coerce a 300 into 255 rather than refuse it.
+ *
+ * Returns the first offending field, or null. The regexes reject a leading
+ * minus, which is how `min:0` is mirrored without a second comparison.
+ */
+export function validateTypology(form: TypologyForm): TypologyField | null {
+  const title = form.title.trim()
+  if (title === '' || title.length > 255) return 'title'
+
+  for (const field of ['bedrooms', 'bathrooms'] as const) {
+    const raw = form[field].trim()
+    if (raw === '') continue
+    if (!WHOLE.test(raw) || Number(raw) > 255) return field
+  }
+
+  for (const field of ['area', 'base_price'] as const) {
+    const raw = form[field].trim()
+    if (raw !== '' && !DECIMAL.test(raw)) return field
+  }
+
+  const order = form.sort_order.trim()
+  if (order !== '' && !WHOLE.test(order)) return 'sort_order'
+
+  return null
+}
+
+/** Empty stays null, never 0: clearing an area must clear it, not set it to
+ *  zero square metres. */
+export function toNumberOrNull(raw: string): number | null {
+  const trimmed = raw.trim()
+
+  return trimmed === '' ? null : Number(trimmed)
 }
 
 export interface TypologyInput {

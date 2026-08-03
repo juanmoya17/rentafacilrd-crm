@@ -1,3 +1,4 @@
+import { useEffect, useId, useRef } from 'react'
 import type { ChangeEvent, ReactNode } from 'react'
 import { resolveControl, type ControlState, type ControlTone } from '@/lib/control-state'
 
@@ -150,6 +151,7 @@ export function Field({
   required,
   autoComplete,
   placeholder,
+  inputMode,
 }: {
   id: string
   label: string
@@ -168,6 +170,13 @@ export function Field({
   autoComplete?: string
   /** Shows the expected format, never an instruction — the label does that. */
   placeholder?: string
+  /**
+   * Numeric keypad without `type="number"`. The spinner would collide with
+   * the right-edge glyph slot, and Chrome reports an empty `value` for text a
+   * number input considers malformed — so a typo would clear the field
+   * instead of failing validation with a message.
+   */
+  inputMode?: 'numeric' | 'decimal'
 }) {
   const c = resolveControl({ id, state, disabled, helper, error })
   const showInvalid = c.invalid || invalid === true
@@ -195,6 +204,7 @@ export function Field({
           required={required}
           autoComplete={autoComplete}
           placeholder={placeholder}
+          inputMode={inputMode}
           aria-invalid={showInvalid || undefined}
           aria-describedby={c.describedBy}
           aria-busy={c.busy || undefined}
@@ -228,6 +238,143 @@ export function Field({
         </p>
       )}
     </div>
+  )
+}
+
+/* ------------------------------------------------------------------ select */
+
+export interface SelectOption {
+  value: string
+  label: string
+}
+
+/**
+ * A plain `<select>`. Native on purpose: it brings its own keyboard support,
+ * type-ahead and a mobile picker that a listbox rebuilt in divs would owe a
+ * few hundred lines to approximate.
+ *
+ * Same geometry as `Field` — one label line, one reserved message line — so a
+ * form mixing the two does not step.
+ */
+export function Select({
+  id,
+  label,
+  value,
+  onChange,
+  options,
+  helper,
+  disabled,
+}: {
+  id: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+  options: SelectOption[]
+  helper?: string
+  disabled?: boolean
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium text-ink-2">
+        {label}
+      </label>
+
+      <select
+        id={id}
+        name={id}
+        value={value}
+        disabled={disabled}
+        onChange={(event: ChangeEvent<HTMLSelectElement>) => onChange(event.target.value)}
+        aria-describedby={helper === undefined ? undefined : `${id}-msg`}
+        className="mt-1 min-h-9 w-full rounded-md border border-rule-2 bg-surface-raised px-3 py-1.5 text-sm text-ink transition-colors duration-(--duration-fast) ease-(--ease-out) hover:bg-surface-sunken focus:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-55"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+
+      {helper !== undefined && (
+        <p id={`${id}-msg`} className="mt-1 min-h-[1lh] text-xs text-muted">
+          {helper}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------- modal */
+
+/**
+ * Native `<dialog>` opened with showModal(), which is what buys the focus
+ * trap, the inert background, Escape-to-close and the top-layer stacking —
+ * none of which a div-with-a-backdrop gets without a few hundred lines that
+ * are wrong in at least one browser.
+ *
+ * Mounted only while open (the caller conditionally renders it), so there is
+ * no open/closed prop to keep in sync with the element's own state: opening
+ * is mount, closing is the native `close` event calling back.
+ */
+export function Modal({
+  title,
+  closeLabel,
+  onClose,
+  children,
+  footer,
+}: {
+  title: string
+  /** Accessible name for the × — the glyph has none of its own. */
+  closeLabel: string
+  onClose: () => void
+  children: ReactNode
+  footer?: ReactNode
+}) {
+  const ref = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
+
+  useEffect(() => {
+    const element = ref.current
+    element?.showModal()
+
+    // close() on unmount, not just on the × — it is what returns focus to the
+    // control that opened the dialog. A caller that dismisses by unmounting
+    // (every Cancel button here) would otherwise drop focus to <body>.
+    return () => element?.close()
+  }, [])
+
+  return (
+    <dialog
+      ref={ref}
+      onClose={onClose}
+      aria-labelledby={titleId}
+      /* m-auto because preflight zeroes the UA margin that centres a modal
+         dialog. max-h + overflow so a long unit list scrolls inside the
+         dialog rather than off the viewport. */
+      className="m-auto max-h-[85dvh] w-[min(100%-2rem,32rem)] overflow-y-auto rounded-lg border border-rule bg-surface-raised p-0 text-ink backdrop:bg-ink/40"
+    >
+      <div className="flex items-start justify-between gap-3 border-b border-rule px-4 py-3">
+        <h2 id={titleId} className="text-sm font-semibold text-ink">
+          {title}
+        </h2>
+        <button
+          type="button"
+          onClick={() => ref.current?.close()}
+          aria-label={closeLabel}
+          className="-mr-1 shrink-0 rounded px-1.5 text-base text-muted transition-colors duration-(--duration-fast) ease-out hover:text-ink"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="px-4 py-4">{children}</div>
+
+      {footer && (
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-rule px-4 py-3">
+          {footer}
+        </div>
+      )}
+    </dialog>
   )
 }
 
