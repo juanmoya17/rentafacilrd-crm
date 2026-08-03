@@ -1,11 +1,15 @@
 import { Link } from 'react-router'
 import { useI18n } from '@/lib/i18n/context'
-import { EmptyState, MockNotice, PageHeader } from '@/components/ui'
+import { EmptyState, ErrorState, LoadingState, PageHeader } from '@/components/ui'
 import { Register, type Column } from '@/components/register'
 import { useRecordMorph } from '@/lib/motion'
-import { PROJECTS, type UnitStatus } from '@/lib/mock/data'
+import { useResource } from '@/lib/use-resource'
+import { UNIT_STATUSES, fetchInventory } from '@/lib/crm/projects'
 
-const STATUSES: UnitStatus[] = ['available', 'reserved', 'sold', 'unavailable']
+// Columns come from the canonical status list, never from the data: a status
+// nothing is in must keep its column instead of vanishing from the report,
+// which is the same reason the server seeds every status at zero.
+const STATUSES = UNIT_STATUSES
 
 interface Row {
   id: number
@@ -33,24 +37,31 @@ function ProjectName({ row }: { row: Row }) {
 
 export function InventoryPage() {
   const { t } = useI18n()
+  const inventory = useResource((signal) => fetchInventory(signal), [])
 
-  const rows: Row[] = PROJECTS.map((project) => ({
+  if (inventory.status === 'loading') return <LoadingState label={t('common.loading')} />
+  if (inventory.status === 'error') {
+    return (
+      <ErrorState
+        message={inventory.message}
+        retryLabel={t('common.retry')}
+        onRetry={inventory.reload}
+      />
+    )
+  }
+
+  // E.8 is an aggregation the server already did — the counts arrive per
+  // project and pre-totalled, so nothing here re-derives them from unit rows.
+  const rows: Row[] = inventory.data.projects.map((project) => ({
     id: project.id,
-    name: project.name,
-    city: project.city,
-    counts: STATUSES.map(
-      (status) => project.units.filter((unit) => unit.status === status).length,
-    ),
-    total: project.units.length,
+    name: project.title,
+    city: project.city ?? '',
+    counts: STATUSES.map((status) => project.by_status[status]),
+    total: project.units_total,
   }))
 
-  const totals = STATUSES.map((status) =>
-    PROJECTS.reduce(
-      (sum, project) => sum + project.units.filter((unit) => unit.status === status).length,
-      0,
-    ),
-  )
-  const grandTotal = totals.reduce((sum, count) => sum + count, 0)
+  const totals = STATUSES.map((status) => inventory.data.totals[status])
+  const grandTotal = inventory.data.totals.units_total
 
   const columns: Column<Row>[] = [
     {
@@ -79,9 +90,12 @@ export function InventoryPage() {
   return (
     <>
       <PageHeader title={t('inventory.title')} subtitle={t('inventory.subtitle')} />
-      <MockNotice>{t('mock.notice', { milestone: 'E.8' })}</MockNotice>
 
-      {grandTotal === 0 ? (
+      {/* Empty when there are no PROJECTS, not when the unit count is zero: a
+          project with no inventory loaded is exactly what an agent opens this
+          screen to notice, and hiding the whole table behind a zero total
+          would hide it. */}
+      {rows.length === 0 ? (
         <EmptyState title={t('inventory.empty')} />
       ) : (
         // E.8 is an aggregation over `unidades`, not a new table.

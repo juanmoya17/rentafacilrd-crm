@@ -77,6 +77,7 @@ export interface InventoryProjectRow {
   id: number
   title: string
   slug_id: string | null
+  city: string | null
   units_total: number
   units_available: number
   by_status: Record<UnitStatus, number>
