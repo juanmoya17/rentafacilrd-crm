@@ -222,15 +222,56 @@ function query(params: Record<string, string>): string {
   return search === '' ? '' : `?${search}`
 }
 
+/**
+ * What the endpoint actually sends today: the legacy listing row, with
+ * `title_image` in place of `images` and the coordinates as strings under
+ * their old names. Everything else already matches CrmProperty.
+ */
+interface WireProperty extends Omit<CrmProperty, 'images' | 'lat' | 'lng'> {
+  images?: string[] | null
+  lat?: number | null
+  lng?: number | null
+  title_image?: string | null
+  latitude?: string | number | null
+  longitude?: string | number | null
+}
+
+/** `''` is the API's "not geocoded", and `Number('')` is 0 — a legal
+ *  coordinate in the Atlantic. Reject it before parsing, not after. */
+function coord(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+/**
+ * The one place every screen's rows come through, so the `images: []`-always
+ * contract in types.ts is made true here rather than guarded at each of the
+ * consumers that trust it. Same for the coordinates: `isLocated` checks for
+ * null, and an absent `lat` would sail past that check straight into Leaflet.
+ */
+export function normalizeProperty(row: WireProperty): CrmProperty {
+  const lat = coord(row.lat ?? row.latitude)
+  const lng = coord(row.lng ?? row.longitude)
+  return {
+    ...row,
+    images: row.images ?? (row.title_image ? [row.title_image] : []),
+    // Both or neither — a half-geocoded row counts as unlocated, not drawable.
+    lat: lng === null ? null : lat,
+    lng: lat === null ? null : lng,
+  }
+}
+
 export async function listProperties(
   filters: PropertyFilters = {},
   signal?: AbortSignal,
 ): Promise<Page<CrmProperty>> {
-  const response = await api<Envelope<CrmProperty[]>>(
+  const response = await api<Envelope<WireProperty[]>>(
     `crm/properties${query(propertyParams(filters))}`,
     { signal },
   )
-  return { items: response.data, total: response.total ?? response.data.length }
+  const items = response.data.map(normalizeProperty)
+  return { items, total: response.total ?? items.length }
 }
 
 export async function getPropertySummary(signal?: AbortSignal): Promise<PropertySummary> {

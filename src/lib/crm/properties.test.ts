@@ -7,6 +7,7 @@ import {
   formatSpecs,
   isLocated,
   messageFor,
+  normalizeProperty,
   propertyParams,
   railBucketTarget,
   type BatchFailure,
@@ -187,5 +188,40 @@ describe('messageFor', () => {
     expect(messageFor({ kind: 'other', message: 'ids required' }, t)).toBe(
       'ids required bulk.nothingChanged',
     )
+  })
+})
+
+describe('normalizeProperty', () => {
+  const wire = (row: Record<string, unknown>) =>
+    row as unknown as Parameters<typeof normalizeProperty>[0]
+
+  // The live row that crashed the list: no `images` key at all, only the
+  // legacy cover, and the coordinates as strings under their old names.
+  it('fills images from the legacy title_image and parses the string coords', () => {
+    const row = normalizeProperty(wire({
+      id: 28,
+      title_image: 'https://cdn/1782855703.jpg',
+      latitude: '18.4748198',
+      longitude: '-69.9315716',
+    }))
+    expect(row.images).toEqual(['https://cdn/1782855703.jpg'])
+    expect(row.lat).toBe(18.4748198)
+    expect(row.lng).toBe(-69.9315716)
+  })
+
+  it('gives an unphotographed, ungeocoded row an empty array and no pin', () => {
+    const row = normalizeProperty(wire({ id: 1, title_image: '', latitude: '', longitude: '' }))
+    expect(row.images).toEqual([])
+    expect(isLocated(row)).toBe(false)
+  })
+
+  it('keeps a real images array, including the empty one the new API sends', () => {
+    expect(normalizeProperty(wire({ id: 1, images: [] })).images).toEqual([])
+    expect(normalizeProperty(wire({ id: 1, images: ['a'], title_image: 'b' })).images).toEqual(['a'])
+  })
+
+  it('drops a half-geocoded row to unlocated rather than passing a NaN to Leaflet', () => {
+    const row = normalizeProperty(wire({ id: 1, latitude: '18.47', longitude: null }))
+    expect(isLocated(row)).toBe(false)
   })
 })
