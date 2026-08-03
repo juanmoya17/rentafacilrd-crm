@@ -4,7 +4,9 @@
     "target": "es2023",
     "lib": ["ES2023", "DOM"],
     "module": "esnext",
-    "types": ["vite/client"],
+    /* google.maps declares the `google` global the Places loader installs at
+       runtime; it is types-only and adds nothing to the bundle. */
+    "types": ["vite/client", "google.maps"],
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
 

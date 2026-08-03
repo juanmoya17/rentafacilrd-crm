@@ -112,7 +112,7 @@ export interface PackageLimit {
 }
 
 export async function checkPackageLimit(
-  type: 'property_list' | 'project_list' | 'gallery_photos' | 'media_rich',
+  type: 'property_list' | 'project_list' | 'gallery_photos' | 'media_rich' | 'ai_description',
   signal?: AbortSignal,
 ): Promise<PackageLimit> {
   const body = await api<Envelope<PackageLimit>>(`check-package-limit?type=${type}`, { signal })
