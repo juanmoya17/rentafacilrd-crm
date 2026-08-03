@@ -113,7 +113,10 @@ async function loadReference(signal: AbortSignal): Promise<Reference> {
     // photo. Only a real number caps anything.
     galleryLimit: gallery?.limit ?? null,
     mediaRich: media?.feature_available ?? true,
-    aiDescription: ai?.feature_available ?? false,
+    // Permissive on a failed pre-check, like the other two: a false lock would
+    // hide a feature the plan actually has, where the optimistic path just
+    // costs one request that comes back with the server's own refusal.
+    aiDescription: ai?.feature_available ?? true,
   }
 }
 
@@ -340,6 +343,7 @@ export function PropertyNewPage() {
   const [saving, setSaving] = useState(false)
   const [writing, setWriting] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
+  const [confirmingRegen, setConfirmingRegen] = useState(false)
 
   if (reference.status === 'loading') return <LoadingState label={t('common.loading')} />
   if (reference.status === 'error') {
@@ -718,6 +722,63 @@ export function PropertyNewPage() {
                     is where the app puts it — and because the AI writer reads
                     those features, so writing it earlier would waste them. */}
                 <div className="border-t border-rule pt-4">
+                  {/* Above the field and always rendered, exactly as the app
+                      does it (set_property_parameters.dart:_descriptionSection).
+                      The plan check happens on press, not on render: hiding the
+                      button on a locked tier means an agent who has the feature
+                      but whose pre-check failed can never reach it, and one who
+                      does not have it never learns the feature exists. */}
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    {confirmingRegen ? (
+                      <>
+                        <span className="text-sm text-ink-2">
+                          {t('newProperty.aiOverwrite')}
+                        </span>
+                        <Button
+                          variant="primary"
+                          state={writing ? 'loading' : 'idle'}
+                          onClick={() => {
+                            setConfirmingRegen(false)
+                            void write()
+                          }}
+                        >
+                          {t('newProperty.aiOverwriteYes')}
+                        </Button>
+                        <Button onClick={() => setConfirmingRegen(false)}>
+                          {t('common.cancel')}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          onClick={() => {
+                            setAiError(null)
+                            if (!aiDescription) {
+                              setAiError(t('newProperty.aiLocked'))
+                              return
+                            }
+                            // Never silently replace copy the agent wrote.
+                            if (form.description.trim() !== '') {
+                              setConfirmingRegen(true)
+                              return
+                            }
+                            void write()
+                          }}
+                          state={writing ? 'loading' : 'idle'}
+                          disabled={saving || !canGenerateDescription(form, photos)}
+                        >
+                          {!writing && <Sparkles aria-hidden="true" className="size-4" />}
+                          {t(writing ? 'newProperty.aiWriting' : 'newProperty.aiWrite')}
+                        </Button>
+                        <p className="text-xs text-muted">
+                          {canGenerateDescription(form, photos)
+                            ? t('newProperty.aiHint')
+                            : t('newProperty.aiNeeds')}
+                        </p>
+                      </>
+                    )}
+                  </div>
+
                   <TextArea
                     id="property-description"
                     label={t('newProperty.description')}
@@ -730,26 +791,6 @@ export function PropertyNewPage() {
                     required
                   />
 
-                  {/* Hidden entirely on a tier without ai_description: an always
-                      visible button that only ever answers "upgrade" is an
-                      advert, not a control. */}
-                  {aiDescription && (
-                    <div className="-mt-1 flex flex-wrap items-center gap-2">
-                      <Button
-                        onClick={() => void write()}
-                        state={writing ? 'loading' : 'idle'}
-                        disabled={saving || !canGenerateDescription(form, photos)}
-                      >
-                        {!writing && <Sparkles aria-hidden="true" className="size-4" />}
-                        {t(writing ? 'newProperty.aiWriting' : 'newProperty.aiWrite')}
-                      </Button>
-                      <p className="text-xs text-muted">
-                        {canGenerateDescription(form, photos)
-                          ? t('newProperty.aiHint')
-                          : t('newProperty.aiNeeds')}
-                      </p>
-                    </div>
-                  )}
                   {aiError !== null && (
                     <p role="alert" className="mt-1 text-xs text-error">
                       {aiError}

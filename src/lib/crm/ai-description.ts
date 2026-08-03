@@ -59,7 +59,9 @@ export async function generateDescription(
   }
 
   put('category', categoryLabel)
-  put('operation', form.property_type === '1' ? 'rent' : 'sell')
+  // Spanish, matching the app — the words go straight into the prompt and the
+  // listing is written in Spanish. 'sell'/'rent' would be the only English in it.
+  put('operation', form.property_type === '1' ? 'alquiler' : 'venta')
   put('price', form.price)
   put('city', form.city)
   put('state', form.state)
