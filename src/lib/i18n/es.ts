@@ -124,10 +124,12 @@ export const es = {
   'activity.visit': 'Visita',
   'activity.note': 'Nota',
 
-  'projectStatus.preselling': 'Preventa',
-  'projectStatus.building': 'En construcción',
-  'projectStatus.delivered': 'Entregado',
-  'projectStatus.sold_out': 'Agotado',
+  // La etapa que controla el agente (projects.type). No es un ciclo de vida:
+  // 'status' es un booleano de publicación y 'agotado' se deriva del inventario.
+  'projectStage.upcoming': 'Preventa',
+  'projectStage.under_process': 'En construcción',
+  'projects.soldOut': 'Agotado',
+  'projects.noInventory': 'Sin inventario',
 
   'unitStatus.available': 'Disponible',
   'unitStatus.reserved': 'Reservada',

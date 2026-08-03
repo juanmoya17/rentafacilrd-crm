@@ -120,10 +120,12 @@ export const en: Record<TranslationKey, string> = {
   'activity.visit': 'Visit',
   'activity.note': 'Note',
 
-  'projectStatus.preselling': 'Pre-selling',
-  'projectStatus.building': 'Under construction',
-  'projectStatus.delivered': 'Delivered',
-  'projectStatus.sold_out': 'Sold out',
+  // The agent-controlled stage (projects.type). Not a lifecycle: 'status' is
+  // a boolean publish flag and 'sold out' is derived from inventory.
+  'projectStage.upcoming': 'Pre-selling',
+  'projectStage.under_process': 'Under construction',
+  'projects.soldOut': 'Sold out',
+  'projects.noInventory': 'No inventory',
 
   'unitStatus.available': 'Available',
   'unitStatus.reserved': 'Reserved',
