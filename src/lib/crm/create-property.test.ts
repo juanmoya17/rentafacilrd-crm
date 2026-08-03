@@ -10,6 +10,7 @@ import {
   type PropertyMedia,
 } from './create-property'
 import { validateProject, projectPayload, EMPTY_PROJECT_FORM, EMPTY_PROJECT_MEDIA } from './create-project'
+import { affirmativeOption } from './reference'
 
 const jpeg = (name = 'cover.jpg', bytes = 1000) =>
   new File([new Uint8Array(bytes)], name, { type: 'image/jpeg' })
@@ -236,5 +237,57 @@ describe('validateProject', () => {
     expect(body.image).toBeInstanceOf(File)
     expect('title_image' in body).toBe(false)
     expect(body.title).toBe('Torre Mirador')
+  })
+})
+
+describe('affirmativeOption', () => {
+  const parameter = (
+    type: string,
+    options: { value: string }[] | null,
+  ): Parameters<typeof affirmativeOption>[0] =>
+    ({
+      id: 1,
+      name: 'p',
+      type_of_parameter: type,
+      is_required: 0,
+      translated_option_value: options,
+    }) as unknown as Parameters<typeof affirmativeOption>[0]
+
+  // The real shape from api.rentafacilrd.com: every amenity on a house is its
+  // own checkbox parameter with exactly Si/No — "Piscina", "Gimnasio",
+  // "Balcón" and eighteen more. Rendering each as a labelled Si/No pair is
+  // what this detection exists to avoid.
+  it('reads Si out of the Si/No pair the panel actually sends', () => {
+    expect(affirmativeOption(parameter('checkbox', [{ value: 'Si' }, { value: 'No' }]))).toBe('Si')
+  })
+
+  it('treats a lone option as a boolean too — "Amueblado" ships with just Si', () => {
+    expect(affirmativeOption(parameter('checkbox', [{ value: 'Si' }]))).toBe('Si')
+  })
+
+  it('leaves a genuine two-way choice alone', () => {
+    expect(affirmativeOption(parameter('checkbox', [{ value: 'Techado' }, { value: 'Abierto' }])))
+      .toBeNull()
+  })
+
+  it('leaves a real multi-select alone', () => {
+    const many = [{ value: 'A' }, { value: 'B' }, { value: 'C' }]
+    expect(affirmativeOption(parameter('checkbox', many))).toBeNull()
+  })
+
+  it('only ever applies to checkbox — a radiobutton pair stays a choice', () => {
+    expect(affirmativeOption(parameter('radiobutton', [{ value: 'Si' }, { value: 'No' }])))
+      .toBeNull()
+    expect(affirmativeOption(parameter('number', null))).toBeNull()
+  })
+})
+
+describe('stepOf', () => {
+  // The app writes the description on the parameters screen, after the
+  // features the AI writer reads. Routing it to 'details' would send a failed
+  // validation to a step that no longer holds the field.
+  it('routes the description to the parameters step, not details', () => {
+    expect(stepOf('description')).toBe('parameters')
+    expect(stepOf('title')).toBe('details')
   })
 })

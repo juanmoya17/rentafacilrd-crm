@@ -20,6 +20,12 @@ interface ImportMetaEnv {
    * and the map pin still sets the coordinates by hand.
    */
   readonly VITE_GOOGLE_MAPS_API_KEY?: string
+  /**
+   * Map ID for the wizard's picker. Advanced markers do not render without
+   * one — the map draws and the pin silently never appears. Defaults to
+   * Google's DEMO_MAP_ID; set a real one from Cloud Console for production.
+   */
+  readonly VITE_GOOGLE_MAPS_MAP_ID?: string
 }
 
 interface ImportMeta {

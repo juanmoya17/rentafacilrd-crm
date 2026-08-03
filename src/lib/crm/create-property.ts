@@ -164,6 +164,11 @@ export function stepOf(field: PropertyField): PropertyStep {
     case 'property_type':
     case 'rentduration':
       return 'category'
+    // Written on the parameters step, not with the rest of the details —
+    // that is where the app puts it, and where the AI writer has the
+    // features and the rest of the listing to work from.
+    case 'description':
+      return 'parameters'
     case 'country':
     case 'state':
     case 'city':

@@ -20,6 +20,7 @@ import { useObjectUrls } from '@/lib/use-object-urls'
 import { reverseGeocode, type Place } from '@/lib/google-maps'
 import { useResource } from '@/lib/use-resource'
 import {
+  affirmativeOption,
   checkPackageLimit,
   fetchCategories,
   fetchFacilities,
@@ -361,6 +362,18 @@ export function PropertyNewPage() {
   } = reference.data
   const category = categories.find((entry) => String(entry.id) === form.category_id) ?? null
   const categoryParameters = category?.parameter_types ?? []
+
+  // Split once: the Si/No parameters become a tag cloud, everything else keeps
+  // its own control. See affirmativeOption() for why this installation has
+  // twenty booleans rather than one twenty-option amenities field.
+  const booleanParameters = categoryParameters.flatMap((parameter) => {
+    const yes = affirmativeOption(parameter)
+    return yes === null ? [] : [{ parameter, yes }]
+  })
+  const booleanIds = new Set(booleanParameters.map((entry) => entry.parameter.id))
+  const scalarParameters = categoryParameters.filter(
+    (parameter) => !booleanIds.has(parameter.id),
+  )
   const photos = [media.title_image, ...media.gallery_images].filter(
     (file): file is File => file !== null,
   )
@@ -565,45 +578,6 @@ export function PropertyNewPage() {
           <div className="grid gap-4">
             {field('title', t('newProperty.listingTitle'), { required: true })}
 
-            <div>
-              <TextArea
-                id="property-description"
-                label={t('newProperty.description')}
-                value={form.description}
-                onChange={(value) => set('description', value)}
-                state={invalid === 'description' ? 'error' : 'idle'}
-                error={t('newProperty.error.description')}
-                disabled={saving || writing}
-                required
-              />
-
-              {/* Hidden entirely on a tier without ai_description: an always
-                  visible button that only ever answers "upgrade" is an advert,
-                  not a control. */}
-              {aiDescription && (
-                <div className="-mt-1 flex flex-wrap items-center gap-2">
-                  <Button
-                    onClick={() => void write()}
-                    state={writing ? 'loading' : 'idle'}
-                    disabled={saving || !canGenerateDescription(form, photos)}
-                  >
-                    {!writing && <Sparkles aria-hidden="true" className="size-4" />}
-                    {t(writing ? 'newProperty.aiWriting' : 'newProperty.aiWrite')}
-                  </Button>
-                  <p className="text-xs text-muted">
-                    {canGenerateDescription(form, photos)
-                      ? t('newProperty.aiHint')
-                      : t('newProperty.aiNeeds')}
-                  </p>
-                </div>
-              )}
-              {aiError !== null && (
-                <p role="alert" className="mt-1 text-xs text-error">
-                  {aiError}
-                </p>
-              )}
-            </div>
-
             <div className="grid gap-3 sm:grid-cols-2">
               {field('price', t('common.price'), { inputMode: 'decimal', required: true })}
               <Select
@@ -665,33 +639,124 @@ export function PropertyNewPage() {
         )}
 
         {step === 'parameters' && (
-          <div className="grid gap-4">
+          <div className="grid gap-5">
             {category === null ? (
               <p className="text-sm text-muted">{t('newProperty.pickCategoryFirst')}</p>
-            ) : categoryParameters.length === 0 ? (
-              <p className="text-sm text-muted">{t('newProperty.noParameters')}</p>
             ) : (
-              <div className="grid items-start gap-4 sm:grid-cols-2">
-                {categoryParameters.map((parameter) => (
-                  <div
-                    key={parameter.id}
-                    className={
-                      WIDE_PARAMETERS.includes(parameter.type_of_parameter) ? 'sm:col-span-2' : ''
-                    }
-                  >
-                    <ParameterInput
-                      parameter={parameter}
-                      value={parameters[parameter.id]}
-                      onChange={(value) => {
-                        setParameters((current) => ({ ...current, [parameter.id]: value }))
-                        if (invalid === `param:${parameter.id}`) setInvalid(null)
-                      }}
-                      invalid={invalid === `param:${parameter.id}`}
-                      disabled={saving}
-                    />
+              <>
+                {/* Numbers and free text first — habitaciones, baños, parqueos
+                    are what the amenity tags below qualify. */}
+                {scalarParameters.length > 0 && (
+                  <div className="grid items-start gap-4 sm:grid-cols-2">
+                    {scalarParameters.map((parameter) => (
+                      <div
+                        key={parameter.id}
+                        className={
+                          WIDE_PARAMETERS.includes(parameter.type_of_parameter)
+                            ? 'sm:col-span-2'
+                            : ''
+                        }
+                      >
+                        <ParameterInput
+                          parameter={parameter}
+                          value={parameters[parameter.id]}
+                          onChange={(value) => {
+                            setParameters((current) => ({ ...current, [parameter.id]: value }))
+                            if (invalid === `param:${parameter.id}`) setInvalid(null)
+                          }}
+                          invalid={invalid === `param:${parameter.id}`}
+                          disabled={saving}
+                        />
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+
+                {/* Every Si/No parameter as one tag. Twenty of them rendered as
+                    labelled Si/No pairs is a wall nobody can scan; as chips it
+                    is one glanceable row, and the same wire values. */}
+                {booleanParameters.length > 0 && (
+                  <fieldset disabled={saving}>
+                    <legend className="text-sm font-semibold text-ink">
+                      {t('newProperty.features')}
+                    </legend>
+                    <p className="mt-0.5 text-xs text-muted">{t('newProperty.featuresHint')}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {booleanParameters.map(({ parameter, yes }) => {
+                        const on = parameters[parameter.id] === yes
+                        return (
+                          <Chip
+                            key={parameter.id}
+                            input="checkbox"
+                            on={on}
+                            disabled={saving}
+                            onToggle={() => {
+                              setParameters((current) => {
+                                const next = { ...current }
+                                // Removed, not set to "No": on create the app
+                                // omits an untouched checkbox entirely, and the
+                                // handler skips any parameter with no value.
+                                if (on) delete next[parameter.id]
+                                else next[parameter.id] = yes
+                                return next
+                              })
+                            }}
+                          >
+                            {labelOf(parameter)}
+                          </Chip>
+                        )
+                      })}
+                    </div>
+                  </fieldset>
+                )}
+
+                {scalarParameters.length === 0 && booleanParameters.length === 0 && (
+                  <p className="text-sm text-muted">{t('newProperty.noParameters')}</p>
+                )}
+
+                {/* The description lives here, after the features, because that
+                    is where the app puts it — and because the AI writer reads
+                    those features, so writing it earlier would waste them. */}
+                <div className="border-t border-rule pt-4">
+                  <TextArea
+                    id="property-description"
+                    label={t('newProperty.description')}
+                    value={form.description}
+                    onChange={(value) => set('description', value)}
+                    rows={6}
+                    state={invalid === 'description' ? 'error' : 'idle'}
+                    error={t('newProperty.error.description')}
+                    disabled={saving || writing}
+                    required
+                  />
+
+                  {/* Hidden entirely on a tier without ai_description: an always
+                      visible button that only ever answers "upgrade" is an
+                      advert, not a control. */}
+                  {aiDescription && (
+                    <div className="-mt-1 flex flex-wrap items-center gap-2">
+                      <Button
+                        onClick={() => void write()}
+                        state={writing ? 'loading' : 'idle'}
+                        disabled={saving || !canGenerateDescription(form, photos)}
+                      >
+                        {!writing && <Sparkles aria-hidden="true" className="size-4" />}
+                        {t(writing ? 'newProperty.aiWriting' : 'newProperty.aiWrite')}
+                      </Button>
+                      <p className="text-xs text-muted">
+                        {canGenerateDescription(form, photos)
+                          ? t('newProperty.aiHint')
+                          : t('newProperty.aiNeeds')}
+                      </p>
+                    </div>
+                  )}
+                  {aiError !== null && (
+                    <p role="alert" className="mt-1 text-xs text-error">
+                      {aiError}
+                    </p>
+                  )}
+                </div>
+              </>
             )}
           </div>
         )}
@@ -1085,14 +1150,29 @@ function ReviewStep({
     useMemo(() => (media.title_image === null ? [] : [media.title_image]), [media.title_image]),
   )
 
-  const parameterRows = categoryParameters.flatMap((parameter): [string, string][] => {
+  // Same split as the step itself: a Si/No parameter that is on reads as a
+  // tag, not as the row "Piscina: Si".
+  const featureTags: string[] = []
+  const parameterRows: [string, string][] = []
+
+  for (const parameter of categoryParameters) {
     const value = parameters[parameter.id]
-    if (value === undefined) return []
+    if (value === undefined) continue
     const label = parameter.translated_name ?? parameter.name
-    if (value instanceof File) return [[label, value.name]]
+
+    const yes = affirmativeOption(parameter)
+    if (yes !== null) {
+      if (value === yes) featureTags.push(label)
+      continue
+    }
+
+    if (value instanceof File) {
+      parameterRows.push([label, value.name])
+      continue
+    }
     const text = Array.isArray(value) ? value.join(', ') : value
-    return text.trim() === '' ? [] : [[label, text]]
-  })
+    if (text.trim() !== '') parameterRows.push([label, text])
+  }
 
   const facilityTags = allFacilities
     .filter((facility) => facility.id in facilities)
@@ -1152,9 +1232,6 @@ function ReviewStep({
             ],
           ]}
         />
-        <p className="mt-2 whitespace-pre-line border-t border-rule pt-2 text-sm text-ink-2">
-          {form.description === '' ? dash : form.description}
-        </p>
       </ReviewCard>
 
       <ReviewCard
@@ -1162,11 +1239,21 @@ function ReviewStep({
         onEdit={() => onEdit('parameters')}
         editLabel={edit}
       >
-        {parameterRows.length === 0 ? (
-          <p className="text-sm text-muted">{t('newProperty.reviewNothing')}</p>
-        ) : (
-          <Rows rows={parameterRows} />
+        {parameterRows.length > 0 && <Rows rows={parameterRows} />}
+
+        {featureTags.length > 0 && (
+          <div className={parameterRows.length > 0 ? 'mt-3 border-t border-rule pt-3' : ''}>
+            <TagList values={featureTags} empty={t('newProperty.reviewNothing')} />
+          </div>
         )}
+
+        {parameterRows.length === 0 && featureTags.length === 0 && (
+          <p className="text-sm text-muted">{t('newProperty.reviewNothing')}</p>
+        )}
+
+        <p className="mt-3 whitespace-pre-line border-t border-rule pt-3 text-sm text-ink-2">
+          {form.description === '' ? dash : form.description}
+        </p>
       </ReviewCard>
 
       <ReviewCard

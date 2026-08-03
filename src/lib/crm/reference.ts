@@ -43,6 +43,38 @@ export interface CategoryParameter {
   translated_option_value?: ParameterOption[] | null
 }
 
+/** `No`, in the spellings the panel's option editor actually produces. */
+const NEGATIVES = ['no', 'not', 'false', '0']
+
+/**
+ * The "yes" value of a boolean parameter, or null if it is a real multi-select.
+ *
+ * This installation does not model amenities as one parameter with twenty
+ * options. Each amenity is its own `checkbox` parameter whose options are
+ * exactly `Si` / `No` — "Piscina", "Gimnasio", "Balcón" and eighteen more on a
+ * house. Rendering each of those as a labelled Si/No pair produces twenty
+ * fieldsets and no way to see at a glance what the property has; rendering
+ * each as one tag is the same data in one line of chips.
+ *
+ * A single-option parameter ("Amueblado" ships with just `Si`) is a boolean
+ * too. Anything with two non-negative options is a genuine choice and is left
+ * alone.
+ */
+export function affirmativeOption(parameter: CategoryParameter): string | null {
+  if (parameter.type_of_parameter !== 'checkbox') return null
+
+  const options = parameter.translated_option_value ?? []
+  if (options.length === 0 || options.length > 2) return null
+
+  const positives = options.filter(
+    (option) => !NEGATIVES.includes(option.value.trim().toLowerCase()),
+  )
+  // Two positives is a choice between two things, not a yes/no.
+  if (positives.length !== 1) return null
+
+  return positives[0]?.value ?? null
+}
+
 export interface Category {
   id: number
   category: string

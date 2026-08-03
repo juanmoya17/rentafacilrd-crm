@@ -409,6 +409,8 @@ export const en: Record<TranslationKey, string> = {
   'newProperty.slug': 'URL',
   'newProperty.slugHint': 'Optional. Generated from the title when left empty.',
   'newProperty.translations': 'Other languages',
+  'newProperty.features': 'Features',
+  'newProperty.featuresHint': 'Tap whatever the property has.',
   'newProperty.aiWrite': 'Write with AI',
   'newProperty.aiWriting': 'Writing…',
   'newProperty.aiHint': 'Uses the category, price, location, features and photos.',

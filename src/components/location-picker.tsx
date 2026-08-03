@@ -1,35 +1,29 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { loadMaps, mapsConfigured, MAP_ID } from '@/lib/google-maps'
 
 /**
  * One draggable pin. `post_property` requires latitude AND longitude, and
  * typing coordinates by hand is how a listing ends up in the Atlantic — so the
- * map is the input, and the two number fields beside it only echo it.
+ * map is the input, and the coordinate line beneath it only echoes it.
  *
- * Same tile source and same no-default-icon rule as `PropertyMap` (see the
- * notes there). No reverse geocoding: the address fields are typed by the
- * agent, which keeps this free of a geocoding key and of a second outbound
- * service. If the product wants "drop pin → fill address", that is a Nominatim
- * or Google Places call added here, not a rewrite.
+ * Google Maps when a key is configured, so the picker matches the autocomplete
+ * beside it (same place data, same street names, same imagery the agent sees
+ * on the public site). Leaflet/OpenStreetMap when it is not — that keeps local
+ * dev and a key-less deploy working instead of showing an empty grey box.
+ *
+ * The properties list keeps its own Leaflet map (`property-map.tsx`): it draws
+ * hundreds of pins and costs nothing to run.
  */
 
-const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-const TILE_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-
 /** Santo Domingo. Where an unplaced pin starts, never what gets submitted —
- *  the form still refuses until the agent has actually moved it. */
-const DEFAULT_CENTER: [number, number] = [18.4861, -69.9312]
+ *  the form still refuses until the agent has actually placed one. */
+const DEFAULT_CENTER = { lat: 18.4861, lng: -69.9312 }
 const CITY_ZOOM = 12
 const PLACED_ZOOM = 15
 
-export function LocationPicker({
-  lat,
-  lng,
-  onChange,
-  label,
-}: {
+export function LocationPicker(props: {
   /** Null until the agent places the pin. */
   lat: number | null
   lng: number | null
@@ -37,6 +31,120 @@ export function LocationPicker({
   /** Accessible name for the map region — it has no heading of its own. */
   label: string
 }) {
+  return mapsConfigured() ? <GooglePicker {...props} /> : <LeafletPicker {...props} />
+}
+
+interface PickerProps {
+  lat: number | null
+  lng: number | null
+  onChange: (lat: number, lng: number) => void
+  label: string
+}
+
+function GooglePicker({ lat, lng, onChange, label }: PickerProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<google.maps.Map | null>(null)
+  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null)
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+
+  useEffect(() => {
+    if (containerRef.current === null) return
+    let live = true
+
+    void (async () => {
+      await loadMaps()
+      const { Map } = await google.maps.importLibrary('maps')
+      if (!live || containerRef.current === null) return
+
+      const map = new Map(containerRef.current, {
+        center: DEFAULT_CENTER,
+        zoom: CITY_ZOOM,
+        // Advanced markers do not render without a map ID — with it missing
+        // the map draws and the pin silently never appears.
+        mapId: MAP_ID,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        // The page already scrolls; a wheel that zooms the map instead of
+        // moving the page is the most hated thing an embedded map does.
+        gestureHandling: 'cooperative',
+      })
+      map.addListener('click', (event: google.maps.MapMouseEvent) => {
+        const position = event.latLng
+        if (position !== null) onChangeRef.current(position.lat(), position.lng())
+      })
+      mapRef.current = map
+    })()
+
+    return () => {
+      live = false
+      mapRef.current = null
+      markerRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    let live = true
+
+    void (async () => {
+      const map = mapRef.current
+      if (map === null) return
+
+      if (lat === null || lng === null) {
+        if (markerRef.current !== null) markerRef.current.map = null
+        markerRef.current = null
+        return
+      }
+
+      if (markerRef.current === null) {
+        const { AdvancedMarkerElement } = await google.maps.importLibrary('marker')
+        if (!live || mapRef.current === null) return
+
+        const marker = new AdvancedMarkerElement({
+          map: mapRef.current,
+          position: { lat, lng },
+          gmpDraggable: true,
+        })
+        marker.addListener('dragend', () => {
+          const position = marker.position
+          if (position === null || position === undefined) return
+          const nextLat = typeof position.lat === 'number' ? position.lat : position.lat()
+          const nextLng = typeof position.lng === 'number' ? position.lng : position.lng()
+          onChangeRef.current(nextLat, nextLng)
+        })
+        markerRef.current = marker
+        // Only on first placement: re-centring on every drag would fight the
+        // hand that is dragging.
+        mapRef.current.setCenter({ lat, lng })
+        mapRef.current.setZoom(Math.max(mapRef.current.getZoom() ?? 0, PLACED_ZOOM))
+      } else {
+        markerRef.current.position = { lat, lng }
+      }
+    })()
+
+    return () => {
+      live = false
+    }
+  }, [lat, lng])
+
+  return (
+    <div
+      ref={containerRef}
+      role="application"
+      aria-label={label}
+      className="h-72 w-full overflow-hidden rounded-lg border border-rule"
+    />
+  )
+}
+
+/* -------------------------------------------------- no-key fallback (OSM) */
+
+const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+const TILE_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+
+function LeafletPicker({ lat, lng, onChange, label }: PickerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const markerRef = useRef<L.Marker | null>(null)
@@ -48,13 +156,15 @@ export function LocationPicker({
 
     const map = L.map(containerRef.current, { scrollWheelZoom: false })
     L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION, maxZoom: 19 }).addTo(map)
-    map.setView(DEFAULT_CENTER, CITY_ZOOM)
+    map.setView([DEFAULT_CENTER.lat, DEFAULT_CENTER.lng], CITY_ZOOM)
     mapRef.current = map
 
     map.on('click', (event: L.LeafletMouseEvent) => {
       onChangeRef.current(event.latlng.lat, event.latlng.lng)
     })
 
+    // Leaflet caches the size it saw at construction — the classic grey band
+    // when the container is laid out after the map is built.
     const observer = new ResizeObserver(() => {
       map.invalidateSize()
     })
@@ -82,6 +192,8 @@ export function LocationPicker({
       const marker = L.marker([lat, lng], {
         draggable: true,
         keyboard: true,
+        // A divIcon, so the marker-icon.png 404 bundlers famously produce
+        // cannot happen — Leaflet never asks for the image.
         icon: L.divIcon({ className: 'rf-pin', html: '<span class="rf-pin__label">●</span>' }),
       })
       marker.on('dragend', () => {
@@ -90,8 +202,6 @@ export function LocationPicker({
       })
       marker.addTo(map)
       markerRef.current = marker
-      // Only on first placement: re-centring on every drag would fight the
-      // hand that is dragging.
       map.setView([lat, lng], Math.max(map.getZoom(), PLACED_ZOOM))
     } else {
       markerRef.current.setLatLng([lat, lng])

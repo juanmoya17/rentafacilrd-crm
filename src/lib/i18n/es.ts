@@ -418,6 +418,8 @@ export const es = {
   'newProperty.slug': 'URL',
   'newProperty.slugHint': 'Opcional. Si la dejas vacía se genera desde el título.',
   'newProperty.translations': 'Otros idiomas',
+  'newProperty.features': 'Características',
+  'newProperty.featuresHint': 'Toca lo que tenga la propiedad.',
   'newProperty.aiWrite': 'Escribir con IA',
   'newProperty.aiWriting': 'Escribiendo…',
   'newProperty.aiHint': 'Usa la categoría, el precio, la ubicación, las características y las fotos.',

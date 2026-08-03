@@ -32,6 +32,14 @@ export interface Suggestion {
 
 const KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? ''
 
+/**
+ * Advanced markers refuse to render without a map ID — the map draws and the
+ * pin silently never appears, which is a nasty thing to debug. DEMO_MAP_ID is
+ * Google's documented stand-in; set VITE_GOOGLE_MAPS_MAP_ID to a real one from
+ * Cloud Console for production styling and quota attribution.
+ */
+export const MAP_ID = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID ?? 'DEMO_MAP_ID'
+
 /** The market — `includedRegionCodes` is the new API's country filter. */
 const REGION = ['do']
 
@@ -48,7 +56,7 @@ export function mapsConfigured(): boolean {
  */
 let loader: Promise<void> | null = null
 
-function loadMaps(): Promise<void> {
+export function loadMaps(): Promise<void> {
   if (loader !== null) return loader
 
   loader = new Promise<void>((resolve, reject) => {
