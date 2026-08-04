@@ -21,6 +21,7 @@ import { reverseGeocode, type Place } from '@/lib/google-maps'
 import { useResource } from '@/lib/use-resource'
 import {
   affirmativeOption,
+  isAreaParameter,
   checkPackageLimit,
   fetchCategories,
   fetchFacilities,
@@ -194,6 +195,26 @@ function ParameterInput({
       {required && <span aria-hidden="true"> *</span>}
     </legend>
   )
+
+  // Before the type switch, because the declared type lies here: "Área General"
+  // is a `radiobutton` whose options are the range `1 metros` / `50000 metros`.
+  // The app does the same — every non-checkbox parameter goes through its
+  // _areaField, numeric when the name is area-like.
+  if (isAreaParameter(parameter)) {
+    return (
+      <Field
+        id={id}
+        label={`${label} (m²)`}
+        value={text}
+        onChange={onChange}
+        inputMode="decimal"
+        placeholder="0"
+        state={invalid ? 'error' : 'idle'}
+        disabled={disabled}
+        required={required}
+      />
+    )
+  }
 
   switch (parameter.type_of_parameter) {
     case 'textarea':

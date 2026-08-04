@@ -10,7 +10,7 @@ import {
   type PropertyMedia,
 } from './create-property'
 import { validateProject, projectPayload, EMPTY_PROJECT_FORM, EMPTY_PROJECT_MEDIA } from './create-project'
-import { affirmativeOption } from './reference'
+import { affirmativeOption, isAreaParameter } from './reference'
 
 const jpeg = (name = 'cover.jpg', bytes = 1000) =>
   new File([new Uint8Array(bytes)], name, { type: 'image/jpeg' })
@@ -289,5 +289,38 @@ describe('stepOf', () => {
   it('routes the description to the parameters step, not details', () => {
     expect(stepOf('description')).toBe('parameters')
     expect(stepOf('title')).toBe('details')
+  })
+})
+
+describe('isAreaParameter', () => {
+  const parameter = (
+    name: string,
+    type = 'radiobutton',
+  ): Parameters<typeof isAreaParameter>[0] =>
+    ({ id: 1, name, translated_name: name, type_of_parameter: type, is_required: 1 }) as unknown as
+      Parameters<typeof isAreaParameter>[0]
+
+  // The live shape: a radiobutton whose two "options" are `1 metros` and
+  // `50000 metros` — a range, not a choice. Two radio tags there asks the agent
+  // to pick one of two absurd areas.
+  it('treats the Área General radiobutton as an area field', () => {
+    expect(isAreaParameter(parameter('Área General'))).toBe(true)
+  })
+
+  it('matches the app tokens on either name field', () => {
+    for (const name of ['Superficie', 'Metros cuadrados', 'Area total', 'Mts', 'm² construidos']) {
+      expect(isAreaParameter(parameter(name))).toBe(true)
+    }
+  })
+
+  // Load-bearing: this amenity contains "area" and is a Si/No tag. Turning it
+  // into a numeric field would delete a real feature from the form.
+  it('never claims a checkbox — "Area De Lavado" stays a tag', () => {
+    expect(isAreaParameter(parameter('Area De Lavado', 'checkbox'))).toBe(false)
+  })
+
+  it('leaves the ordinary counters alone', () => {
+    expect(isAreaParameter(parameter('Habitacion', 'number'))).toBe(false)
+    expect(isAreaParameter(parameter('Parqueo Techado', 'number'))).toBe(false)
   })
 })

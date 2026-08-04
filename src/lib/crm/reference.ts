@@ -75,6 +75,32 @@ export function affirmativeOption(parameter: CategoryParameter): string | null {
   return positives[0]?.value ?? null
 }
 
+/** Same tokens the app matches on (`_isAreaParam`). */
+const AREA_TOKENS = ['área', 'area', 'm²', 'metros', 'superficie', 'mts']
+
+/**
+ * True for a parameter that asks for a surface area, whatever type the panel
+ * gave it.
+ *
+ * "Área General" ships as a `radiobutton` whose two options are `1 metros` and
+ * `50000 metros` — that is a min and a max, not a choice between two areas.
+ * Rendering it as two radio tags asks the agent to pick one of two absurd
+ * values; the app renders it as a numeric field with an m² suffix
+ * (`_areaField`), and so does this.
+ *
+ * Checkbox is excluded on purpose, and the exclusion is load-bearing: the
+ * amenity "Area De Lavado" contains the token `area` and is a Si/No tag. The
+ * app is protected by partition order — it pulls checkboxes out before it ever
+ * asks this question — so the rule is encoded here instead.
+ */
+export function isAreaParameter(parameter: CategoryParameter): boolean {
+  if (parameter.type_of_parameter === 'checkbox') return false
+
+  const name = `${parameter.name} ${parameter.translated_name ?? ''}`.toLowerCase()
+
+  return AREA_TOKENS.some((token) => name.includes(token))
+}
+
 export interface Category {
   id: number
   category: string
