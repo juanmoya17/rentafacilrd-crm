@@ -20,8 +20,17 @@ type Screen =
   | { kind: 'methods' }
   | { kind: 'bank' }
   | { kind: 'bank-sent' }
-  | { kind: 'paypal'; blockedUrl: string | null }
-  | { kind: 'stripe'; clientSecret: string; publishableKey: string }
+  | { kind: 'paypal'; transactionId: number; blockedUrl: string | null }
+  | { kind: 'stripe'; transactionId: number; clientSecret: string; publishableKey: string }
+
+/**
+ * Best-effort release of one abandoned/orphaned intent. Fire-and-forget by
+ * design — nothing on screen can react to this failing, so the rejection is
+ * swallowed here instead of becoming an unhandled one.
+ */
+function releaseTransaction(id: number): void {
+  void failPaymentTransaction(id).catch(() => {})
+}
 
 export function CheckoutDialog({
   pkg,
@@ -37,16 +46,26 @@ export function CheckoutDialog({
   const [screen, setScreen] = useState<Screen>({ kind: 'methods' })
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  /** Set once an intent exists, so closing can mark it failed. */
-  const openTransaction = useRef<number | null>(null)
+  /** Every intent this dialog has created that is neither paid nor released yet. */
+  const pending = useRef<Set<number>>(new Set())
+  /** Flipped false in the cleanup below, so a request that resolves after
+   *  close (the cleanup already ran and will never see its id) can release
+   *  itself immediately instead of leaking. */
+  const mounted = useRef(true)
   const paypalWindow = useRef<Window | null>(null)
 
-  // Closing without paying releases the pending transaction. Runs on unmount,
-  // which is how every dismissal here ends.
+  // Closing without paying releases every still-pending transaction. Runs on
+  // unmount, which is how every dismissal here ends.
   useEffect(() => {
+    // Not a DOM ref: `pending`/`mounted` are plain mutable containers this
+    // component owns, so reading `.current` at cleanup time is the point —
+    // it must see every id added since mount, not a snapshot from render.
     return () => {
-      const id = openTransaction.current
-      if (id !== null) void failPaymentTransaction(id)
+      mounted.current = false
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      pending.current.forEach(releaseTransaction)
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      pending.current.clear()
     }
   }, [])
 
@@ -56,7 +75,15 @@ export function CheckoutDialog({
     setError(null)
     try {
       const intent = await createPaymentIntent(pkg.id, method)
-      openTransaction.current = intent.transactionId
+
+      if (!mounted.current) {
+        // The dialog closed while this request was in flight. The unmount
+        // cleanup already ran and will never see this id, so release it here
+        // instead of orphaning it.
+        releaseTransaction(intent.transactionId)
+        return
+      }
+      pending.current.add(intent.transactionId)
 
       if (method === 'stripe') {
         const key = settings.status === 'ready' ? settings.data.stripeKey : null
@@ -66,6 +93,7 @@ export function CheckoutDialog({
         }
         setScreen({
           kind: 'stripe',
+          transactionId: intent.transactionId,
           clientSecret: intent.clientSecret,
           publishableKey: key,
         })
@@ -78,7 +106,7 @@ export function CheckoutDialog({
       // No same-tab fallback: paypal.blade.php calls window.opener.postMessage,
       // and a same-tab redirect has no opener — the agent would land on a blank
       // page. Offer the link instead, which reopens with a user gesture.
-      setScreen({ kind: 'paypal', blockedUrl: popup === null ? url : null })
+      setScreen({ kind: 'paypal', transactionId: intent.transactionId, blockedUrl: popup === null ? url : null })
     } catch (caught: unknown) {
       setError(caught instanceof ApiError ? caught.message : t('error.generic'))
     } finally {
@@ -91,10 +119,11 @@ export function CheckoutDialog({
   useEffect(() => {
     if (screen.kind !== 'paypal') return
     const trusted = apiOrigin()
+    const { transactionId } = screen
 
     const onMessage = (event: MessageEvent) => {
       if (!isTrustedPaymentMessage({ origin: event.origin, data: event.data }, trusted)) return
-      openTransaction.current = null
+      pending.current.delete(transactionId)
       onPurchased()
     }
 
@@ -102,11 +131,16 @@ export function CheckoutDialog({
 
     // An agent who closes the PayPal window without paying sends no message and
     // would otherwise sit on "finish the payment" forever. Poll for it and fall
-    // back to the method list, where they can pick again.
+    // back to the method list, where they can pick again. This intent is
+    // known-abandoned right here, so release it now rather than deferring to
+    // unmount — otherwise a retry's intent would overwrite this one and only
+    // the most recent attempt would ever get released.
     const poll = window.setInterval(() => {
       if (paypalWindow.current?.closed !== true) return
       window.clearInterval(poll)
       paypalWindow.current = null
+      pending.current.delete(transactionId)
+      releaseTransaction(transactionId)
       setScreen({ kind: 'methods' })
     }, 500)
 
@@ -114,7 +148,7 @@ export function CheckoutDialog({
       window.removeEventListener('message', onMessage)
       window.clearInterval(poll)
     }
-  }, [screen.kind, onPurchased])
+  }, [screen, onPurchased])
 
   const body = () => {
     if (settings.status === 'loading') return <LoadingState label={t('plan.loading')} />
@@ -134,7 +168,7 @@ export function CheckoutDialog({
           publishableKey={screen.publishableKey}
           clientSecret={screen.clientSecret}
           onPaid={() => {
-            openTransaction.current = null
+            pending.current.delete(screen.transactionId)
             onPurchased()
           }}
         />
