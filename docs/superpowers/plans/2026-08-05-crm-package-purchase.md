@@ -951,8 +951,10 @@ git commit -m "feat(crm): translation keys for plan, checkout and the package ga
 - Modify: `src/components/crm-layout.tsx`
 
 **Interfaces:**
-- Consumes: `getPackages`, `getPendingBankTransfer`, `Package`, `PackageFeature` from `@/lib/crm/packages`; `useResource`; `useI18n`; `Badge`, `Button`, `Card`, `EmptyState`, `ErrorState`, `LoadingState`, `PageHeader` from `@/components/ui`; `RecordSectionHead` from `@/components/record`.
-- Produces: `PlanPage`, and the `/plan` route the gate links to. Renders `<CheckoutDialog>` from Task 8 — until that task lands, the buy button is wired to a `selected` state that renders nothing.
+**Execution order:** run this task **after Tasks 7 and 8** — it imports the `<CheckoutDialog>` they produce.
+
+- Consumes: `getPackages`, `getPendingBankTransfer`, `Package`, `PackageFeature` from `@/lib/crm/packages`; `CheckoutDialog` from `@/components/checkout-dialog` (Task 8); `useResource`; `useI18n`; `Badge`, `Button`, `Card`, `EmptyState`, `ErrorState`, `LoadingState`, `PageHeader` from `@/components/ui`; `RecordSectionHead` from `@/components/record`.
+- Produces: `PlanPage`, and the `/plan` route the gate links to.
 
 - [ ] **Step 1: Write the page**
 
@@ -1073,15 +1075,34 @@ export function PlanPage() {
         </section>
       </div>
 
+      {selected !== null && (
+        <CheckoutDialog
+          pkg={selected}
+          onClose={() => setSelected(null)}
+          onPurchased={() => {
+            setSelected(null)
+            catalog.reload()
+            pending.reload()
+          }}
+        />
+      )}
     </>
   )
 }
 ```
 
-`selected` is set here but not yet rendered — Task 8 adds the `<CheckoutDialog>`
-that consumes it. Do **not** emit a placeholder expression such as
-`{selected !== null && null}`: it is dead code, and a reviewer would be right to
-flag it. The state declaration alone is the seam.
+Add the matching import beside the other `@/components` imports:
+
+```tsx
+import { CheckoutDialog } from '@/components/checkout-dialog'
+```
+
+**Ordering note.** This task runs **after** Tasks 7 and 8, so `<CheckoutDialog>`
+already exists when `plan.tsx` is created. An earlier draft had this task create
+`plan.tsx` first and leave `selected` unconsumed until Task 8 — that does not
+compile: `tsconfig.app.json` sets `noUnusedLocals: true`, so a declared-but-unread
+`selected` is a build error, not a lint warning. Building the dialog first
+removes the seam entirely rather than papering over it.
 
 - [ ] **Step 2: Register the route**
 
@@ -1256,7 +1277,7 @@ git commit -m "feat(crm): Stripe Elements payment component"
 
 **Files:**
 - Create: `src/components/checkout-dialog.tsx`
-- Modify: `src/routes/plan.tsx` (renders the dialog against the `selected` state Task 6 left unconsumed)
+(Task 6 creates `src/routes/plan.tsx` afterwards and imports this component.)
 
 **Interfaces:**
 - Consumes: `Package`, `PaymentMethods`, `getPaymentSettings`, `getBankDetails`, `createPaymentIntent`, `initiateBankTransfer`, `failPaymentTransaction`, `receiptError`, `RECEIPT_ACCEPT` from `@/lib/crm/packages`; `apiOrigin`, `isTrustedPaymentMessage`, `openCentered` from `@/lib/crm/payment-popup`; `StripePayment`, `abandonStripePayment` from `@/components/stripe-payment`.
@@ -1559,44 +1580,18 @@ function BankPanel({ pkg, onSent }: { pkg: Package; onSent: () => void }) {
 }
 ```
 
-- [ ] **Step 2: Wire it into the plan page**
-
-In `src/routes/plan.tsx`, add the import and replace the Task 6 placeholder:
-
-```tsx
-import { CheckoutDialog } from '@/components/checkout-dialog'
-```
-
-```tsx
-Add this as the last child of the fragment, after the closing `</div>`:
-
-```tsx
-      {selected !== null && (
-        <CheckoutDialog
-          pkg={selected}
-          onClose={() => setSelected(null)}
-          onPurchased={() => {
-            setSelected(null)
-            catalog.reload()
-            pending.reload()
-          }}
-        />
-      )}
-```
-
-- [ ] **Step 3: Verify it compiles, lints and the suite passes**
+- [ ] **Step 2: Verify it compiles, lints and the suite passes**
 
 Run: `pnpm exec tsc -b && pnpm lint && pnpm exec vitest run`
 Expected: clean.
 
-- [ ] **Step 4: Manual check of the bank path**
+`src/routes/plan.tsx` does not exist yet — **Task 6 runs after this one** and
+creates it already importing this dialog. This task ships the component only.
 
-Run `pnpm dev`, open `/plan`, click a plan, pick the bank transfer method. Confirm the details render, a `.heic` file is rejected client-side, and a small PDF submits to the "under review" state. Stop the server.
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add src/components/checkout-dialog.tsx src/routes/plan.tsx
+git add src/components/checkout-dialog.tsx
 git commit -m "feat(crm): checkout dialog for bank transfer, PayPal and Stripe"
 ```
 
