@@ -216,9 +216,23 @@ describe('gateReason()', () => {
     ).toBe('limit-reached')
   })
 
-  it('ignores feature_available: property_list and project_list are count-based', () => {
+  it('ignores feature_available: flipping it does not change the result', () => {
+    const base = { package_available: true, limit_available: true }
+    expect(gateReason({ ...base, feature_available: true })).toBe('ok')
+    expect(gateReason({ ...base, feature_available: false })).toBe('ok')
+  })
+
+  it('reports no-package even when limit is also unavailable — no-package wins', () => {
     expect(
-      gateReason({ package_available: true, feature_available: false, limit_available: true }),
-    ).toBe('ok')
+      gateReason({ package_available: false, feature_available: true, limit_available: false }),
+    ).toBe('no-package')
+  })
+
+  it('fails closed on null and treats it as no-package', () => {
+    expect(gateReason(null)).toBe('no-package')
+  })
+
+  it('fails closed on empty object and treats it as no-package', () => {
+    expect(gateReason({})).toBe('no-package')
   })
 })
