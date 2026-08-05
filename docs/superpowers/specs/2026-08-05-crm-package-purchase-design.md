@@ -30,7 +30,7 @@ All three clients drive the same Laravel endpoints in `rentalfacilrdpanel`.
 | `payment-transaction-fail` | Marks an abandoned intent failed. |
 | `check-package-limit` | `{package_available, feature_available, limit_available}` for a feature type. |
 | `get_payment_details` | The caller's transactions, filterable by `payment_type` and paginated. Returns **no `data` key at all** when there are none. |
-| `get_system_settings` | Everything, including `bank_details` as a JSON string. |
+| `web-settings` | Public settings map. Carries `bank_details` as an **already-decoded array** of `{title, value, translated_title}`, localised off `Content-Language` (which the CRM already sends). Not `get_system_settings` — that endpoint's type list omits `bank_details` entirely. |
 
 `payment_method` is validated `in:paypal,stripe`. The Razorpay / Paystack /
 Flutterwave handlers in the website are dead eBroker inventory and are not
@@ -113,9 +113,11 @@ the dialog says so rather than rendering an empty list.
 ### Bank transfer
 
 A panel with the bank details and a receipt `FileField`. Details come from
-`get_system_settings` → `bank_details`, fetched **lazily** only when this method
-is picked — that endpoint returns every setting the platform has and should not
-load on page open. The client mirrors the server validator (jpeg/png/jpg/pdf/doc/docx,
+`web-settings` → `bank_details`, fetched **lazily** only when this method is
+picked — that endpoint returns every public setting the platform has and should
+not load on page open. Rows arrive decoded, with `translated_title` already
+resolved for the active locale, so the panel renders `translated_title` / `value`
+pairs directly. The client mirrors the server validator (jpeg/png/jpg/pdf/doc/docx,
 ≤ 6 MB) so an oversized file fails before the upload rather than after it. On
 submit, `initiate-bank-transfer` lands the transaction in `review` and the panel
 says so.
