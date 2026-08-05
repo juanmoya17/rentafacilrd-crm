@@ -29,6 +29,7 @@ All three clients drive the same Laravel endpoints in `rentalfacilrdpanel`.
 | `initiate-bank-transfer` | `package_id` + receipt `file`. Creates a transaction with `payment_status: 'review'` for an admin to approve. |
 | `payment-transaction-fail` | Marks an abandoned intent failed. |
 | `check-package-limit` | `{package_available, feature_available, limit_available}` for a feature type. |
+| `get_payment_details` | The caller's transactions, filterable by `payment_type` and paginated. Returns **no `data` key at all** when there are none. |
 | `get_system_settings` | Everything, including `bank_details` as a JSON string. |
 
 `payment_method` is validated `in:paypal,stripe`. The Razorpay / Paystack /
@@ -68,7 +69,7 @@ paywall CTA a two-hop journey.
 
 | File | Responsibility |
 |---|---|
-| `src/lib/crm/packages.ts` | Types and the six calls. No React. |
+| `src/lib/crm/packages.ts` | Types and the eight calls: `getPackages`, `getPaymentSettings`, `getBankDetails`, `createPaymentIntent`, `initiateBankTransfer`, `failPaymentTransaction`, `checkPackageLimit`, `getPendingBankTransfer`. No React. |
 | `src/routes/plan.tsx` | Current plan + usage, then the catalog. |
 | `src/components/checkout-dialog.tsx` | Method picker and the three flows. |
 | `src/components/stripe-payment.tsx` | `<Elements>` wrapper. |
@@ -95,6 +96,10 @@ the existing `useResource` hook. Two response shapes need pinning down:
 `used_limit` and `total_limit` arrive per feature on active packages, so the usage
 display needs no extra call.
 
+The free-package filter belongs to the **catalog only**. An agent who holds a free
+plan must still see it under "current plan", so `readCatalog` filters
+`envelope.data` and passes `active_packages` through untouched.
+
 ## Flows
 
 ### Catalog
@@ -113,7 +118,16 @@ is picked — that endpoint returns every setting the platform has and should no
 load on page open. The client mirrors the server validator (jpeg/png/jpg/pdf/doc/docx,
 ≤ 6 MB) so an oversized file fails before the upload rather than after it. On
 submit, `initiate-bank-transfer` lands the transaction in `review` and the panel
-says so; `/plan` shows it as pending until an admin approves.
+says so.
+
+`/plan` keeps showing that pending state across reloads, which `get-package`
+cannot supply: a transfer under review has no `UserPackage` yet, so it never
+appears in `active_packages`. One call to
+`get_payment_details?payment_type=bank transfer&limit=1` gives the latest
+transfer, and a `payment_status` of `review` renders a banner naming the package.
+That is one banner, not the transaction-history screen ruled out under Scope.
+The call must tolerate a **missing `data` key** — that endpoint omits it entirely
+when the agent has no transactions.
 
 ### PayPal
 
@@ -142,10 +156,11 @@ After any success the plan page reloads through `useResource.reload()`.
 
 `plan-gate.tsx` wraps `/properties/new` and `/projects/new`. On mount it calls
 `check-package-limit` for `property_list` / `project_list` and renders the form
-only when the package **and** the limit are available. Otherwise it renders a
-panel whose copy is driven by which boolean failed — "no plan" links to `/plan`,
-"limit reached" says the quota is spent — because those need different actions
-from the agent. The submit-time error banner added in `ca667ef` stays as the
+only when the package **and** the limit are available. `feature_available` is
+ignored for these two: both are count-based types, and `PackageType.propertyList`
+in the app reads exactly the same pair. Otherwise it renders a panel whose copy is
+driven by which boolean failed — "no plan" links to `/plan`, "limit reached" says
+the quota is spent — because those need different actions from the agent. The submit-time error banner added in `ca667ef` stays as the
 backstop and gains the same link.
 
 ## Error handling
@@ -173,7 +188,7 @@ be tested without rendering:
 | Function | Covers |
 |---|---|
 | `paymentMethods(rows)` | Folding `[{type,data}]` into the enabled-methods object. |
-| `readCatalog(envelope)` | The `active_packages` sibling and the free-package filter. |
+| `readCatalog(envelope)` | The `active_packages` sibling, the free-package filter, and that a *held* free plan survives it. |
 | `gateReason(limits)` | Three booleans → `'ok' \| 'no-package' \| 'limit-reached'`. |
 | `isTrustedPaymentMessage(event)` | The PayPal origin check. |
 
@@ -191,8 +206,8 @@ Two new dependencies, both already used by the website:
 `@stripe/stripe-js` and `@stripe/react-stripe-js`. Stripe's JS must be loaded from
 `js.stripe.com` and never bundled, so the alternative is hand-writing that loader
 and mounting Elements imperatively — roughly 40 lines of lifecycle code to replace
-5 KB of officially-supported dependency. Installing them needs explicit approval
-per the project rules; it is the only install in this plan.
+a few KB of officially-supported dependency. Installing them needs explicit
+approval per the project rules; it is the only install in this plan.
 
 New i18n keys go in `es.ts` (source of truth) and `en.ts`. The typing makes a
 missing English string a compile error rather than a runtime fallback.
