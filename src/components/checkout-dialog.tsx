@@ -69,6 +69,33 @@ export function CheckoutDialog({
     }
   }, [])
 
+  /** Opens the PayPal popup and arms the poll/message listener for it. Shared
+   *  by the initial attempt and the "popup was blocked" retry button, so both
+   *  go through the exact same tested path instead of a second one. */
+  const openPaypalPopup = (url: string, transactionId: number) => {
+    const popup = openCentered(url, 'PayPal')
+    paypalWindow.current = popup
+    // No same-tab fallback: paypal.blade.php calls window.opener.postMessage,
+    // and a same-tab redirect has no opener — the agent would land on a blank
+    // page. Offer a retry instead, which reopens with a user gesture and so
+    // is never itself blocked.
+    setScreen({ kind: 'paypal', transactionId, blockedUrl: popup === null ? url : null })
+  }
+
+  /** Leaves the PayPal screen without waiting on the popup: closes it if it
+   *  is still open and releases the intent — guarded exactly like the
+   *  abandon-poll below, so a success message that lands in the same tick
+   *  still wins the race and this can never release a payment that just
+   *  succeeded. */
+  const backFromPaypal = (transactionId: number) => {
+    if (paypalWindow.current !== null && !paypalWindow.current.closed) {
+      paypalWindow.current.close()
+    }
+    paypalWindow.current = null
+    if (pending.current.delete(transactionId)) releaseTransaction(transactionId)
+    setScreen({ kind: 'methods' })
+  }
+
   const start = async (method: 'paypal' | 'stripe') => {
     if (busy) return // one intent per dialog: each call writes a PaymentTransaction
     setBusy(true)
@@ -87,26 +114,29 @@ export function CheckoutDialog({
 
       if (method === 'stripe') {
         const key = settings.status === 'ready' ? settings.data.stripeKey : null
-        if (key === null || intent.clientSecret === null) {
-          setError(t('checkout.noMethods'))
+        if (key === null) {
+          // Stripe is enabled but no publishable key is configured. The intent
+          // row is already written by createPaymentIntent above and the flow
+          // cannot continue without a key, so release it now instead of
+          // leaving it orphaned until the dialog closes.
+          if (pending.current.delete(intent.transactionId)) releaseTransaction(intent.transactionId)
+          setError(t('checkout.stripeUnavailable'))
           return
         }
         setScreen({
           kind: 'stripe',
           transactionId: intent.transactionId,
-          clientSecret: intent.clientSecret,
+          // createPaymentIntent() already throws for method === 'stripe' when
+          // the gateway response carries no client_secret, so this is never
+          // null here.
+          clientSecret: intent.clientSecret!,
           publishableKey: key,
         })
         return
       }
 
       const url = intent.paypalUrl ?? ''
-      const popup = openCentered(url, 'PayPal')
-      paypalWindow.current = popup
-      // No same-tab fallback: paypal.blade.php calls window.opener.postMessage,
-      // and a same-tab redirect has no opener — the agent would land on a blank
-      // page. Offer the link instead, which reopens with a user gesture.
-      setScreen({ kind: 'paypal', transactionId: intent.transactionId, blockedUrl: popup === null ? url : null })
+      openPaypalPopup(url, intent.transactionId)
     } catch (caught: unknown) {
       setError(caught instanceof ApiError ? caught.message : t('error.generic'))
     } finally {
@@ -187,24 +217,28 @@ export function CheckoutDialog({
     }
 
     if (screen.kind === 'paypal') {
+      const { blockedUrl, transactionId } = screen
       return (
         <div className="grid gap-3">
           <p className="text-sm text-ink-2">{t('checkout.paypalWaiting')}</p>
-          {screen.blockedUrl !== null && (
+          {blockedUrl !== null && (
             <>
               <p role="alert" className="text-sm text-error">
                 {t('checkout.popupBlocked')}
               </p>
-              <a
-                href={screen.blockedUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-sm font-medium text-accent underline"
-              >
+              {/* A plain link would open with a null window.opener (rel="noreferrer"
+                  and, in current browsers, target="_blank" alone both null it out),
+                  and paypal.blade.php's success view throws on window.opener.postMessage
+                  before it can close itself. A click is a user gesture, so retrying
+                  through the same openPaypalPopup() path is never blocked. */}
+              <Button onClick={() => openPaypalPopup(blockedUrl, transactionId)}>
                 {t('checkout.popupOpen')}
-              </a>
+              </Button>
             </>
           )}
+          <Button variant="ghost" onClick={() => backFromPaypal(transactionId)}>
+            {t('checkout.back')}
+          </Button>
         </div>
       )
     }

@@ -17,7 +17,6 @@ import {
 import { LocationPicker } from '@/components/location-picker'
 import { AddressSearch } from '@/components/address-search'
 import { PhotoInput } from '@/components/photo-input'
-import { PlanGate } from '@/components/plan-gate'
 import { useObjectUrls } from '@/lib/use-object-urls'
 import { reverseGeocode, type Place } from '@/lib/google-maps'
 import { useResource } from '@/lib/use-resource'
@@ -65,6 +64,14 @@ import {
  * two would refuse a listing the server would happily accept. The gallery,
  * media_rich and ai_description checks ARE safe to pre-run: those map to the
  * same PackageFeature lookups their handlers use.
+ *
+ * This is why this screen has no `<PlanGate>`, unlike project-new.tsx: there
+ * `HelperService::updatePackageLimit('project_list')` genuinely refuses a
+ * packageless agent, so the pre-check and the server agree and gating up
+ * front is correct. Here they don't, so the submit-time error banner below
+ * (with its own `/plan` link) is the only gate — it fires from the server's
+ * real answer, not the legacy one. Don't "fix" this inconsistency by adding a
+ * gate here without first re-verifying post_property's actual limit check.
  */
 
 const STEPS: PropertyStep[] = [
@@ -350,7 +357,7 @@ function ParameterInput({
 
 /* ------------------------------------------------------------------ page */
 
-function PropertyNewForm() {
+export function PropertyNewPage() {
   const { t } = useI18n()
   const navigate = useNavigate()
   const reference = useResource((signal) => loadReference(signal), [])
@@ -1114,14 +1121,6 @@ function PropertyNewForm() {
         )}
       </div>
     </>
-  )
-}
-
-export function PropertyNewPage() {
-  return (
-    <PlanGate feature="property_list">
-      <PropertyNewForm />
-    </PlanGate>
   )
 }
 

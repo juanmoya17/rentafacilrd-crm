@@ -541,6 +541,7 @@ export const es = {
   'checkout.close': 'Cerrar',
   'checkout.method': 'Elige cómo pagar',
   'checkout.noMethods': 'No hay métodos de pago activos. Contacta con soporte.',
+  'checkout.stripeUnavailable': 'El pago con tarjeta no está disponible en este momento. Contacta con soporte.',
   'checkout.bank': 'Transferencia bancaria',
   'checkout.paypal': 'PayPal',
   'checkout.stripe': 'Tarjeta',

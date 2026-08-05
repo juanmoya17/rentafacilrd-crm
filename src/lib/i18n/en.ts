@@ -532,6 +532,7 @@ export const en: Record<TranslationKey, string> = {
   'checkout.close': 'Close',
   'checkout.method': 'Choose how to pay',
   'checkout.noMethods': 'No payment methods are active. Contact support.',
+  'checkout.stripeUnavailable': 'Card payment is not available right now. Contact support.',
   'checkout.bank': 'Bank transfer',
   'checkout.paypal': 'PayPal',
   'checkout.stripe': 'Card',

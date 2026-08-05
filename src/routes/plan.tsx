@@ -135,7 +135,10 @@ export function PlanPage() {
       {selected !== null && (
         <CheckoutDialog
           pkg={selected}
-          onClose={() => setSelected(null)}
+          onClose={() => {
+            setSelected(null)
+            pending.reload()
+          }}
           onPurchased={() => {
             setSelected(null)
             catalog.reload()
