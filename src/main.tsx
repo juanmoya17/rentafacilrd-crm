@@ -22,6 +22,7 @@ import { ProjectDetailPage } from '@/routes/project-detail'
 import { InventoryPage } from '@/routes/inventory'
 import { TasksPage } from '@/routes/tasks'
 import { NotificationsPage } from '@/routes/notifications'
+import { PlanPage } from '@/routes/plan'
 import { SettingsPage } from '@/routes/settings'
 import './index.css'
 
@@ -51,6 +52,7 @@ const router = createBrowserRouter([
           { path: '/inventory', element: <InventoryPage /> },
           { path: '/tasks', element: <TasksPage /> },
           { path: '/notifications', element: <NotificationsPage /> },
+          { path: '/plan', element: <PlanPage /> },
           { path: '/settings', element: <SettingsPage /> },
         ],
       },

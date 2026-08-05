@@ -534,6 +534,8 @@ export const es = {
   'plan.pendingTransferHint': 'Se activará cuando un administrador la apruebe.',
   'plan.loading': 'Cargando planes…',
   'plan.retry': 'Reintentar',
+  'plan.returnSucceeded': 'Pago recibido. Tu plan puede tardar unos segundos en aparecer.',
+  'plan.returnFailed': 'El pago no se completó.',
 
   'checkout.title': 'Contratar {package}',
   'checkout.close': 'Cerrar',

@@ -525,6 +525,8 @@ export const en: Record<TranslationKey, string> = {
   'plan.pendingTransferHint': 'It activates once an administrator approves it.',
   'plan.loading': 'Loading plans…',
   'plan.retry': 'Retry',
+  'plan.returnSucceeded': 'Payment received. Your plan may take a few seconds to appear.',
+  'plan.returnFailed': 'The payment did not complete.',
 
   'checkout.title': 'Subscribe to {package}',
   'checkout.close': 'Close',
