@@ -1610,7 +1610,7 @@ git commit -m "feat(crm): checkout dialog for bank transfer, PayPal and Stripe"
 - Modify: `src/routes/project-new.tsx`
 
 **Interfaces:**
-- Consumes: `checkPackageLimit`, `type GatedFeature` from `@/lib/crm/packages`; `useResource`; `EmptyState`, `LinkButton`, `LoadingState`, `ErrorState` from `@/components/ui`.
+- Consumes: `gateReason`, `type GatedFeature` from `@/lib/crm/packages`; `checkPackageLimit` from `@/lib/crm/reference` (the pre-existing fetch — Task 3 deliberately does **not** add a second one); `useResource`; `EmptyState`, `LinkButton`, `LoadingState`, `ErrorState` from `@/components/ui`.
 - Produces: `<PlanGate feature>{children}</PlanGate>`.
 
 - [ ] **Step 1: Write the gate**
@@ -1622,7 +1622,8 @@ import type { ReactNode } from 'react'
 import { useI18n } from '@/lib/i18n/context'
 import { EmptyState, ErrorState, LinkButton, LoadingState } from '@/components/ui'
 import { useResource } from '@/lib/use-resource'
-import { checkPackageLimit, type GatedFeature } from '@/lib/crm/packages'
+import { gateReason, type GatedFeature } from '@/lib/crm/packages'
+import { checkPackageLimit } from '@/lib/crm/reference'
 
 /**
  * Refuse before the form, not after it.
@@ -1641,7 +1642,12 @@ export function PlanGate({
   children: ReactNode
 }) {
   const { t } = useI18n()
-  const gate = useResource((signal) => checkPackageLimit(feature, signal), [feature])
+  // reference.ts owns the fetch; gateReason owns the decision — and the
+  // fail-closed guard, since that fetch returns `body.data` unguarded.
+  const gate = useResource(
+    (signal) => checkPackageLimit(feature, signal).then(gateReason),
+    [feature],
+  )
 
   if (gate.status === 'loading') return <LoadingState label={t('gate.checking')} />
   if (gate.status === 'error') {
