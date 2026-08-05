@@ -8,6 +8,7 @@ import {
   ErrorState,
   Field,
   FileField,
+  LinkButton,
   LoadingState,
   PageHeader,
   Select,
@@ -16,6 +17,7 @@ import {
 import { LocationPicker } from '@/components/location-picker'
 import { AddressSearch } from '@/components/address-search'
 import { PhotoInput } from '@/components/photo-input'
+import { PlanGate } from '@/components/plan-gate'
 import { useObjectUrls } from '@/lib/use-object-urls'
 import { reverseGeocode, type Place } from '@/lib/google-maps'
 import { useResource } from '@/lib/use-resource'
@@ -348,7 +350,7 @@ function ParameterInput({
 
 /* ------------------------------------------------------------------ page */
 
-export function PropertyNewPage() {
+function PropertyNewForm() {
   const { t } = useI18n()
   const navigate = useNavigate()
   const reference = useResource((signal) => loadReference(signal), [])
@@ -1085,9 +1087,10 @@ export function PropertyNewPage() {
         )}
 
         {error !== null && (
-          <p role="alert" className="mt-4 text-xs text-error">
-            {error}
-          </p>
+          <div role="alert" className="mt-4 grid gap-1">
+            <p className="text-xs text-error">{error}</p>
+            <LinkButton to="/plan">{t('gate.seePlans')}</LinkButton>
+          </div>
         )}
       </Card>
 
@@ -1111,6 +1114,14 @@ export function PropertyNewPage() {
         )}
       </div>
     </>
+  )
+}
+
+export function PropertyNewPage() {
+  return (
+    <PlanGate feature="property_list">
+      <PropertyNewForm />
+    </PlanGate>
   )
 }
 

@@ -7,12 +7,14 @@ import {
   ErrorState,
   Field,
   FileField,
+  LinkButton,
   LoadingState,
   PageHeader,
   Select,
   TextArea,
 } from '@/components/ui'
 import { LocationPicker } from '@/components/location-picker'
+import { PlanGate } from '@/components/plan-gate'
 import { useResource } from '@/lib/use-resource'
 import { fetchCategories } from '@/lib/crm/reference'
 import {
@@ -38,7 +40,7 @@ import type { ProjectStage } from '@/lib/crm/projects'
 
 const STAGES: ProjectStage[] = ['upcoming', 'under_process']
 
-export function ProjectNewPage() {
+function ProjectNewForm() {
   const { t } = useI18n()
   const navigate = useNavigate()
   const categories = useResource((signal) => fetchCategories(signal), [])
@@ -238,9 +240,10 @@ export function ProjectNewPage() {
         </div>
 
         {error !== null && (
-          <p role="alert" className="text-xs text-error">
-            {error}
-          </p>
+          <div role="alert" className="grid gap-1">
+            <p className="text-xs text-error">{error}</p>
+            <LinkButton to="/plan">{t('gate.seePlans')}</LinkButton>
+          </div>
         )}
       </Card>
 
@@ -250,5 +253,13 @@ export function ProjectNewPage() {
         </Button>
       </div>
     </>
+  )
+}
+
+export function ProjectNewPage() {
+  return (
+    <PlanGate feature="project_list">
+      <ProjectNewForm />
+    </PlanGate>
   )
 }
