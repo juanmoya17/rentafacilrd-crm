@@ -135,13 +135,24 @@ export function CheckoutDialog({
     // known-abandoned right here, so release it now rather than deferring to
     // unmount — otherwise a retry's intent would overwrite this one and only
     // the most recent attempt would ever get released.
+    //
+    // But paypal.blade.php's success view ALSO closes the popup itself right
+    // after posting the message — every successful payment ends with
+    // `closed === true` too, so this poll fires on both outcomes. The only way
+    // to tell them apart from here is whether onMessage already claimed the
+    // id: `Set.delete` returns false when it's already gone, which is exactly
+    // "the success handler got here first, this is not an abandonment." Do
+    // NOT remove this guard — without it a payment that completes just before
+    // the popup auto-closes gets reported as failed for money the agent
+    // actually paid.
     const poll = window.setInterval(() => {
       if (paypalWindow.current?.closed !== true) return
       window.clearInterval(poll)
       paypalWindow.current = null
-      pending.current.delete(transactionId)
-      releaseTransaction(transactionId)
-      setScreen({ kind: 'methods' })
+      if (pending.current.delete(transactionId)) {
+        releaseTransaction(transactionId)
+        setScreen({ kind: 'methods' })
+      }
     }, 500)
 
     return () => {
