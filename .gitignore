@@ -30,3 +30,6 @@ dist-ssr
 
 # Playwright MCP session artifacts
 .playwright-mcp/
+
+# SDD scratch workspace (ledger, briefs, review packages)
+.superpowers/
