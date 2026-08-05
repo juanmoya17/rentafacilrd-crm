@@ -235,3 +235,45 @@ export async function getPendingBankTransfer(
   if (latest?.payment_status !== 'review') return null
   return { packageName: latest.package?.name ?? '' }
 }
+
+export interface PackageLimits {
+  package_available: boolean
+  feature_available: boolean
+  limit_available: boolean
+}
+
+export type GateReason = 'ok' | 'no-package' | 'limit-reached'
+
+/** The two feature types the CRM's create screens consume. */
+export type GatedFeature = 'property_list' | 'project_list'
+
+/**
+ * `feature_available` is deliberately unread. Both gated types are count-based,
+ * and PackageType.propertyList in the Flutter app reads exactly this same pair
+ * (`checkLimit: true`, not `checkFeature`). Order matters: with no package at
+ * all the limit is meaningless, and "buy a plan" is a different instruction
+ * from "your quota is spent".
+ */
+export function gateReason(limits: PackageLimits): GateReason {
+  if (!limits.package_available) return 'no-package'
+  if (!limits.limit_available) return 'limit-reached'
+  return 'ok'
+}
+
+export async function checkPackageLimit(
+  type: GatedFeature,
+  signal?: AbortSignal,
+): Promise<GateReason> {
+  const response = await api<Envelope<Partial<PackageLimits> | null>>(
+    `check-package-limit?type=${type}`,
+    { signal },
+  )
+
+  // Absent flags mean "not granted" — fail closed, never open the form on a
+  // shape we did not recognise.
+  return gateReason({
+    package_available: response.data?.package_available === true,
+    feature_available: response.data?.feature_available === true,
+    limit_available: response.data?.limit_available === true,
+  })
+}

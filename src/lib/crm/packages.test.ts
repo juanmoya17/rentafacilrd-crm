@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/lib/api'
 import {
   createPaymentIntent,
+  gateReason,
   getPendingBankTransfer,
   paymentMethods,
   receiptError,
@@ -193,5 +194,31 @@ describe('receiptError()', () => {
 
   it('accepts a pdf', () => {
     expect(receiptError(new File([], 'receipt.pdf'))).toBeNull()
+  })
+})
+
+describe('gateReason()', () => {
+  it('opens the form when the package and the limit are both available', () => {
+    expect(
+      gateReason({ package_available: true, feature_available: false, limit_available: true }),
+    ).toBe('ok')
+  })
+
+  it('reports no-package first — buying is the only fix', () => {
+    expect(
+      gateReason({ package_available: false, feature_available: true, limit_available: true }),
+    ).toBe('no-package')
+  })
+
+  it('reports limit-reached when the plan is live but spent', () => {
+    expect(
+      gateReason({ package_available: true, feature_available: true, limit_available: false }),
+    ).toBe('limit-reached')
+  })
+
+  it('ignores feature_available: property_list and project_list are count-based', () => {
+    expect(
+      gateReason({ package_available: true, feature_available: false, limit_available: true }),
+    ).toBe('ok')
   })
 })
