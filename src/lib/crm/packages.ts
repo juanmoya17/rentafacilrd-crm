@@ -7,7 +7,7 @@
  * session already satisfies, so none of this needed backend work.
  */
 
-import { api } from '@/lib/api'
+import { api, ApiError } from '@/lib/api'
 import type { Envelope } from './api'
 
 export interface PackageFeature {
@@ -105,4 +105,133 @@ export function paymentMethods(rows: SettingRow[]): PaymentMethods {
 export async function getPaymentSettings(signal?: AbortSignal): Promise<PaymentMethods> {
   const response = await api<Envelope<SettingRow[] | null>>('get_payment_settings', { signal })
   return paymentMethods(response.data ?? [])
+}
+
+export interface PaymentIntent {
+  transactionId: number
+  /** PayPal only — the checkout page to open. */
+  paypalUrl: string | null
+  /** Stripe only — what <Elements> needs. */
+  clientSecret: string | null
+}
+
+interface IntentPayload {
+  payment_intent?: {
+    payment_transaction_id?: number
+    payment_url?: string
+    payment_gateway_response?: { client_secret?: string }
+  }
+}
+
+/**
+ * Writes a new PaymentTransaction row on EVERY call, so callers must create one
+ * intent per dialog and disable the button in flight — two clicks are two
+ * pending transactions.
+ *
+ * The refusals (`no paid package found`, `you already have purchased this
+ * package`) arrive as {error:true} and api() throws them. The guard below is for
+ * the other shape: a 200 that carries no usable gateway field, which would
+ * otherwise open `undefined` in a popup.
+ */
+export async function createPaymentIntent(
+  packageId: number,
+  method: 'paypal' | 'stripe',
+): Promise<PaymentIntent> {
+  const response = await api<Envelope<IntentPayload | null>>('create-payment-intent', {
+    method: 'POST',
+    body: { package_id: packageId, platform_type: 'web', payment_method: method },
+  })
+
+  const intent = response.data?.payment_intent
+  const transactionId = intent?.payment_transaction_id
+  const paypalUrl = intent?.payment_url ?? null
+  const clientSecret = intent?.payment_gateway_response?.client_secret ?? null
+  const usable = method === 'paypal' ? paypalUrl !== null : clientSecret !== null
+
+  if (transactionId === undefined || !usable) {
+    throw new ApiError(response.message ?? 'No se pudo iniciar el pago.', 200, response)
+  }
+
+  return { transactionId, paypalUrl, clientSecret }
+}
+
+/** Marks an abandoned intent failed so it stops counting as pending. */
+export async function failPaymentTransaction(transactionId: number): Promise<void> {
+  await api<Envelope<unknown>>('payment-transaction-fail', {
+    method: 'POST',
+    body: { payment_transaction_id: transactionId },
+  })
+}
+
+/** Mirrors the server's `mimes:` rule — a hint to the picker, not the check. */
+export const RECEIPT_ACCEPT = '.jpg,.jpeg,.png,.pdf,.doc,.docx'
+/** The server's `max:6144` is kilobytes. */
+export const RECEIPT_MAX_BYTES = 6144 * 1024
+
+const RECEIPT_EXTENSIONS = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx']
+
+/**
+ * Mirror of the server validator so a 20 MB photo fails instantly instead of
+ * after the upload. Returns an i18n key suffix, not a message — the caller owns
+ * the wording.
+ */
+export function receiptError(file: File): 'tooLarge' | 'badType' | null {
+  if (file.size > RECEIPT_MAX_BYTES) return 'tooLarge'
+  const extension = file.name.split('.').pop()?.toLowerCase() ?? ''
+  return RECEIPT_EXTENSIONS.includes(extension) ? null : 'badType'
+}
+
+export async function initiateBankTransfer(packageId: number, file: File): Promise<void> {
+  const body = new FormData()
+  body.append('package_id', String(packageId))
+  body.append('file', file)
+  await api<Envelope<unknown>>('initiate-bank-transfer', { method: 'POST', body })
+}
+
+/** One `{translated_title, value}` row of the admin's bank details block. */
+export interface BankDetail {
+  title: string
+  translated_title?: string | null
+  value: string
+}
+
+/**
+ * bank_details lives on `web-settings`, NOT `get_system_settings` — that
+ * endpoint's type list omits it. Rows arrive already decoded, with
+ * translated_title resolved off the Content-Language header api() sends.
+ */
+export async function getBankDetails(signal?: AbortSignal): Promise<BankDetail[]> {
+  const response = await api<Envelope<Record<string, unknown> | null>>('web-settings', { signal })
+  const rows = response.data?.bank_details
+  return Array.isArray(rows) ? (rows as BankDetail[]) : []
+}
+
+export interface PendingTransfer {
+  packageName: string
+}
+
+interface TransactionRow {
+  payment_status?: string
+  package?: { name?: string } | null
+}
+
+/**
+ * A transfer under review has no UserPackage yet, so it never shows up in
+ * get-package's active_packages. This is the only way to keep the pending
+ * banner alive across a reload — one row, not a history screen.
+ *
+ * `data` is ABSENT (not empty) when the agent has no transactions at all.
+ */
+export async function getPendingBankTransfer(
+  signal?: AbortSignal,
+): Promise<PendingTransfer | null> {
+  const query = new URLSearchParams({ payment_type: 'bank transfer', limit: '1' })
+  const response = await api<Envelope<TransactionRow[] | undefined>>(
+    `get_payment_details?${query.toString()}`,
+    { signal },
+  )
+
+  const latest = response.data?.[0]
+  if (latest?.payment_status !== 'review') return null
+  return { packageName: latest.package?.name ?? '' }
 }
