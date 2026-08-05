@@ -1073,12 +1073,15 @@ export function PlanPage() {
         </section>
       </div>
 
-      {/* Task 8 replaces this with <CheckoutDialog>. */}
-      {selected !== null && null}
     </>
   )
 }
 ```
+
+`selected` is set here but not yet rendered — Task 8 adds the `<CheckoutDialog>`
+that consumes it. Do **not** emit a placeholder expression such as
+`{selected !== null && null}`: it is dead code, and a reviewer would be right to
+flag it. The state declaration alone is the seam.
 
 - [ ] **Step 2: Register the route**
 
@@ -1253,7 +1256,7 @@ git commit -m "feat(crm): Stripe Elements payment component"
 
 **Files:**
 - Create: `src/components/checkout-dialog.tsx`
-- Modify: `src/routes/plan.tsx` (replaces the `{selected !== null && null}` placeholder left by Task 6)
+- Modify: `src/routes/plan.tsx` (renders the dialog against the `selected` state Task 6 left unconsumed)
 
 **Interfaces:**
 - Consumes: `Package`, `PaymentMethods`, `getPaymentSettings`, `getBankDetails`, `createPaymentIntent`, `initiateBankTransfer`, `failPaymentTransaction`, `receiptError`, `RECEIPT_ACCEPT` from `@/lib/crm/packages`; `apiOrigin`, `isTrustedPaymentMessage`, `openCentered` from `@/lib/crm/payment-popup`; `StripePayment`, `abandonStripePayment` from `@/components/stripe-payment`.
@@ -1563,6 +1566,9 @@ In `src/routes/plan.tsx`, add the import and replace the Task 6 placeholder:
 ```tsx
 import { CheckoutDialog } from '@/components/checkout-dialog'
 ```
+
+```tsx
+Add this as the last child of the fragment, after the closing `</div>`:
 
 ```tsx
       {selected !== null && (
