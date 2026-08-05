@@ -953,6 +953,18 @@ git commit -m "feat(crm): translation keys for plan, checkout and the package ga
 **Interfaces:**
 **Execution order:** run this task **after Tasks 7 and 8** — it imports the `<CheckoutDialog>` they produce.
 
+**Also required here — the 3DS return path.** Task 7 confirms Stripe payments with
+`redirect: 'if_required'`, so a card that raises a 3DS challenge leaves the SPA
+entirely and comes back to `return_url` = `${window.location.origin}/plan`, with
+`redirect_status` and `payment_intent_client_secret` appended as query params.
+The page boots fresh, so no dialog state survives. Read `redirect_status` from
+`useSearchParams()` and render a banner: `succeeded` → the payment landed and the
+plan may take a moment to appear (the server grants it on Stripe's webhook, which
+can lag the redirect); anything else → it did not complete. Without this an agent
+who passed a 3DS challenge returns to a page that looks exactly like the one they
+left, with no idea whether they were charged. Reuse the `plan.pendingTransfer`
+banner's markup; add the two keys it needs to both locales.
+
 - Consumes: `getPackages`, `getPendingBankTransfer`, `Package`, `PackageFeature` from `@/lib/crm/packages`; `CheckoutDialog` from `@/components/checkout-dialog` (Task 8); `useResource`; `useI18n`; `Badge`, `Button`, `Card`, `EmptyState`, `ErrorState`, `LoadingState`, `PageHeader` from `@/components/ui`; `RecordSectionHead` from `@/components/record`.
 - Produces: `PlanPage`, and the `/plan` route the gate links to.
 
@@ -1149,7 +1161,7 @@ git commit -m "feat(crm): plan and billing screen with current usage"
 - Create: `src/components/stripe-payment.tsx`
 
 **Interfaces:**
-- Consumes: `failPaymentTransaction` from `@/lib/crm/packages`.
+- Consumes: nothing from `@/lib/crm/packages` — releasing an abandoned transaction is the host dialog's job (Task 8), so `failPaymentTransaction` is deliberately **not** imported here.
 - Produces: `<StripePayment publishableKey clientSecret onPaid />`. Releasing an abandoned transaction stays with the dialog (Task 8), which owns the intent for all three methods.
 
 > **Gate:** installing the two dependencies needs Damian's explicit go-ahead (project rule: ask before installing packages). Confirm before Step 1.
