@@ -16,13 +16,7 @@
  */
 
 import { api } from '@/lib/api'
-
-interface Envelope<T> {
-  error: boolean
-  message?: string
-  data: T
-  total?: number
-}
+import { createdRow, type Envelope } from './api'
 
 /** `0` sell, `1` rent — the wire values, not labels. Rent is what makes
  *  `rentduration` required, both here and in the server validator. */
@@ -389,16 +383,20 @@ export interface CreatedProperty {
 }
 
 /**
- * The `property_list` refusal comes back as HTTP 200 with `error: true`, which
- * `api()` already turns into an ApiError — so an out-of-slots agent gets the
- * server's own "active_listing_limit_reached" wording, not a generic failure.
+ * Two refusals, two different envelopes. An agent who holds a package but has
+ * burned its slots is refused with `error: true`, which `api()` already turns
+ * into an ApiError carrying the server's "active_listing_limit_reached"
+ * wording. An agent with *no* package at all is refused with `error: false` and
+ * an empty `data` (see [createdRow]) — which is why the unwrap is not a bare
+ * `data[0]`: `data` is `null` on that path, and indexing it would replace the
+ * server's explanation with a TypeError.
  */
-export async function createProperty(body: FormData): Promise<CreatedProperty | null> {
-  const response = await api<Envelope<CreatedProperty[]>>('post_property', {
+export async function createProperty(body: FormData): Promise<CreatedProperty> {
+  // get_property_details() answers with a collection even for one row.
+  const response = await api<Envelope<CreatedProperty[] | null>>('post_property', {
     method: 'POST',
     body,
   })
 
-  // get_property_details() answers with a collection even for one row.
-  return response.data[0] ?? null
+  return createdRow(response)
 }

@@ -1,4 +1,4 @@
-import { api } from '@/lib/api'
+import { ApiError, api } from '@/lib/api'
 import type {
   ActivityType,
   CrmContact,
@@ -12,11 +12,31 @@ import type {
  * at the top level (ApiResponseService merges customData there), which is what
  * the list screens read for their result count.
  */
-interface Envelope<T> {
+export interface Envelope<T> {
   error: boolean
   message?: string
   data: T
   total?: number
+}
+
+/**
+ * Unwrap the row a `post_*` endpoint says it created, or throw.
+ *
+ * `HelperService::updatePackageLimit()` refuses an agent who holds no active
+ * package by halting with a *success* envelope — `{error:false, message:"No
+ * active package found…", data:null}` at HTTP 200 — so `api()` sees nothing
+ * wrong and hands back a body that describes a refusal. An empty `data` is the
+ * only evidence that nothing was written; without this the CRM navigates away
+ * as though the create had worked and the agent hunts for a row that does not
+ * exist. Throwing puts the server's own wording on the form instead.
+ */
+export function createdRow<T>(envelope: Envelope<T | T[] | null>): T {
+  const data = envelope.data
+  const row = Array.isArray(data) ? data[0] : data
+  if (row === undefined || row === null) {
+    throw new ApiError(envelope.message ?? 'No se pudo guardar.', 200, envelope)
+  }
+  return row
 }
 
 export interface Page<T> {

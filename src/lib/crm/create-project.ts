@@ -14,14 +14,8 @@
  */
 
 import { api } from '@/lib/api'
+import { createdRow, type Envelope } from './api'
 import type { ProjectStage } from './projects'
-
-interface Envelope<T> {
-  error: boolean
-  message?: string
-  data: T
-  total?: number
-}
 
 export interface ProjectForm {
   title: string
@@ -146,13 +140,11 @@ export function projectPayload(form: ProjectForm, media: ProjectMedia): FormData
  * post_project is an upsert — this module only ever creates, so no `id` is
  * ever appended. Sending one would silently edit whatever project it named.
  */
-export async function createProject(body: FormData): Promise<{ id: number } | null> {
-  const response = await api<Envelope<{ id: number } | { id: number }[]>>('post_project', {
+export async function createProject(body: FormData): Promise<{ id: number }> {
+  const response = await api<Envelope<{ id: number } | { id: number }[] | null>>('post_project', {
     method: 'POST',
     body,
   })
 
-  const data = response.data
-
-  return Array.isArray(data) ? (data[0] ?? null) : data
+  return createdRow(response)
 }

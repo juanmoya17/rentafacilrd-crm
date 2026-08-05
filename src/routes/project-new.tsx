@@ -91,7 +91,7 @@ export function ProjectNewPage() {
       const created = await createProject(projectPayload(form, media))
       // Straight to the inventory: creating a project without units is only
       // half of what the agent came to do.
-      void navigate(created === null ? '/projects' : `/projects/${created.id}`)
+      void navigate(`/projects/${created.id}`)
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : t('error.generic'))
       setSaving(false)
