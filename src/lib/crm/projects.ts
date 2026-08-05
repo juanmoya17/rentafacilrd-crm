@@ -33,6 +33,22 @@ export interface CrmProject {
   city: string | null
   type: ProjectStage
   status: number
+  /**
+   * M8 phase 6b — the derived taxonomy, emitted by ProjectResource alongside
+   * the legacy column. Projects have no `operation`: that comes from
+   * propery_type, which only properties have.
+   *
+   * `moderation` folds `expired` into `approved` (a lapsed package is not a
+   * moderation verdict), so an expired project reads `lifecycle === 'expired'`
+   * and NOT `moderation === 'expired'`.
+   */
+  lifecycle: string | null
+  moderation: string | null
+  /**
+   * @deprecated Dropped in phase 6c. Nothing reads it — the property screens
+   * have been on lifecycle/operation/moderation since phase 2a — so retiring
+   * it is a type-only change on this side.
+   */
   request_status: string | null
   /** Null, never 0: no pricing information means no range to render. */
   price_from: string | null
