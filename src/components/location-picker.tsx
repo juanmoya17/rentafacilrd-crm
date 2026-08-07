@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { loadMaps, mapsConfigured } from '@/lib/google-maps'
@@ -48,6 +48,15 @@ function GooglePicker({ lat, lng, onChange, label }: PickerProps) {
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
 
+  /**
+   * State, not a ref, because the marker effect has to re-run when the map
+   * finishes loading. The map is built asynchronously; on the edit screen the
+   * coordinates are already set at first render, so the marker effect fired
+   * once against a null map, returned, and — with nothing left to change —
+   * never fired again. A saved pin simply never appeared.
+   */
+  const [ready, setReady] = useState(false)
+
   useEffect(() => {
     if (containerRef.current === null) return
     let live = true
@@ -79,12 +88,14 @@ function GooglePicker({ lat, lng, onChange, label }: PickerProps) {
         if (position !== null) onChangeRef.current(position.lat(), position.lng())
       })
       mapRef.current = map
+      setReady(true)
     })()
 
     return () => {
       live = false
       mapRef.current = null
       markerRef.current = null
+      setReady(false)
     }
   }, [])
 
@@ -128,7 +139,9 @@ function GooglePicker({ lat, lng, onChange, label }: PickerProps) {
     return () => {
       live = false
     }
-  }, [lat, lng])
+    // `ready` is a dependency on purpose: it is what replays this effect for
+    // coordinates that arrived before the map did.
+  }, [lat, lng, ready])
 
   return (
     <div
