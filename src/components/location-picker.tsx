@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { loadMaps, mapsConfigured, MAP_ID } from '@/lib/google-maps'
+import { loadMaps, mapsConfigured } from '@/lib/google-maps'
 
 /**
  * One draggable pin. `post_property` requires latitude AND longitude, and
@@ -44,7 +44,7 @@ interface PickerProps {
 function GooglePicker({ lat, lng, onChange, label }: PickerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<google.maps.Map | null>(null)
-  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null)
+  const markerRef = useRef<google.maps.Marker | null>(null)
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
 
@@ -60,9 +60,13 @@ function GooglePicker({ lat, lng, onChange, label }: PickerProps) {
       const map = new Map(containerRef.current, {
         center: DEFAULT_CENTER,
         zoom: CITY_ZOOM,
-        // Advanced markers do not render without a map ID — with it missing
-        // the map draws and the pin silently never appears.
-        mapId: MAP_ID,
+        // No mapId, deliberately. It is required by AdvancedMarkerElement and
+        // by nothing else here, and a mapId that does not resolve — created in
+        // a different Cloud project, or not a JavaScript-type style — renders
+        // the base map and then silently refuses every advanced marker. That
+        // is what "the map works but clicking does nothing" looked like in
+        // production. One draggable dot does not need advanced markers, so the
+        // dependency is gone rather than documented.
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: false,
@@ -92,26 +96,24 @@ function GooglePicker({ lat, lng, onChange, label }: PickerProps) {
       if (map === null) return
 
       if (lat === null || lng === null) {
-        if (markerRef.current !== null) markerRef.current.map = null
+        markerRef.current?.setMap(null)
         markerRef.current = null
         return
       }
 
       if (markerRef.current === null) {
-        const { AdvancedMarkerElement } = await google.maps.importLibrary('marker')
+        const { Marker } = await google.maps.importLibrary('marker')
         if (!live || mapRef.current === null) return
 
-        const marker = new AdvancedMarkerElement({
+        const marker = new Marker({
           map: mapRef.current,
           position: { lat, lng },
-          gmpDraggable: true,
+          draggable: true,
         })
-        marker.addListener('dragend', () => {
-          const position = marker.position
+        marker.addListener('dragend', (event: google.maps.MapMouseEvent) => {
+          const position = event.latLng
           if (position === null || position === undefined) return
-          const nextLat = typeof position.lat === 'number' ? position.lat : position.lat()
-          const nextLng = typeof position.lng === 'number' ? position.lng : position.lng()
-          onChangeRef.current(nextLat, nextLng)
+          onChangeRef.current(position.lat(), position.lng())
         })
         markerRef.current = marker
         // Only on first placement: re-centring on every drag would fight the
@@ -119,7 +121,7 @@ function GooglePicker({ lat, lng, onChange, label }: PickerProps) {
         mapRef.current.setCenter({ lat, lng })
         mapRef.current.setZoom(Math.max(mapRef.current.getZoom() ?? 0, PLACED_ZOOM))
       } else {
-        markerRef.current.position = { lat, lng }
+        markerRef.current.setPosition({ lat, lng })
       }
     })()
 

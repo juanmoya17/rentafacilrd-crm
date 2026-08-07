@@ -23,7 +23,8 @@ interface ImportMetaEnv {
   /**
    * Map ID for the wizard's picker. Advanced markers do not render without
    * one — the map draws and the pin silently never appears. Defaults to
-   * Google's DEMO_MAP_ID; set a real one from Cloud Console for production.
+   * Currently unused: the location picker's marker needs no map ID. Kept
+   * because a styled JavaScript map would want one back.
    */
   readonly VITE_GOOGLE_MAPS_MAP_ID?: string
 }

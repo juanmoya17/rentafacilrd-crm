@@ -33,12 +33,17 @@ export interface Suggestion {
 const KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? ''
 
 /**
- * Advanced markers refuse to render without a map ID — the map draws and the
- * pin silently never appears, which is a nasty thing to debug. DEMO_MAP_ID is
- * Google's documented stand-in; set VITE_GOOGLE_MAPS_MAP_ID to a real one from
- * Cloud Console for production styling and quota attribution.
+ * No MAP_ID export any more. It existed only for AdvancedMarkerElement in the
+ * location picker, and a map ID that does not resolve — created in a different
+ * Cloud project, or not a JavaScript-type style — renders the base map and then
+ * silently refuses every advanced marker, which is what "the map works but
+ * clicking does nothing" turned out to be in production. The picker draws a
+ * plain draggable marker instead, which needs no map ID at all.
+ *
+ * VITE_GOOGLE_MAPS_MAP_ID is consequently unused. It stays documented in
+ * env.d.ts and .env.example because setting it is harmless and a future styled
+ * map would want it back.
  */
-export const MAP_ID = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID ?? 'DEMO_MAP_ID'
 
 /** The market — `includedRegionCodes` is the new API's country filter. */
 const REGION = ['do']
