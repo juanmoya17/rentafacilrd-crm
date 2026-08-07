@@ -13,6 +13,7 @@ import {
   TextArea,
 } from '@/components/ui'
 import { LocationPicker } from '@/components/location-picker'
+import { reverseGeocode, type Place } from '@/lib/google-maps'
 import { useResource } from '@/lib/use-resource'
 import { fetchCategories } from '@/lib/crm/reference'
 import {
@@ -85,6 +86,24 @@ export function ProjectFormView({
   const set = <K extends keyof ProjectForm>(name: K, value: ProjectForm[K]) => {
     setForm((current) => ({ ...current, [name]: value }))
     if (invalid === name) setInvalid(null)
+  }
+
+  /** A moved pin lands here. Only non-empty parts overwrite — a rural pin with
+   *  no locality must not blank the city the agent typed by hand. Same rule as
+   *  the property wizard's applyPlace, and the same reason. */
+  const applyPlace = (place: Place) => {
+    setForm((current) => ({
+      ...current,
+      location: place.label || current.location,
+      city: place.city || current.city,
+      state: place.state || current.state,
+      country: place.country || current.country,
+      latitude: place.lat.toFixed(7),
+      longitude: place.lng.toFixed(7),
+    }))
+    setInvalid((current) =>
+      current === 'country' || current === 'state' || current === 'city' ? null : current,
+    )
   }
 
   const field = (name: keyof ProjectForm, label: string, helper?: string) => (
@@ -186,11 +205,17 @@ export function ProjectFormView({
             lat={form.latitude === '' ? null : Number(form.latitude)}
             lng={form.longitude === '' ? null : Number(form.longitude)}
             onChange={(lat, lng) => {
+              // The pin is authoritative for the coordinates immediately; the
+              // address catches up when the lookup returns, so a slow or failed
+              // geocode never costs the agent the pin they placed.
               setForm((current) => ({
                 ...current,
                 latitude: lat.toFixed(7),
                 longitude: lng.toFixed(7),
               }))
+              void reverseGeocode(lat, lng).then((place) => {
+                if (place !== null) applyPlace(place)
+              })
             }}
           />
           <p className="mt-1 min-h-[1lh] text-xs text-muted">
