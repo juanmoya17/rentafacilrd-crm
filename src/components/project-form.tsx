@@ -94,7 +94,10 @@ export function ProjectFormView({
   const applyPlace = (place: Place) => {
     setForm((current) => ({
       ...current,
-      location: place.label || current.location,
+      // "Zona" is a sector, not an address: place.label is the whole formatted
+      // line ("Av. Winston Churchill 1099, Santo Domingo, …") and reads as
+      // nonsense in this field. Fall back to nothing rather than to the label.
+      location: place.zone || current.location,
       city: place.city || current.city,
       state: place.state || current.state,
       country: place.country || current.country,

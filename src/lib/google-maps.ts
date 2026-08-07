@@ -20,6 +20,12 @@ export interface Place {
   city: string
   state: string
   country: string
+  /**
+   * The sector or barrio — what the project form labels "Zona" and stores in
+   * `projects.location`. Separate from `label`, which is the whole formatted
+   * address and belongs in a property's address field, not in a zone.
+   */
+  zone: string
 }
 
 /** A prediction, before the (billed) details fetch. */
@@ -104,9 +110,17 @@ const COMPONENT = {
   city: ['locality', 'postal_town', 'sublocality', 'administrative_area_level_2'],
   state: ['administrative_area_level_1'],
   country: ['country'],
+  // Most specific first. `sublocality` also appears in the city list as a
+  // fallback, so an address that carries nothing finer than a sublocality
+  // fills both — which is right: a sector is the best name that address has.
+  zone: ['neighborhood', 'sublocality_level_1', 'sublocality'],
 } as const
 
-function componentOf(
+/** Exported for its test: the priority order is the whole behaviour, and a
+ *  reordering silently drops the city into the Zona field. */
+export const ADDRESS_COMPONENTS = COMPONENT
+
+export function componentOf(
   components: google.maps.places.AddressComponent[] | null | undefined,
   wanted: readonly string[],
 ): string {
@@ -166,6 +180,7 @@ export async function searchPlaces(query: string): Promise<Suggestion[]> {
               city: componentOf(place.addressComponents, COMPONENT.city),
               state: componentOf(place.addressComponents, COMPONENT.state),
               country: componentOf(place.addressComponents, COMPONENT.country),
+              zone: componentOf(place.addressComponents, COMPONENT.zone),
             }
           },
         },
@@ -206,6 +221,7 @@ export async function reverseGeocode(lat: number, lng: number): Promise<Place | 
       city: componentOf(components, COMPONENT.city),
       state: componentOf(components, COMPONENT.state),
       country: componentOf(components, COMPONENT.country),
+      zone: componentOf(components, COMPONENT.zone),
     }
   } catch {
     return null
