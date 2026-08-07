@@ -11,12 +11,16 @@ import type { ProjectStage } from './projects'
  * its update branch requires only `title` and skips the limit entirely, so
  * correcting a typo does not cost an agent a listing slot.
  *
- * The prefill comes from `get-project-detail` rather than the CRM's own
- * `crm/projects` list, because `ProjectResource` projects a card — title,
- * image, city, stage, prices, unit counts — and an edit form needs the record:
- * description, category, state/country, the map pin, video and the meta block.
- * Both live behind `auth:sanctum`, so this costs one extra request and no
- * backend change.
+ * The prefill reads `GET crm/projects/{id}`, which returns the agent's own
+ * record with ownership as the only check.
+ *
+ * It first read the public `get-project-detail`, and that was wrong: the
+ * endpoint filters `publiclyVisible()` and runs a PROJECT_ACCESS package gate,
+ * so it answered `data: null` for exactly the projects an edit form exists to
+ * fix — the ones still waiting on approval. The CRM's own list endpoint is no
+ * good either; `ProjectResource` projects a card (title, image, city, stage,
+ * prices, unit counts) and a form needs description, category, state/country,
+ * the map pin, video and the meta block.
  */
 
 const STAGES: ProjectStage[] = ['upcoming', 'under_process']
@@ -83,12 +87,12 @@ export async function fetchProjectForEdit(
   projectId: number,
   signal?: AbortSignal,
 ): Promise<ProjectEditSource | null> {
-  const response = await api<Envelope<ProjectDetailRow | ProjectDetailRow[] | null>>(
-    `get-project-detail?id=${projectId}`,
+  const response = await api<Envelope<ProjectDetailRow | null>>(
+    `crm/projects/${projectId}`,
     { signal },
   )
 
-  const row = Array.isArray(response.data) ? response.data[0] : response.data
+  const row = response.data
   if (row === undefined || row === null) return null
 
   return { form: toProjectForm(row), image: row.image ?? null }
