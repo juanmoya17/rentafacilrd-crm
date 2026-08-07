@@ -2,7 +2,16 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { AnimatePresence, motion } from 'motion/react'
 import { useI18n } from '@/lib/i18n/context'
-import { Badge, Button, Card, EmptyState, ErrorState, LoadingState, Modal } from '@/components/ui'
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  LinkButton,
+  LoadingState,
+  Modal,
+} from '@/components/ui'
 import { RecordHeader } from '@/components/record'
 import { Register, type Column } from '@/components/register'
 import { UnitStatusBadge } from '@/components/labels'
@@ -189,9 +198,12 @@ export function ProjectDetailPage() {
           </>
         }
         actions={
-          <Button variant="primary" onClick={() => setDialog({ kind: 'unit', unit: null })}>
-            {t('projectDetail.closeSale')}
-          </Button>
+          <>
+            <LinkButton to={`/projects/${projectId}/edit`}>{t('common.edit')}</LinkButton>
+            <Button variant="primary" onClick={() => setDialog({ kind: 'unit', unit: null })}>
+              {t('projectDetail.closeSale')}
+            </Button>
+          </>
         }
       />
 

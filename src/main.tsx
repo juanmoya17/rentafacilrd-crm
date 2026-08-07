@@ -18,6 +18,7 @@ import { PropertyNewPage } from '@/routes/property-new'
 import { PropertyDetailPage } from '@/routes/property-detail'
 import { ProjectsPage } from '@/routes/projects'
 import { ProjectNewPage } from '@/routes/project-new'
+import { ProjectEditPage } from '@/routes/project-edit'
 import { ProjectDetailPage } from '@/routes/project-detail'
 import { InventoryPage } from '@/routes/inventory'
 import { TasksPage } from '@/routes/tasks'
@@ -49,6 +50,7 @@ const router = createBrowserRouter([
           { path: '/projects', element: <ProjectsPage /> },
           { path: '/projects/new', element: <ProjectNewPage /> },
           { path: '/projects/:id', element: <ProjectDetailPage /> },
+          { path: '/projects/:id/edit', element: <ProjectEditPage /> },
           { path: '/inventory', element: <InventoryPage /> },
           { path: '/tasks', element: <TasksPage /> },
           { path: '/notifications', element: <NotificationsPage /> },

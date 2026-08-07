@@ -482,6 +482,10 @@ export const en: Record<TranslationKey, string> = {
   'newProperty.error.three_d_image': 'The 360° image must be a JPG, PNG or GIF under 3 MB.',
   'newProperty.error.documents': 'Documents must be PDF, DOC, DOCX or TXT under 5 MB.',
 
+  'editProject.title': 'Edit project',
+  'editProject.subtitle': 'Typologies and units are managed on the project detail screen.',
+  'editProject.save': 'Save changes',
+  'editProject.imageKept': 'Leave empty to keep the current cover image.',
   'newProject.new': 'New project',
   'newProject.title': 'New project',
   'newProject.subtitle': 'Typologies and units come next, on its detail screen.',
