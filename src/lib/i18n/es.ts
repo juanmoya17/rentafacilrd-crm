@@ -491,6 +491,10 @@ export const es = {
   'newProperty.error.three_d_image': 'La imagen 360° debe ser JPG, PNG o GIF de menos de 3 MB.',
   'newProperty.error.documents': 'Los documentos deben ser PDF, DOC, DOCX o TXT de menos de 5 MB.',
 
+  'editProject.title': 'Editar proyecto',
+  'editProject.subtitle': 'Las tipologías y las unidades se gestionan en la ficha del proyecto.',
+  'editProject.save': 'Guardar cambios',
+  'editProject.imageKept': 'Si no subes una imagen, se conserva la actual.',
   'newProject.new': 'Nuevo proyecto',
   'newProject.title': 'Nuevo proyecto',
   'newProject.subtitle': 'Después añades tipologías y unidades desde su ficha.',

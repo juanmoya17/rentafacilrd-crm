@@ -81,7 +81,17 @@ const YOUTUBE_HOST = /^(https?:\/\/)?(www\.youtube\.com|youtu\.be)\/.+$/
 export type ProjectField = keyof ProjectForm | 'image'
 
 /** Mirrors post_project's create-branch validator. */
-export function validateProject(form: ProjectForm, media: ProjectMedia): ProjectField | null {
+/**
+ * @param requireImage `false` when editing: post_project's update branch drops
+ *   every required rule but `title`, and the record already carries a cover —
+ *   demanding a re-upload to fix a typo in the description would be absurd. A
+ *   file that IS supplied is still checked, on either path.
+ */
+export function validateProject(
+  form: ProjectForm,
+  media: ProjectMedia,
+  requireImage = true,
+): ProjectField | null {
   if (form.title.trim() === '') return 'title'
   if (form.description.trim() === '') return 'description'
   if (form.category_id === '') return 'category_id'
@@ -90,9 +100,12 @@ export function validateProject(form: ProjectForm, media: ProjectMedia): Project
   if (form.state.trim() === '') return 'state'
   if (form.city.trim() === '') return 'city'
 
-  if (media.image === null) return 'image'
-  if (!IMAGE_TYPES.includes(media.image.type)) return 'image'
-  if (media.image.size > IMAGE_MAX_BYTES) return 'image'
+  if (media.image === null) {
+    if (requireImage) return 'image'
+  } else {
+    if (!IMAGE_TYPES.includes(media.image.type)) return 'image'
+    if (media.image.size > IMAGE_MAX_BYTES) return 'image'
+  }
 
   const video = form.video_link.trim()
   if (video !== '' && !YOUTUBE_HOST.test(video)) return 'video_link'
