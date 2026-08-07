@@ -26,6 +26,8 @@ import { useToast } from '@/lib/toast-context'
 import {
   deleteTypology,
   fetchProjectDetail,
+  projectStatusGate,
+  setProjectStatus,
   type CrmTypology,
   type CrmUnit,
 } from '@/lib/crm/projects'
@@ -56,6 +58,7 @@ export function ProjectDetailPage() {
   const [dialog, setDialog] = useState<Dialog | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [togglingStatus, setTogglingStatus] = useState(false)
 
   // A non-numeric :id resolves to null rather than reaching the API — the
   // route pattern does not constrain it, so /projects/abc is reachable.
@@ -65,6 +68,28 @@ export function ProjectDetailPage() {
     [projectId],
   )
   const reload = resource.reload
+
+  /**
+   * Publish or unpublish. `status` is the agent's own flag — it is what puts
+   * the project on the app's map and home — and is a different thing from
+   * moderation, which only an admin moves.
+   */
+  const toggleStatus = async (projectId: number, next: 0 | 1) => {
+    setTogglingStatus(true)
+    try {
+      await setProjectStatus(projectId, next)
+      reload()
+    } catch (caught: unknown) {
+      // The server owns the package check, so its wording is the useful one:
+      // "Limit Not Available" needs a different action from "not approved".
+      toast.fail(caught instanceof Error ? caught.message : t('error.generic'), {
+        label: t('common.retry'),
+        run: () => void toggleStatus(projectId, next),
+      })
+    } finally {
+      setTogglingStatus(false)
+    }
+  }
 
   const removeTypology = async (typology: CrmTypology) => {
     setDeleting(true)
@@ -194,11 +219,43 @@ export function ProjectDetailPage() {
         badges={
           <>
             <Badge tone="brand">{t(`projectStage.${project.type}`)}</Badge>
+            {project.status === 1 ? (
+              <Badge tone="success">{t('projectDetail.live')}</Badge>
+            ) : (
+              <Badge tone="neutral">{t('projectDetail.hidden')}</Badge>
+            )}
             {project.sold_out && <Badge tone="neutral">{t('projects.soldOut')}</Badge>}
           </>
         }
         actions={
           <>
+            {(() => {
+              const gate = projectStatusGate(project)
+
+              // A disabled button with no reason is the thing an agent files a
+              // ticket about. When the gate is shut, say why instead.
+              if (!gate.can) {
+                return (
+                  <Badge tone="warning">
+                    {t(
+                      `projectDetail.statusBlocked.${gate.reason}` as 'projectDetail.statusBlocked.pending',
+                    )}
+                  </Badge>
+                )
+              }
+
+              const live = project.status === 1
+
+              return (
+                <Button
+                  disabled={togglingStatus}
+                  state={togglingStatus ? 'loading' : 'idle'}
+                  onClick={() => void toggleStatus(project.id, live ? 0 : 1)}
+                >
+                  {t(live ? 'projectDetail.deactivate' : 'projectDetail.activate')}
+                </Button>
+              )
+            })()}
             <LinkButton to={`/projects/${projectId}/edit`}>{t('common.edit')}</LinkButton>
             <Button variant="primary" onClick={() => setDialog({ kind: 'unit', unit: null })}>
               {t('projectDetail.closeSale')}

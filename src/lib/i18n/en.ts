@@ -278,6 +278,12 @@ export const en: Record<TranslationKey, string> = {
   'projects.empty': 'You have not created any projects yet.',
   'projects.emptyHint': 'A project groups typologies and units under a single listing.',
 
+  'projectDetail.live': 'Visible',
+  'projectDetail.hidden': 'Hidden',
+  'projectDetail.activate': 'Activate',
+  'projectDetail.deactivate': 'Deactivate',
+  'projectDetail.statusBlocked.pending': 'Awaiting approval',
+  'projectDetail.statusBlocked.rejected': 'Rejected by the administrator',
   'projectDetail.models': 'Models',
   'projectDetail.availability': 'Availability',
   'projectDetail.availabilityNote': 'Unit-by-unit detail is a CRM view and is never public.',

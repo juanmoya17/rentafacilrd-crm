@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   UNIT_STATUSES,
   inventoryState,
+  projectStatusGate,
   toNumberOrNull,
   validateTypology,
   type TypologyForm,
@@ -89,5 +90,35 @@ describe('UNIT_STATUSES', () => {
     // from this list rather than from the data, so a status nothing is in
     // keeps its column instead of vanishing from the report.
     expect(UNIT_STATUSES).toEqual(['available', 'reserved', 'sold', 'unavailable'])
+  })
+})
+
+describe('projectStatusGate', () => {
+  it('lets an approved project be published or hidden', () => {
+    expect(projectStatusGate({ moderation: 'approved' })).toEqual({ can: true, reason: null })
+  })
+
+  it('blocks a project still waiting on an admin, and says which', () => {
+    // change-project-status refuses these server-side with "Project is not
+    // approved"; the screen must not offer a button that cannot work.
+    expect(projectStatusGate({ moderation: 'pending' })).toEqual({ can: false, reason: 'pending' })
+    expect(projectStatusGate({ moderation: 'rejected' })).toEqual({
+      can: false,
+      reason: 'rejected',
+    })
+  })
+
+  it('falls back to the legacy column while both ship', () => {
+    // 6b emits moderation beside request_status; 6c has not dropped the old
+    // one yet, and an older payload may carry only it.
+    expect(projectStatusGate({ moderation: null, request_status: 'approved' })).toEqual({
+      can: true,
+      reason: null,
+    })
+  })
+
+  it('treats an absent state as pending, never as publishable', () => {
+    // Failing open here would render an Activate button that 400s.
+    expect(projectStatusGate({ moderation: null })).toEqual({ can: false, reason: 'pending' })
   })
 })

@@ -282,6 +282,12 @@ export const es = {
   'projects.empty': 'Aún no has creado proyectos.',
   'projects.emptyHint': 'Un proyecto agrupa tipologías y unidades bajo una sola ficha.',
 
+  'projectDetail.live': 'Visible',
+  'projectDetail.hidden': 'Oculto',
+  'projectDetail.activate': 'Activar',
+  'projectDetail.deactivate': 'Desactivar',
+  'projectDetail.statusBlocked.pending': 'Pendiente de aprobación',
+  'projectDetail.statusBlocked.rejected': 'Rechazado por el administrador',
   'projectDetail.models': 'Modelos',
   'projectDetail.availability': 'Disponibilidad',
   'projectDetail.availabilityNote': 'El detalle unidad por unidad es vista de CRM y nunca es público.',

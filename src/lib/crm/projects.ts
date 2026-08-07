@@ -140,6 +140,47 @@ export async function fetchProjects(signal?: AbortSignal): Promise<CrmProject[]>
   return body.data ?? []
 }
 
+/**
+ * Whether the agent may flip this project's visibility, and why not.
+ *
+ * Mirrors what `change-project-status` enforces server-side, so the screen can
+ * disable the control with a reason instead of firing a request that comes back
+ * "Project is not approved". The endpoint's third guard — an active package
+ * with project_list capacity — is deliberately NOT modelled here: the CRM
+ * cannot know the agent's remaining capacity without asking, so that one is
+ * left to the server and its message is surfaced on failure.
+ */
+export type StatusGate =
+  | { can: true; reason: null }
+  | { can: false; reason: 'pending' | 'rejected' }
+
+export function projectStatusGate(project: {
+  moderation: string | null
+  request_status?: string | null
+}): StatusGate {
+  // moderation is the derived column (M8 phase 6a); request_status is the
+  // legacy one still emitted beside it. Prefer the derived, fall back while
+  // both ship.
+  const state = project.moderation ?? project.request_status ?? 'pending'
+
+  if (state === 'approved') return { can: true, reason: null }
+  if (state === 'rejected') return { can: false, reason: 'rejected' }
+
+  return { can: false, reason: 'pending' }
+}
+
+/**
+ * Publish or unpublish. `status` is the agent's own flag — what makes the
+ * project appear on the app's map and home — and is a different thing from
+ * moderation, which only an admin can move.
+ */
+export async function setProjectStatus(projectId: number, status: 0 | 1): Promise<void> {
+  await api<Envelope<unknown>>('change-project-status', {
+    method: 'POST',
+    body: { project_id: projectId, status },
+  })
+}
+
 export async function fetchInventory(signal?: AbortSignal): Promise<Inventory> {
   const body = await api<Envelope<Inventory>>('crm/projects/inventory', { signal })
 
