@@ -1,4 +1,4 @@
-import { useRef, useState, type ComponentType } from 'react'
+import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { motion } from 'motion/react'
 import {
@@ -22,13 +22,18 @@ import { useT } from '@/lib/i18n/context'
 import type { TranslationKey } from '@/lib/i18n/es'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { Button } from '@/components/ui'
-import { NOTIFICATIONS } from '@/lib/mock/data'
+import { refreshUnreadCount, useUnreadCount } from '@/lib/crm/unread-store'
 
 interface NavItem {
   to: string
   label: TranslationKey
   icon: ComponentType<{ className?: string; strokeWidth?: number }>
-  badge?: number
+  /**
+   * A marker, not a number: the count is live and this list is a module
+   * constant evaluated once at import. Holding the value here is what made
+   * the old badge freeze at whatever the placeholder array said.
+   */
+  badge?: 'unread'
 }
 
 /**
@@ -63,7 +68,7 @@ const SECTIONS: { title: TranslationKey; items: NavItem[] }[] = [
         to: '/notifications',
         label: 'nav.notifications',
         icon: Bell,
-        badge: NOTIFICATIONS.filter((item) => !item.read).length,
+        badge: 'unread',
       },
       { to: '/plan', label: 'nav.plan', icon: CreditCard },
       { to: '/settings', label: 'nav.settings', icon: Settings },
@@ -81,6 +86,18 @@ export function CrmLayout() {
 
   const scrollRef = useRef<HTMLElement>(null)
   useScrollRestoration(scrollRef)
+
+  // Re-read on every navigation, not once per session: the sidebar mounts at
+  // login and never unmounts, so a mount-only fetch would show the count from
+  // hours ago for the rest of the day. One small GET per screen change.
+  const unread = useUnreadCount()
+  useEffect(() => {
+    const controller = new AbortController()
+    refreshUnreadCount(controller.signal)
+    return () => {
+      controller.abort()
+    }
+  }, [location.pathname])
 
   const user = state.status === 'authenticated' ? state.user : null
 
@@ -237,9 +254,9 @@ export function CrmLayout() {
                               />
                               <span className="truncate">{t(item.label)}</span>
                             </span>
-                            {item.badge !== undefined && item.badge > 0 && (
+                            {item.badge === 'unread' && unread > 0 && (
                               <span className="relative rounded-full bg-accent px-1.5 font-mono text-xs font-semibold text-accent-ink">
-                                {item.badge}
+                                {unread}
                               </span>
                             )}
                           </>

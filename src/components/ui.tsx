@@ -712,12 +712,3 @@ export function ErrorState({
     </Card>
   )
 }
-
-/** Placeholder marker so it is obvious which screens are not wired to the API yet. */
-export function MockNotice({ children }: { children: ReactNode }) {
-  return (
-    <p className="mb-4 rounded-md border border-dashed border-brand-300 bg-brand-50 px-3 py-2 text-xs text-brand-800">
-      {children}
-    </p>
-  )
-}
