@@ -2,6 +2,10 @@ import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router'
 import { useAuth } from '@/lib/auth-context'
 import { useT } from '@/lib/i18n/context'
+import { useResource } from '@/lib/use-resource'
+import { isSocialLoginEnabled } from '@/lib/crm/settings'
+import { googleErrorKey } from '@/lib/crm/google-login'
+import type { TranslationKey } from '@/lib/i18n/es'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { Button, Field } from '@/components/ui'
 
@@ -10,13 +14,14 @@ interface LocationState {
 }
 
 export function LoginPage() {
-  const { state, login } = useAuth()
+  const { state, login, loginWithGoogle } = useAuth()
   const location = useLocation()
   const t = useT()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const socialLogin = useResource((signal) => isSocialLoginEnabled(signal), [])
 
   // Don't decide anything until the boot probe answers, or a refresh on /login
   // would flash the form at an already-authenticated agent.
@@ -43,6 +48,18 @@ export function LoginPage() {
       // The backend already localises its message via Content-Language; the
       // fallback is for network-level failures that never reached it.
       setError(caught instanceof Error ? caught.message : t('auth.failed'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleGoogle = async () => {
+    setSubmitting(true)
+    setError(null)
+    try {
+      await loginWithGoogle()
+    } catch (caught: unknown) {
+      setError(t(`auth.google.${googleErrorKey(caught)}` as TranslationKey))
     } finally {
       setSubmitting(false)
     }
@@ -104,6 +121,19 @@ export function LoginPage() {
         >
           {submitting ? t('auth.signingIn') : t('auth.signIn')}
         </Button>
+
+        {socialLogin.status === 'ready' && socialLogin.data && (
+          <div className="mt-4 border-t border-rule pt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={submitting}
+              onClick={() => void handleGoogle()}
+            >
+              {t('auth.google')}
+            </Button>
+          </div>
+        )}
       </form>
     </div>
   )
