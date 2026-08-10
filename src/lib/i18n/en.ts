@@ -245,7 +245,7 @@ export const en: Record<TranslationKey, string> = {
   'bulk.shortfall': 'You selected {need} and you have {have}. You are {short} short.',
   'bulk.nothingChanged': 'Nothing changed.',
   'bulk.notApproved': '{count} listings are not approved. Approve them or remove them from the selection.',
-  'bulk.alreadyFeatured': '{count} listings are already featured or in review.',
+  'bulk.alreadyFeatured': '{count} listings are in review or paused by an admin. Those cannot be featured or renewed; the ones already running are renewed.',
   'bulk.stale': 'The selection is no longer valid. We refreshed the list.',
   'bulk.balance': 'Credits available: {count}',
   'bulk.balanceUnlimited': 'Unlimited credits',

@@ -249,7 +249,7 @@ export const es = {
   'bulk.shortfall': 'Seleccionaste {need} y tienes {have}. Te faltan {short}.',
   'bulk.nothingChanged': 'No se cambió nada.',
   'bulk.notApproved': 'Hay {count} anuncios sin aprobar. Aprueba o quítalos de la selección.',
-  'bulk.alreadyFeatured': 'Hay {count} anuncios que ya están destacados o en revisión.',
+  'bulk.alreadyFeatured': 'Hay {count} anuncios en revisión o pausados por un administrador. Esos no se pueden destacar ni renovar; los que ya están destacados sí se renuevan.',
   'bulk.stale': 'La selección ya no es válida. Actualizamos la lista.',
   'bulk.balance': 'Créditos disponibles: {count}',
   'bulk.balanceUnlimited': 'Créditos ilimitados',
