@@ -36,6 +36,7 @@ export type AuthState =
 export interface AuthContextValue {
   state: AuthState
   login: (email: string, password: string) => Promise<void>
+  loginWithGoogle: () => Promise<void>
   logout: () => Promise<void>
   retry: () => void
 }

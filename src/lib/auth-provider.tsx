@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ApiError, api, setUnauthorizedHandler } from '@/lib/api'
+import { signInWithGoogle } from '@/lib/crm/google-login'
 import { AuthContext, type AuthState, type CrmUser } from '@/lib/auth-context'
 
 interface Envelope<T> {
@@ -70,6 +71,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ status: 'authenticated', user: response.data })
   }, [])
 
+  // Same shape as login(): the popup and the POST both throw, and the caller
+  // turns that into copy. Nothing is set unless a user actually came back.
+  const loginWithGoogle = useCallback(async () => {
+    const user = await signInWithGoogle()
+    setState({ status: 'authenticated', user })
+  }, [])
+
   const logout = useCallback(async () => {
     try {
       await api('web-logout', { method: 'POST' })
@@ -87,8 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ state, login, logout, retry }),
-    [state, login, logout, retry],
+    () => ({ state, login, loginWithGoogle, logout, retry }),
+    [state, login, loginWithGoogle, logout, retry],
   )
 
   return <AuthContext value={value}>{children}</AuthContext>
