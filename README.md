@@ -99,9 +99,11 @@ Cuentas del mock:
 Y `curl localhost:8787/api/__rotate-csrf` caduca el token CSRF sin cerrar la
 sesión, para ver en DevTools cómo el cliente reprima y reintenta ante el 419.
 
-El mock **solo implementa el auth**; las pantallas pintan desde
-`src/lib/mock/data.ts`. Nada de esto se despliega: la SPA compila a estáticos y
-habla con la API real.
+El mock implementa el **auth** y la **bandeja de notificaciones**; todo lo
+demás lo sirve la API real, así que esas pantallas necesitan un backend
+levantado (o `VITE_DEV_BACKEND_ORIGIN` apuntando a uno). **Ninguna pantalla
+pinta ya datos de ejemplo**: `src/lib/mock/data.ts` se borró cuando la bandeja
+se conectó. Nada de esto se despliega: la SPA compila a estáticos.
 
 ## Variables de entorno
 
@@ -112,12 +114,16 @@ mock. Para apuntar a un backend real, `.env.local` (no se commitea):
 # Dev: VITE_API_ORIGIN vacío para pasar por el proxy de Vite.
 VITE_API_ORIGIN=
 VITE_API_PREFIX=/api/
-VITE_DEV_BACKEND_ORIGIN=https://panel.rentafacilrd.com
+VITE_DEV_BACKEND_ORIGIN=https://api.rentafacilrd.com
 
 # Producción:
-# VITE_API_ORIGIN=https://panel.rentafacilrd.com
+# VITE_API_ORIGIN=https://api.rentafacilrd.com
 # VITE_API_PREFIX=/api/
 ```
+
+*** Es `api.rentafacilrd.com`, **no** `panel.` — ese subdominio no resuelve.
+Verificado contra producción el 2026-08-06: `GET /sanctum/csrf-cookie` en `api.`
+devuelve 204 con las dos cookies en `.rentafacilrd.com`.
 
 `VITE_API_PREFIX` es `/api/` porque `RouteServiceProvider.php:33` hace
 `->prefix('api')`. El `.env.example` del sitio web dice `/api/v1/` — está
@@ -158,8 +164,15 @@ Dos condiciones **obligatorias**:
 `npm run build` → `dist/`. Estáticos, sin proceso Node.
 
 **Requiere fallback SPA**: cualquier ruta desconocida debe servir `index.html`.
-Sin eso, un F5 en `/leads/123` da 404 porque el routing es de cliente. La config
-concreta (Caddy/nginx/Dockerfile) se añade al conectar el servicio.
+Sin eso, un F5 en `/leads/123` da 404 porque el routing es de cliente.
+
+**Ya está desplegado y resuelto** en `crm.rentafacilrd.com` (verificado el
+2026-08-06: `/leads/123` y una ruta inventada devuelven ambas el mismo
+`index.html` con 200). Railway sirve el build de Vite con ese fallback por su
+cuenta: **no hace falta `railway.json` ni Dockerfile**, y que no estén en el
+repo no prueba nada — esa configuración vive en el panel de Railway, no en el
+árbol de archivos. Darlo por roto mirando un `ls` fue un error de método que se
+cometió dos sesiones seguidas.
 
 ## Scripts
 
@@ -182,7 +195,8 @@ src/
   lib/auth-context.ts        tipos + useAuth
   lib/auth-provider.tsx      sonda de sesión, login, logout, retry
   lib/i18n/                  diccionarios es/en, provider, translate puro
-  lib/mock/data.ts           datos de ejemplo de las pantallas
+  lib/crm/                   tipos + llamadas por recurso de la API
+  lib/crm/unread-store.ts    contador del badge, compartido sidebar ↔ pantalla
   components/require-auth.tsx  el único guard
   components/crm-layout.tsx    shell: cabecera, sidebar, cerrar sesión
   components/ui.tsx            Badge, Card, Button, EmptyState, ScoreDot…
@@ -207,13 +221,16 @@ trabajo, no una landing.
 | Tareas | **API** | — |
 | Ficha de propiedad → sus leads | **API** | la ficha en sí: A.1–A.8 |
 | Resumen: leads nuevos, SLA vencido | **API** | contadores de propiedades: A.5 |
-| Mis propiedades | ejemplo | A.1 – A.8 |
-| Proyectos, ficha, inventario | ejemplo | E.1 – E.8 |
-| Notificaciones | ejemplo | B.2 · B.3 |
+| Mis propiedades | **API** | — |
+| Proyectos, ficha, inventario | **API** | — |
+| Notificaciones | **API** | — |
+| Plan y checkout | **API** | — |
 
-Lo que sigue en ejemplo lo dice en pantalla con un aviso y vive en
-`src/lib/mock/data.ts`. Borra la porción que corresponda cuando su endpoint
-aterrice.
+**Ninguna pantalla queda en ejemplo.** La última fue Notificaciones, conectada
+el 2026-08-10 a `get_notification_list`, `notification-unread-count` y
+`mark-notification-read` — las mismas rutas `auth:sanctum` que llama la app de
+Flutter, no endpoints propios del CRM. Con ella se fueron `src/lib/mock/data.ts`
+y el componente `MockNotice`.
 
 ### Capa de datos
 
