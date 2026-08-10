@@ -27,6 +27,16 @@ interface ImportMetaEnv {
    * because a styled JavaScript map would want one back.
    */
   readonly VITE_GOOGLE_MAPS_MAP_ID?: string
+  /**
+   * Firebase (Google sign-in). Same project as the website and the app — the
+   * `auth_id` linking depends on the UIDs matching. Empty is a supported
+   * state: `isFirebaseConfigured()` in lib/firebase.ts gates the button off
+   * rather than let an unconfigured client show one that always fails.
+   */
+  readonly VITE_FIREBASE_API_KEY?: string
+  readonly VITE_FIREBASE_AUTH_DOMAIN?: string
+  readonly VITE_FIREBASE_PROJECT_ID?: string
+  readonly VITE_FIREBASE_APP_ID?: string
 }
 
 interface ImportMeta {
