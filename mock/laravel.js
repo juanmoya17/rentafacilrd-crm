@@ -2,9 +2,10 @@
  * Development stand-in for the Laravel panel.
  *
  * Exists so the SPA can be worked on without the real backend running. It
- * implements only the auth surface — every screen still renders from
- * src/lib/mock/data.ts — and it reproduces the two quirks the real
- * ApiController has, because those are what the client code guards against:
+ * implements the auth surface plus the notification inbox — the last screen
+ * that used to render from placeholder data, now wired to the real
+ * endpoints — and it reproduces the two quirks the real ApiController has,
+ * because those are what the client code guards against:
  *
  *   - a deactivated account answers HTTP 200 with {error:true}
  *   - a stale XSRF token answers 419, which the client must re-prime and retry
@@ -69,6 +70,71 @@ async function readBody(request) {
   } catch {
     return {}
   }
+}
+
+/**
+ * In-memory notification inbox.
+ *
+ * Deliberately mixed: modern rows carry `event_type`, one legacy row carries
+ * only the numeric `type` the tinyInteger column used to hold, and one carries
+ * an event_type nobody has mapped. Those three are what categoryOf() has to
+ * survive, and a mock that only emits clean rows would never show it failing.
+ */
+const NOTIFICATION_PATHS = new Set([
+  '/api/get_notification_list',
+  '/api/notification-unread-count',
+  '/api/mark-notification-read',
+])
+
+const HOUR = 3_600_000
+const inbox = [
+  { id: 5, title: 'Tu destacado vence en 2 días', message: 'RF0412 generó 120 visitas y 8 contactos mientras estuvo destacado.', type: '0', event_type: 'advertisement', hoursAgo: 1 },
+  { id: 4, title: 'Nuevo lead', message: 'Rosa Guzmán preguntó por RF0288.', type: '0', event_type: 'lead', hoursAgo: 3 },
+  { id: 3, title: 'Bajada de precio publicada', message: 'RF0412 bajó 6% — notificados 14 favoritos y 3 búsquedas guardadas.', type: '0', event_type: 'saved_search', hoursAgo: 26 },
+  { id: 2, title: 'Consulta sobre un anuncio', message: 'Un usuario preguntó por RF0301.', type: '1', event_type: null, hoursAgo: 50 },
+  { id: 1, title: 'Aviso del sistema', message: 'Evento que este cliente no sabe clasificar.', type: '2', event_type: 'something_new', hoursAgo: 96 },
+]
+const readIds = new Set([1])
+
+function notificationRow(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    message: row.message,
+    type: row.type,
+    event_type: row.event_type,
+    created_at: new Date(Date.now() - row.hoursAgo * HOUR).toISOString(),
+    notification_image: '',
+    is_read: readIds.has(row.id),
+  }
+}
+
+function handleNotifications(method, pathname, params, body) {
+  if (pathname === '/api/notification-unread-count') {
+    return { error: false, unread_count: inbox.filter((row) => !readIds.has(row.id)).length }
+  }
+
+  if (pathname === '/api/mark-notification-read') {
+    if (body.all === true) {
+      for (const row of inbox) readIds.add(row.id)
+      return { error: false, message: 'Success' }
+    }
+    const id = Number(body.notification_id)
+    // Mirrors the real endpoint: an id you cannot see is refused, not ignored.
+    if (!inbox.some((row) => row.id === id)) {
+      return { error: true, message: 'No Data Found' }
+    }
+    readIds.add(id)
+    return { error: false, message: 'Success' }
+  }
+
+  const offset = Number(params.get('offset') ?? 0)
+  const limit = Number(params.get('limit') ?? 10)
+  const page = inbox.slice(offset, offset + limit)
+  // The real endpoint omits `total` on the empty response instead of sending 0.
+  return page.length === 0
+    ? { error: false, message: 'No Data Found', data: [] }
+    : { error: false, total: inbox.length, data: page.map(notificationRow) }
 }
 
 createServer(async (request, response) => {
@@ -146,6 +212,18 @@ createServer(async (request, response) => {
       return
     }
     json(response, 200, { error: false, data: user })
+    return
+  }
+
+  // Notification inbox. NOT under /api/crm: these are the same auth:sanctum
+  // routes the Flutter app calls, so a session is enough — no verified.agent.
+  if (NOTIFICATION_PATHS.has(url.pathname)) {
+    const user = sessions.get(jar.crm_session)
+    if (user === undefined) {
+      json(response, 401, { error: true, message: 'Unauthenticated.' })
+      return
+    }
+    json(response, 200, handleNotifications(request.method, url.pathname, url.searchParams, await readBody(request)))
     return
   }
 
