@@ -32,13 +32,16 @@ describe('googleErrorKey', () => {
     expect(googleErrorKey(new ApiError('x', 500))).toBe('generic')
   })
 
-  it('tells the two 409s apart by their key, not their status', () => {
-    // Same status, opposite advice: one says use your password, the other
-    // says go verify your address with Google.
+  it('tells the three 409s apart by their key, not their status', () => {
+    // Same status, three different pieces of advice: use your password, go
+    // verify your address with Google, or — for an account with no password
+    // to sign in with — contact support instead.
     const ambiguous = new ApiError('x', 409, { key: 'googleEmailAmbiguous' })
     const unverified = new ApiError('x', 409, { key: 'googleEmailUnverified' })
+    const noPassword = new ApiError('x', 409, { key: 'googleAccountNoPassword' })
     expect(googleErrorKey(ambiguous)).toBe('conflict')
     expect(googleErrorKey(unverified)).toBe('emailUnverified')
+    expect(googleErrorKey(noPassword)).toBe('noPassword')
   })
 
   it('falls back to generic for anything unrecognised', () => {

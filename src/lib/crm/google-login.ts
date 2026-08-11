@@ -30,6 +30,7 @@ export type GoogleErrorKey =
   | 'rejected'
   | 'conflict'
   | 'emailUnverified'
+  | 'noPassword'
   | 'generic'
 
 function firebaseCode(error: unknown): string | null {
@@ -58,13 +59,15 @@ export function googleErrorKey(error: unknown): GoogleErrorKey {
       return 'unauthorizedDomain'
   }
 
-  // Both refusals are 409, so the status alone cannot tell them apart and
-  // half the people who hit one would be told to do the wrong thing.
+  // All three refusals are 409, so the status alone cannot tell them apart
+  // and most people who hit one would be told to do the wrong thing.
   switch (serverKey(error)) {
     case 'googleEmailUnverified':
       return 'emailUnverified'
     case 'googleEmailAmbiguous':
       return 'conflict'
+    case 'googleAccountNoPassword':
+      return 'noPassword'
   }
 
   if (error instanceof ApiError) {

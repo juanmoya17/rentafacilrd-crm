@@ -26,6 +26,7 @@ const GOOGLE_ERROR_COPY: Record<GoogleErrorKey, TranslationKey> = {
   rejected: 'auth.google.rejected',
   conflict: 'auth.google.conflict',
   emailUnverified: 'auth.google.emailUnverified',
+  noPassword: 'auth.google.noPassword',
   generic: 'auth.google.generic',
 }
 

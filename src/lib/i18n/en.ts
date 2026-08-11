@@ -37,6 +37,7 @@ export const en: Record<TranslationKey, string> = {
   'auth.google.rejected': 'We could not verify your Google account.',
   'auth.google.conflict': 'That email already has an account. Sign in with your password.',
   'auth.google.emailUnverified': 'Verify your email with Google before continuing.',
+  'auth.google.noPassword': 'That email already has an account. Contact support to recover it.',
   'auth.google.generic': 'We could not finish signing in with Google.',
 
   'verification.title': 'Your account is not verified as an agent yet',
