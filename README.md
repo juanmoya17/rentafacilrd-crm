@@ -137,6 +137,10 @@ de sesión nunca viajaría. El proxy de `vite.config.ts` hace que dev sea
 mismo-origen. Producción no usa proxy: va cross-subdominio y depende de la config
 de abajo.
 
+Para el botón de Google hacen falta las cuatro `VITE_FIREBASE_*`, y
+`crm.rentafacilrd.com` tiene que estar en los **dominios autorizados** de
+Firebase Auth — si no, el popup se cierra con `auth/unauthorized-domain`.
+
 ## Lo que hay que configurar en el backend
 
 En el `.env` del panel Laravel (solo variables, cero cambios de código —
