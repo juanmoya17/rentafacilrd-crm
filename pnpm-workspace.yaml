@@ -1,0 +1,7 @@
+# Neither script is needed for a browser bundle: the Firebase SDK ships
+# prebuilt, and protobufjs's postinstall only matters for its CLI. pnpm 11
+# fails the install rather than silently ignoring them, so the decision has
+# to be written down — and committed, or CI installs without it.
+allowBuilds:
+  '@firebase/util': false
+  protobufjs: false
