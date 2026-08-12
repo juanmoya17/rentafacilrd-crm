@@ -17,14 +17,21 @@ const config = {
 }
 
 /**
- * Gate for the button, not just the popup: with no API key, `authDomain` is
- * `undefined` and the popup navigates to `https://undefined/...` — a
- * configuration failure that otherwise looks identical to the agent closing
- * the window. `social_login` (the admin's kill switch) and this are separate
- * questions; the button needs both to be true.
+ * Gate for the button, not just the popup: a configuration failure otherwise
+ * looks identical to the agent closing the window. `social_login` (the
+ * admin's kill switch) and this are separate questions; the button needs
+ * both to be true.
+ *
+ * Both fields, not just the key. These are inlined by Vite at BUILD time, so
+ * a deploy that sets some of them and not others is a green build with a
+ * button that cannot work — which is exactly what shipped on 2026-08-12:
+ * only `VITE_FIREBASE_API_KEY` was set in Railway, the button rendered, and
+ * `signInWithPopup` threw `auth/auth-domain-config-required`. `projectId`
+ * and `appId` are deliberately not required here: the popup does not use
+ * them, and demanding them would hide a button that works.
  */
 export function isFirebaseConfigured(): boolean {
-  return config.apiKey !== ''
+  return config.apiKey !== '' && config.authDomain !== ''
 }
 
 let app: FirebaseApp | null = null
