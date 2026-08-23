@@ -19,6 +19,9 @@ export const es = {
   'nav.notifications': 'Notificaciones',
   'nav.plan': 'Plan',
   'nav.settings': 'Ajustes',
+  'nav.docs': 'Manual',
+  // Sufijo del aria-label del único enlace del menú que sale del CRM.
+  'nav.newTab': 'se abre en una pestaña nueva',
   'nav.toggle': 'Abrir menú',
 
   'auth.signIn': 'Entrar',

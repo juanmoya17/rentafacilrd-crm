@@ -18,6 +18,8 @@ export const en: Record<TranslationKey, string> = {
   'nav.notifications': 'Notifications',
   'nav.plan': 'Plan',
   'nav.settings': 'Settings',
+  'nav.docs': 'Handbook',
+  'nav.newTab': 'opens in a new tab',
   'nav.toggle': 'Open menu',
 
   'auth.signIn': 'Sign in',

@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { motion } from 'motion/react'
 import {
+  ArrowUpRight,
   Bell,
+  BookOpen,
   Boxes,
   Building2,
   CalendarCheck,
@@ -34,7 +36,19 @@ interface NavItem {
    * the old badge freeze at whatever the placeholder array said.
    */
   badge?: 'unread'
+  /**
+   * A static file under `public/`, not a route — so it has to be a plain
+   * anchor. A NavLink would client-route to it, the SPA fallback would answer
+   * with index.html, and the agent would land back on the dashboard instead of
+   * the document.
+   */
+  external?: boolean
 }
+
+/** Shared by the NavLink and the one external anchor, so the two cannot drift. */
+const ITEM_CLASS =
+  'relative flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors duration-(--duration-fast) ease-out'
+const ITEM_IDLE = 'text-ink-2 hover:bg-surface-sunken'
 
 /**
  * Icons are navigational, not decorative: an agent in this tool all day
@@ -72,6 +86,7 @@ const SECTIONS: { title: TranslationKey; items: NavItem[] }[] = [
       },
       { to: '/plan', label: 'nav.plan', icon: CreditCard },
       { to: '/settings', label: 'nav.settings', icon: Settings },
+      { to: '/manual-agente.html', label: 'nav.docs', icon: BookOpen, external: true },
     ],
   },
 ]
@@ -213,16 +228,41 @@ export function CrmLayout() {
                 <ul className="space-y-0.5">
                   {section.items.map((item) => (
                     <li key={item.to}>
+                      {item.external ? (
+                        /* Never carries the active indicator: it opens in
+                           another tab, so this nav is never "on" it. */
+                        <a
+                          href={item.to}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`${t(item.label)} — ${t('nav.newTab')}`}
+                          onClick={() => setMenuOpen(false)}
+                          className={`${ITEM_CLASS} ${ITEM_IDLE}`}
+                        >
+                          <span className="relative flex min-w-0 items-center gap-2.5">
+                            <item.icon
+                              className="size-4 shrink-0 text-muted"
+                              strokeWidth={1.75}
+                              aria-hidden="true"
+                            />
+                            <span className="truncate">{t(item.label)}</span>
+                          </span>
+                          {/* The one thing that tells this item apart from the
+                              ten above it before it is clicked. */}
+                          <ArrowUpRight
+                            className="size-3.5 shrink-0 text-muted"
+                            aria-hidden="true"
+                          />
+                        </a>
+                      ) : (
                       <NavLink
                         to={item.to}
                         end={item.to === '/'}
                         viewTransition
                         onClick={() => setMenuOpen(false)}
                         className={({ isActive }) =>
-                          `relative flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors duration-(--duration-fast) ease-out ${
-                            isActive
-                              ? 'font-medium text-brand-700'
-                              : 'text-ink-2 hover:bg-surface-sunken'
+                          `${ITEM_CLASS} ${
+                            isActive ? 'font-medium text-brand-700' : ITEM_IDLE
                           }`
                         }
                       >
@@ -262,6 +302,7 @@ export function CrmLayout() {
                           </>
                         )}
                       </NavLink>
+                      )}
                     </li>
                   ))}
                 </ul>

@@ -1,0 +1,1399 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg">
+<title>Manual del agente RentaFácil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
+
+<style>
+/* ------------------------------------------------------------------ tokens
+   Tomados de tokens.css del propio CRM: mismo teal, mismo papel, misma
+   tipografía. El manual se ve como la herramienta que documenta. */
+:root {
+  --paper:        #f5f5f4;
+  --raised:       #ffffff;
+  --sunken:       oklch(96.8% 0.006 195);
+  --ink:          oklch(20.8% 0.014 195);
+  --ink-2:        oklch(37.2% 0.016 195);
+  --muted:        oklch(54% 0.016 195);
+  --rule:         oklch(92.9% 0.008 195);
+  --rule-2:       oklch(64% 0.014 195);
+  --accent:       #087c7c;
+  --accent-soft:  #f0fafa;
+  --accent-edge:  #aee0e0;
+  --accent-ink:   #ffffff;
+  --accent-text:  #076363;
+  --warn:         oklch(54.5% 0.122 65);
+  --warn-bg:      oklch(96.5% 0.022 65);
+  --warn-edge:    oklch(78% 0.09 65);
+  --danger:       oklch(55% 0.19 25);
+  --danger-bg:    oklch(96% 0.018 25);
+  --ok:           oklch(52% 0.125 155);
+  --ok-bg:        oklch(96.5% 0.022 155);
+  --sell-bg:      #d6ebf9;
+  --sell-ink:     oklch(51.5% 0.134 246.6);
+  --rent-bg:      #fdf3e0;
+  --rent-ink:     oklch(55% 0.116 74);
+  --shadow:       0 1px 2px oklch(20% 0.02 195 / 0.06);
+
+  --sans: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:       oklch(18.5% 0.012 195);
+    --raised:      oklch(22.5% 0.013 195);
+    --sunken:      oklch(26% 0.014 195);
+    --ink:         oklch(95% 0.008 195);
+    --ink-2:       oklch(83% 0.010 195);
+    --muted:       oklch(65% 0.012 195);
+    --rule:        oklch(30% 0.014 195);
+    --rule-2:      oklch(42% 0.016 195);
+    --accent:      #4bb2b2;
+    --accent-soft: oklch(28% 0.035 195);
+    --accent-edge: oklch(40% 0.055 195);
+    --accent-ink:  oklch(16% 0.02 195);
+    --accent-text: #7dcccc;
+    --warn:        oklch(78% 0.11 65);
+    --warn-bg:     oklch(30% 0.045 65);
+    --warn-edge:   oklch(50% 0.08 65);
+    --danger:      oklch(72% 0.15 25);
+    --danger-bg:   oklch(29% 0.06 25);
+    --ok:          oklch(75% 0.11 155);
+    --ok-bg:       oklch(28% 0.05 155);
+    --sell-bg:     oklch(30% 0.05 246);
+    --sell-ink:    oklch(80% 0.09 246);
+    --rent-bg:     oklch(30% 0.045 74);
+    --rent-ink:    oklch(82% 0.09 74);
+    --shadow:      0 1px 2px oklch(0% 0 0 / 0.4);
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper:       oklch(18.5% 0.012 195);
+  --raised:      oklch(22.5% 0.013 195);
+  --sunken:      oklch(26% 0.014 195);
+  --ink:         oklch(95% 0.008 195);
+  --ink-2:       oklch(83% 0.010 195);
+  --muted:       oklch(65% 0.012 195);
+  --rule:        oklch(30% 0.014 195);
+  --rule-2:      oklch(42% 0.016 195);
+  --accent:      #4bb2b2;
+  --accent-soft: oklch(28% 0.035 195);
+  --accent-edge: oklch(40% 0.055 195);
+  --accent-ink:  oklch(16% 0.02 195);
+  --accent-text: #7dcccc;
+  --warn:        oklch(78% 0.11 65);
+  --warn-bg:     oklch(30% 0.045 65);
+  --warn-edge:   oklch(50% 0.08 65);
+  --danger:      oklch(72% 0.15 25);
+  --danger-bg:   oklch(29% 0.06 25);
+  --ok:          oklch(75% 0.11 155);
+  --ok-bg:       oklch(28% 0.05 155);
+  --sell-bg:     oklch(30% 0.05 246);
+  --sell-ink:    oklch(80% 0.09 246);
+  --rent-bg:     oklch(30% 0.045 74);
+  --rent-ink:    oklch(82% 0.09 74);
+  --shadow:      0 1px 2px oklch(0% 0 0 / 0.4);
+}
+
+/* ------------------------------------------------------------------- base */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink-2);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono, code, .code { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+a { color: var(--accent-text); text-decoration-color: var(--accent-edge); text-underline-offset: 2px; }
+a:hover { text-decoration-color: var(--accent); }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ----------------------------------------------------------------- shell */
+.shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 20px 96px;
+}
+
+@media (min-width: 1000px) {
+  .shell {
+    grid-template-columns: 232px minmax(0, 1fr);
+    gap: 56px;
+    padding: 0 32px 120px;
+    align-items: start;
+  }
+}
+
+/* ------------------------------------------------------------------- nav */
+.index {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100dvh;
+  overflow-y: auto;
+  padding: 28px 0 40px;
+  display: none;
+}
+@media (min-width: 1000px) { .index { display: block; } }
+
+.index-group + .index-group { margin-top: 20px; }
+
+.index-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 6px;
+  padding-left: 9px;
+}
+
+.index ol { list-style: none; margin: 0; padding: 0; }
+
+.index a {
+  display: block;
+  padding: 4px 9px;
+  border-left: 2px solid transparent;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: color 120ms, border-color 120ms, background 120ms;
+}
+.index a:hover {
+  color: var(--accent-text);
+  border-left-color: var(--accent-edge);
+  background: var(--sunken);
+}
+
+/* --------------------------------------------------------------- masthead */
+.masthead {
+  padding: 64px 0 40px;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 44px;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  margin: 0 0 14px;
+}
+
+.masthead h1 {
+  font-size: clamp(34px, 6vw, 50px);
+  font-weight: 600;
+  letter-spacing: -0.028em;
+  line-height: 1.05;
+  color: var(--ink);
+  margin: 0;
+  text-wrap: balance;
+}
+
+.lede {
+  max-width: 62ch;
+  margin: 18px 0 0;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.masthead-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin-top: 26px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------- headings */
+section { scroll-margin-top: 20px; }
+
+h2 {
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--ink);
+  margin: 0;
+  text-wrap: balance;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 14px;
+  padding-top: 56px;
+  margin-bottom: 6px;
+  border-top: 1px solid var(--rule);
+}
+.head:first-of-type { border-top: 0; padding-top: 0; }
+
+.route {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--muted);
+  background: var(--sunken);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+
+h3 {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  margin: 34px 0 10px;
+}
+
+h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 22px 0 6px;
+}
+
+.purpose {
+  max-width: 66ch;
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: var(--ink-2);
+}
+
+p { max-width: 68ch; margin: 14px 0; }
+
+ul, ol.steps { max-width: 68ch; padding-left: 20px; margin: 12px 0; }
+li { margin: 6px 0; }
+li::marker { color: var(--muted); }
+
+strong { color: var(--ink); font-weight: 600; }
+
+/* ------------------------------------------------------------------ chips */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+.badge.neutral { background: var(--sunken); color: var(--ink-2); border: 1px solid var(--rule); }
+.badge.brand   { background: var(--accent-soft); color: var(--accent-text); border: 1px solid var(--accent-edge); }
+.badge.warn    { background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn-edge); }
+.badge.danger  { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
+.badge.ok      { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok); }
+.badge.sell    { background: var(--sell-bg); color: var(--sell-ink); border: 1px solid transparent; }
+.badge.rent    { background: var(--rent-bg); color: var(--rent-ink); border: 1px solid transparent; }
+
+/* Un control real de la interfaz: algo que el agente pulsa. */
+.ui {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--raised);
+  border: 1px solid var(--rule-2);
+  border-radius: 5px;
+  padding: 0 6px;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+}
+.ui.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.ui.danger  { background: transparent; border-color: var(--danger); color: var(--danger); }
+
+code {
+  font-size: 12.5px;
+  background: var(--sunken);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 0 5px;
+  color: var(--ink-2);
+}
+
+/* --------------------------------------------------------------- callouts */
+.note {
+  max-width: 70ch;
+  margin: 18px 0;
+  padding: 12px 16px;
+  border-left: 2px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: 0 6px 6px 0;
+  font-size: 14.5px;
+  color: var(--ink-2);
+}
+.note > :first-child { margin-top: 0; }
+.note > :last-child { margin-bottom: 0; }
+.note .tag {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  margin-bottom: 4px;
+}
+
+.note.careful { border-left-color: var(--warn); background: var(--warn-bg); }
+.note.careful .tag { color: var(--warn); }
+.note.stop { border-left-color: var(--danger); background: var(--danger-bg); }
+.note.stop .tag { color: var(--danger); }
+
+/* ---------------------------------------------------------------- tables */
+.scroller { overflow-x: auto; margin: 18px 0; }
+
+table {
+  width: 100%;
+  min-width: 460px;
+  border-collapse: collapse;
+  background: var(--raised);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 14px;
+}
+
+th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--sunken);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+}
+
+td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+  color: var(--ink-2);
+}
+tr:last-child td { border-bottom: 0; }
+td:first-child { color: var(--ink); }
+
+/* -------------------------------------------------------------- pipeline */
+.flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 20px 0;
+  padding: 14px;
+  background: var(--raised);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+.flow .arrow { color: var(--rule-2); font-size: 13px; }
+.flow .stage {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+  background: var(--sunken);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  padding: 3px 9px;
+}
+.flow .stage.won  { border-color: var(--ok); color: var(--ok); background: var(--ok-bg); }
+.flow .stage.lost { border-color: var(--rule-2); color: var(--muted); }
+
+/* ------------------------------------------------------------ step cards */
+.wizard { display: grid; gap: 10px; margin: 20px 0; counter-reset: paso; }
+
+.wizard > li {
+  list-style: none;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 14px;
+  padding: 13px 15px;
+  background: var(--raised);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  margin: 0;
+  max-width: none;
+}
+
+.wizard > li::before {
+  counter-increment: paso;
+  content: counter(paso);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-edge);
+  border-radius: 5px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+}
+
+.wizard b { display: block; color: var(--ink); font-size: 14px; font-weight: 600; }
+.wizard p { margin: 3px 0 0; font-size: 14px; max-width: 62ch; }
+
+/* --------------------------------------------------------------- do-list */
+.split { display: grid; gap: 18px; margin: 18px 0; }
+@media (min-width: 760px) { .split { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.panel {
+  background: var(--raised);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 15px 17px;
+}
+.panel h4 { margin: 0 0 8px; }
+.panel ul { margin: 0; padding-left: 18px; max-width: none; }
+.panel li { font-size: 14px; }
+
+.footer {
+  margin-top: 72px;
+  padding-top: 22px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+</style>
+</head>
+
+<body>
+<div class="shell">
+
+<nav class="index" aria-label="Índice del manual">
+  <div class="index-group">
+    <p class="index-title">Empezar</p>
+    <ol>
+      <li><a href="#entrar">Entrar al CRM</a></li>
+      <li><a href="#verificacion">Verificación de agente</a></li>
+      <li><a href="#navegar">Cómo se navega</a></li>
+    </ol>
+  </div>
+  <div class="index-group">
+    <p class="index-title">CRM</p>
+    <ol>
+      <li><a href="#resumen">Resumen</a></li>
+      <li><a href="#pipeline">Pipeline</a></li>
+      <li><a href="#leads">Leads</a></li>
+      <li><a href="#ficha-lead">Ficha de lead</a></li>
+      <li><a href="#tareas">Tareas</a></li>
+    </ol>
+  </div>
+  <div class="index-group">
+    <p class="index-title">Inventario</p>
+    <ol>
+      <li><a href="#propiedades">Mis propiedades</a></li>
+      <li><a href="#lote">Acciones en lote</a></li>
+      <li><a href="#nueva-propiedad">Nueva propiedad</a></li>
+      <li><a href="#ficha-propiedad">Ficha de propiedad</a></li>
+      <li><a href="#proyectos">Proyectos</a></li>
+      <li><a href="#ficha-proyecto">Ficha de proyecto</a></li>
+      <li><a href="#inventario">Inventario global</a></li>
+    </ol>
+  </div>
+  <div class="index-group">
+    <p class="index-title">Sistema</p>
+    <ol>
+      <li><a href="#notificaciones">Notificaciones</a></li>
+      <li><a href="#plan">Plan y facturación</a></li>
+      <li><a href="#ajustes">Ajustes</a></li>
+    </ol>
+  </div>
+  <div class="index-group">
+    <p class="index-title">Referencia</p>
+    <ol>
+      <li><a href="#glosario">Glosario de estados</a></li>
+      <li><a href="#problemas">Si algo no funciona</a></li>
+    </ol>
+  </div>
+</nav>
+
+<main>
+
+<header class="masthead">
+  <p class="eyebrow">RentaFácil · Manual del agente</p>
+  <h1>Todo lo que puedes hacer desde el CRM</h1>
+  <p class="lede">
+    El CRM es tu mesa de trabajo: aquí viven tus anuncios, tus proyectos y —sobre
+    todo— la gente que preguntó por ellos. Este manual recorre pantalla por
+    pantalla qué ves, qué puedes hacer y qué pasa exactamente cuando pulsas cada
+    cosa.
+  </p>
+  <div class="masthead-meta">
+    <span>16 pantallas</span>
+    <span>Español · English</span>
+    <span>Solo para agentes verificados</span>
+  </div>
+</header>
+
+<!-- ============================================================ EMPEZAR -->
+
+<section id="entrar">
+  <div class="head">
+    <h2>Entrar al CRM</h2>
+    <span class="route">/login</span>
+  </div>
+  <p class="purpose">Se entra con la misma cuenta de RentaFácil que usas en la app. No hay una cuenta aparte para el CRM.</p>
+
+  <h3>Las dos formas de entrar</h3>
+  <ul>
+    <li><strong>Correo y contraseña.</strong> Los mismos de tu cuenta de RentaFácil.</li>
+    <li><strong><span class="ui">Continuar con Google</span>.</strong> Solo aparece si el administrador lo tiene activado. Se abre una ventana de Google, eliges tu cuenta y vuelves ya dentro.</li>
+  </ul>
+
+  <h3>Si algo sale mal al entrar</h3>
+  <div class="scroller">
+  <table>
+    <thead>
+      <tr><th>Lo que ves</th><th>Qué significa y qué hacer</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>«No pudimos iniciar sesión»</td><td>El correo o la contraseña no coinciden. El sistema no dice cuál de los dos, por seguridad.</td></tr>
+      <tr><td>Mensaje de cuenta desactivada</td><td>Tu cuenta fue deshabilitada. Contacta a soporte; no se resuelve desde aquí.</td></tr>
+      <tr><td>«Cerraste la ventana de Google antes de terminar»</td><td>Vuelve a pulsar el botón y completa el paso.</td></tr>
+      <tr><td>«Tu navegador bloqueó la ventana de Google»</td><td>Permite las ventanas emergentes para este sitio y reintenta.</td></tr>
+      <tr><td>«Ese correo ya tiene cuenta. Entra con tu contraseña»</td><td>Esa dirección se registró con contraseña. Usa el formulario de arriba.</td></tr>
+      <tr><td>«Verifica tu correo en Google antes de continuar»</td><td>Google todavía no confirmó esa dirección. Verifícala en tu cuenta de Google.</td></tr>
+      <tr><td>«No pudimos contactar el servidor»</td><td>Es un problema de red o del servidor, <em>no</em> es que tu sesión se cerrara. Pulsa <span class="ui">Reintentar</span>.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="tag">Sobre tu sesión</span>
+    La sesión vive en una cookie segura del servidor: en el navegador no se guarda
+    ningún token. Si refrescas la página sigues dentro. Si tu sesión caduca, el CRM
+    te devuelve al login y, al entrar, te lleva de vuelta a la pantalla donde estabas.
+  </div>
+</section>
+
+<section id="verificacion">
+  <div class="head">
+    <h2>Verificación de agente</h2>
+  </div>
+  <p class="purpose">El CRM es solo para agentes verificados. Si entras sin estarlo, verás una pantalla que te explica por qué —no un error.</p>
+
+  <p>
+    Cualquiera con cuenta en RentaFácil puede publicar un anuncio y recibir leads.
+    Lo que la verificación abre es <em>esta</em> herramienta.
+  </p>
+
+  <div class="note">
+    <span class="tag">No se pierde nada</span>
+    Mientras tu verificación está en trámite, tus anuncios siguen publicados y tus
+    leads se siguen guardando. Aparecerán aquí completos el día que se apruebe la
+    verificación.
+  </div>
+
+  <p><strong>Cómo verificarte:</strong> solicita la verificación de agente desde tu perfil en la app de RentaFácil. La revisa el equipo de la plataforma.</p>
+</section>
+
+<section id="navegar">
+  <div class="head">
+    <h2>Cómo se navega</h2>
+  </div>
+  <p class="purpose">Una barra superior fija y un menú lateral con tres bloques. En móvil el menú se abre con el botón ☰.</p>
+
+  <div class="split">
+    <div class="panel">
+      <h4>Barra superior</h4>
+      <ul>
+        <li>Tu nombre.</li>
+        <li>Selector de idioma: <strong>Español</strong> o <strong>English</strong>. Cambia toda la interfaz al instante.</li>
+        <li><span class="ui">Cerrar sesión</span>.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h4>Menú lateral</h4>
+      <ul>
+        <li><strong>CRM</strong> — Resumen, Pipeline, Leads, Tareas.</li>
+        <li><strong>Inventario</strong> — Propiedades, Proyectos, Inventario global.</li>
+        <li><strong>Sistema</strong> — Notificaciones, Plan, Ajustes.</li>
+      </ul>
+    </div>
+  </div>
+
+  <p>
+    El número verde junto a <strong>Notificaciones</strong> es tu contador de no leídas.
+    Se actualiza cada vez que cambias de pantalla, así que siempre refleja el momento,
+    no el de cuando entraste.
+  </p>
+</section>
+
+<!-- ================================================================= CRM -->
+
+<section id="resumen">
+  <div class="head">
+    <h2>Resumen</h2>
+    <span class="route">/</span>
+  </div>
+  <p class="purpose">La pantalla de arranque del día: cuatro cifras y una cola de lo que está pendiente.</p>
+
+  <h3>Las cuatro cifras</h3>
+  <p>Ninguna es un número muerto: al pulsarla te lleva a la lista ya filtrada.</p>
+  <div class="scroller">
+  <table>
+    <thead><tr><th>Tarjeta</th><th>Qué cuenta</th><th>Adónde te lleva</th></tr></thead>
+    <tbody>
+      <tr><td>Propiedades</td><td>Todos tus anuncios</td><td>Mis propiedades, sin filtro</td></tr>
+      <tr><td>Publicadas</td><td>Los que están visibles ahora mismo</td><td>Mis propiedades, filtradas a <span class="badge ok">Publicada</span></td></tr>
+      <tr><td>Leads nuevos</td><td>Leads que nadie ha tocado todavía</td><td>Leads en etapa <span class="badge neutral">Nuevo</span></td></tr>
+      <tr><td>Por vencer</td><td>Destacados a punto de caducar</td><td>Mis propiedades con el destacado por vencer</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Requiere acción</h3>
+  <p>Debajo aparece una cola de trabajo real. Cada fila es un atajo a la lista filtrada correspondiente:</p>
+  <ul>
+    <li><strong>Anuncios rechazados</strong> — el administrador los devolvió. Hay que corregirlos y reenviarlos.</li>
+    <li><strong>Destacados por vencer</strong> — se acaba la ventana de destaque.</li>
+    <li><strong>Leads con SLA vencido</strong> — pasó el tiempo de primera respuesta y nadie ha contestado.</li>
+    <li><strong>Tareas vencidas</strong> — seguimientos que quedaron atrás.</li>
+  </ul>
+
+  <div class="note">
+    <span class="tag">Cero ruido</span>
+    Una categoría con cero pendientes no se muestra. Si no hay nada, leerás
+    «Nada pendiente». Que el riel esté vacío es una buena noticia, no un fallo.
+  </div>
+</section>
+
+<section id="pipeline">
+  <div class="head">
+    <h2>Pipeline</h2>
+    <span class="route">/pipeline</span>
+  </div>
+  <p class="purpose">Tu embudo como tablero. Seis columnas y las tarjetas se arrastran de una a otra.</p>
+
+  <div class="flow">
+    <span class="stage">Nuevo</span><span class="arrow">→</span>
+    <span class="stage">Contactado</span><span class="arrow">→</span>
+    <span class="stage">Visita agendada</span><span class="arrow">→</span>
+    <span class="stage">Negociación</span><span class="arrow">→</span>
+    <span class="stage won">Ganado</span>
+    <span class="arrow">/</span>
+    <span class="stage lost">Perdido</span>
+  </div>
+
+  <h3>Qué muestra cada tarjeta</h3>
+  <ul>
+    <li>Nombre del contacto (pulsa para abrir su ficha).</li>
+    <li>Punto de temperatura del lead.</li>
+    <li>El anuncio por el que preguntó.</li>
+    <li>Su origen (Favorito, WhatsApp, Bajada de precio…).</li>
+    <li>El reloj: cuánto queda de SLA o, si ya pasó, cuándo fue la última actividad. En rojo cuando el SLA está vencido.</li>
+  </ul>
+
+  <h3>Mover un lead</h3>
+  <p>Arrastra la tarjeta a otra columna. Se mueve al instante, sin esperar al servidor.</p>
+
+  <div class="note careful">
+    <span class="tag">Si el servidor rechaza el movimiento</span>
+    La tarjeta vuelve visiblemente a su columna anterior y aparece un aviso
+    «No pudimos mover el lead» con un botón <span class="ui">Reintentar</span>.
+    Si la tarjeta regresa sola, no es un fallo visual: el cambio no se guardó.
+  </div>
+
+  <p>
+    El tablero carga hasta 100 leads. Con más volumen usa <span class="ui">Ver como lista</span>,
+    que tiene filtros y buscador. También puedes cambiar la etapa desde la ficha del
+    lead, que es la vía accesible por teclado.
+  </p>
+</section>
+
+<section id="leads">
+  <div class="head">
+    <h2>Leads</h2>
+    <span class="route">/leads</span>
+  </div>
+  <p class="purpose">La misma información del pipeline, pero en tabla, con búsqueda y filtros que se aplican en el servidor.</p>
+
+  <h3>Buscar</h3>
+  <p>Un solo campo busca por <strong>nombre, teléfono o código <span class="mono">RF####</span></strong>. Escribe y espera un instante: la lista se recarga sola y te dice cuántos resultados hay.</p>
+
+  <h3>Filtrar</h3>
+  <ul>
+    <li><strong>Por etapa</strong> — Todos, Nuevo, Contactado, Visita agendada, Negociación, Ganado, Perdido.</li>
+    <li><strong><span class="ui danger">SLA · Vencido</span></strong> — es un eje aparte, no una etapa. Al activarlo se quita el filtro de etapa.</li>
+    <li><strong>Filtrado por anuncio</strong> — aparece cuando llegas desde una propiedad. Pulsa la × de esa píldora para quitarlo.</li>
+  </ul>
+
+  <div class="note">
+    <span class="tag">Los filtros se comparten</span>
+    Los filtros viven en la dirección de la página. Puedes guardar la vista en
+    favoritos o pasarle el enlace a alguien y verá exactamente lo mismo.
+  </div>
+
+  <h3>Columnas</h3>
+  <p>Nombre y teléfono · temperatura · etapa · origen · propiedad de interés · SLA. Se cargan hasta 50 leads por consulta.</p>
+</section>
+
+<section id="ficha-lead">
+  <div class="head">
+    <h2>Ficha de lead</h2>
+    <span class="route">/leads/:id</span>
+  </div>
+  <p class="purpose">Todo sobre una persona: sus datos, su historial contigo, su etapa y sus seguimientos.</p>
+
+  <h3>Cabecera</h3>
+  <p>Nombre, teléfono y correo, y las insignias de <strong>etapa</strong>, <strong>origen</strong>, <strong>temperatura</strong> y, si aplica, <span class="badge danger">SLA · Vencido</span>. A la derecha hay un desplegable <strong>Etapa</strong>: cambiarlo equivale a arrastrar la tarjeta en el pipeline.</p>
+
+  <h3>Detalles</h3>
+  <p>Seis fechas exactas: origen, creación, primera respuesta, vencimiento del SLA, última actividad y cierre.</p>
+
+  <div class="note">
+    <span class="tag">Un guion no es un cero</span>
+    Cuando ves «—» significa que ese dato no existe todavía. Un lead sin
+    contestar no tiene primera respuesta, y el CRM prefiere decirlo a inventarse
+    una fecha.
+  </div>
+
+  <h3>Registrar actividad</h3>
+  <ol class="steps">
+    <li>Elige el tipo: <strong>Mensaje</strong>, <strong>Llamada</strong>, <strong>Visita</strong> o <strong>Nota</strong>.</li>
+    <li>Escribe qué pasó en el campo <em>Detalle</em>.</li>
+    <li>Pulsa <span class="ui primary">Registrar</span>. Aparece arriba del historial al instante.</li>
+  </ol>
+
+  <div class="note careful">
+    <span class="tag">La regla que más se olvida</span>
+    Una <strong>Nota</strong> es privada y <strong>no detiene el contador de SLA</strong>.
+    Un <strong>Mensaje</strong>, una <strong>Llamada</strong> o una <strong>Visita</strong> sí lo detienen.
+    Si contestaste al cliente, regístralo como mensaje o llamada, no como nota.
+  </div>
+
+  <h3>Columna derecha</h3>
+  <ul>
+    <li><strong>Propiedad de interés</strong> — el anuncio que originó el lead.</li>
+    <li><strong>Tareas</strong> — los seguimientos abiertos de este lead, con su fecha de vencimiento.</li>
+  </ul>
+</section>
+
+<section id="tareas">
+  <div class="head">
+    <h2>Tareas</h2>
+    <span class="route">/tasks</span>
+  </div>
+  <p class="purpose">Seguimientos y recordatorios, en dos listas: Pendientes y Completadas.</p>
+
+  <ul>
+    <li>Marca la casilla para completar una tarea: la fila viaja hasta <strong>Completadas</strong>. Ese movimiento es la confirmación —no hay aviso extra.</li>
+    <li>Desmarca para devolverla a pendientes.</li>
+    <li>Las vencidas llevan <span class="badge danger">Vencido</span>.</li>
+    <li>Si la tarea nació de un lead, hay un enlace directo a su ficha.</li>
+  </ul>
+
+  <div class="note">
+    <span class="tag">Automático</span>
+    Cada <strong>visita</strong> que registras crea sola una tarea de seguimiento
+    para 24 horas después. No tienes que acordarte de crearla.
+  </div>
+
+  <p>Si llegas desde «Tareas vencidas» del Resumen, verás una píldora <em>Filtrado por estado</em>. Pulsa su × para ver todas.</p>
+</section>
+
+<!-- ========================================================== INVENTARIO -->
+
+<section id="propiedades">
+  <div class="head">
+    <h2>Mis propiedades</h2>
+    <span class="route">/properties</span>
+  </div>
+  <p class="purpose">El listado completo de tus anuncios, con cifras arriba, filtros en medio y tres formas de verlo.</p>
+
+  <h3>La franja de cifras</h3>
+  <p>Total, Publicadas, Leads nuevos y Destacados por vencer —cada una es un atajo que filtra la lista—, más <strong>Créditos de destacado</strong>, que no filtra: es tu saldo disponible para destacar anuncios.</p>
+
+  <h3>Encontrar un anuncio</h3>
+  <ul>
+    <li><strong>Buscador</strong> — por título, ciudad o código <span class="mono">RF####</span>.</li>
+    <li><strong>Estado</strong> — Todos, Borrador, Publicada, Pausada, Vencida, Vendida, Alquilada, Rechazada.</li>
+    <li><strong>Orden</strong> — más recientes, más antiguas, precio ascendente, precio descendente, más vistas.</li>
+    <li><strong>Filtros avanzados</strong> — precio desde/hasta, área desde/hasta y «Sólo destacadas». El número en el botón te dice cuántos filtros tienes puestos aunque el panel esté cerrado.</li>
+  </ul>
+
+  <div class="note">
+    <span class="tag">Por qué a veces hay menos controles</span>
+    Con tres anuncios o menos, el CRM oculta las vistas, la densidad y los filtros
+    avanzados: no hay nada que filtrar todavía. Aparecen solos cuando tu inventario crece.
+  </div>
+
+  <h3>Tres vistas</h3>
+  <div class="split">
+    <div class="panel">
+      <h4>Tabla</h4>
+      <ul>
+        <li>Máxima densidad, para comparar precios y leads de un vistazo.</li>
+        <li>Tiene control de densidad: <em>Compacto</em> o <em>Cómodo</em>.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h4>Fichas</h4>
+      <ul>
+        <li>Muestra la foto de portada de cada anuncio.</li>
+        <li>Útil para revisar qué imagen está viendo el comprador.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="panel">
+    <h4>Mapa</h4>
+    <ul>
+      <li>Los pines y la columna de la izquierda están sincronizados: pulsas un pin y su ficha se desplaza a la vista, y al revés.</li>
+      <li>Los anuncios <strong>sin ubicación registrada</strong> no desaparecen: quedan listados debajo de una línea que los cuenta. Es normal —hay direcciones que se reservan hasta que un lead califica.</li>
+    </ul>
+  </div>
+
+  <h3>El botón de cada fila</h3>
+  <p>Cada anuncio muestra <strong>una sola</strong> acción, la más urgente que le aplica, en este orden:</p>
+  <div class="scroller">
+  <table>
+    <thead><tr><th>Si el anuncio está…</th><th>Ves</th><th>Qué hace</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge danger">Rechazada</span></td><td><span class="ui">Corregir y reenviar</span></td><td>Te lleva a arreglar lo que el administrador señaló.</td></tr>
+      <tr><td><span class="badge neutral">Pausada</span></td><td><span class="ui">Publicar</span></td><td>Lo vuelve a poner visible al instante.</td></tr>
+      <tr><td>Con leads sin contestar</td><td><span class="ui">Ver N leads</span></td><td>Abre la lista de leads ya filtrada por ese anuncio.</td></tr>
+      <tr><td>Destacado a punto de vencer</td><td><span class="ui primary">Renovar destacado (Nd)</span></td><td>Renueva la ventana de destaque. Consume un crédito.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>El listado pagina de 30 en 30 y siempre te dice en qué tramo estás («31–60 de 214»).</p>
+</section>
+
+<section id="lote">
+  <div class="head">
+    <h2>Acciones en lote</h2>
+  </div>
+  <p class="purpose">Marca varios anuncios y aplícales la misma acción de una vez.</p>
+
+  <p>
+    Selecciona con las casillas (o marca <strong>Todos</strong> en la barra de herramientas)
+    y aparece una barra teal encima de la lista con el número de seleccionados y tu
+    saldo de créditos de destacado.
+  </p>
+
+  <div class="scroller">
+  <table>
+    <thead><tr><th>Acción</th><th>Qué hace</th></tr></thead>
+    <tbody>
+      <tr><td><span class="ui">Publicar</span></td><td>Pone los anuncios visibles.</td></tr>
+      <tr><td><span class="ui">Pausar</span></td><td>Los retira del portal sin borrarlos.</td></tr>
+      <tr><td><span class="ui">Destacar</span></td><td>Los promociona. Consume un crédito por anuncio.</td></tr>
+      <tr><td><span class="ui">Marcar cerrada</span></td><td>Cierra la operación: <span class="badge sell">Venta</span> pasa a <em>Vendida</em>, <span class="badge rent">Alquiler</span> pasa a <em>Alquilada</em>.</td></tr>
+      <tr><td><span class="ui danger">Eliminar</span></td><td>Borra los anuncios. Pide confirmación aparte.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note stop">
+    <span class="tag">Eliminar no tiene vuelta atrás</span>
+    Se borran también las fotos y los documentos de esos anuncios. Por eso es la
+    única acción que abre una confirmación antes de aplicarse.
+  </div>
+
+  <h3>Todo o nada</h3>
+  <p>Un lote se aplica entero o no se aplica. Si el servidor lo rechaza, <strong>no se cambió nada</strong> y verás en la misma barra el motivo exacto:</p>
+  <div class="scroller">
+  <table>
+    <thead><tr><th>Mensaje</th><th>Qué hacer</th></tr></thead>
+    <tbody>
+      <tr><td>«Seleccionaste N y tienes M. Te faltan X.»</td><td>No te alcanzan los créditos de destacado. Reduce la selección o contrata un plan mayor.</td></tr>
+      <tr><td>«Hay N anuncios sin aprobar.»</td><td>Espera la aprobación o quítalos de la selección.</td></tr>
+      <tr><td>«Hay N anuncios en revisión o pausados por un administrador.»</td><td>Esos no se pueden destacar ni renovar. Los que ya estaban destacados sí se renuevan.</td></tr>
+      <tr><td>«La selección ya no es válida. Actualizamos la lista.»</td><td>Alguno de los anuncios cambió o desapareció. La lista se recarga sola; vuelve a seleccionar.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>El máximo por lote es de <strong>200 anuncios</strong>. Si marcas más, el CRM selecciona los primeros 200 y te avisa.</p>
+</section>
+
+<section id="nueva-propiedad">
+  <div class="head">
+    <h2>Publicar una propiedad</h2>
+    <span class="route">/properties/new</span>
+  </div>
+  <p class="purpose">Ocho pasos con los mismos campos y las mismas reglas que la app. Un anuncio creado aquí es idéntico a uno creado desde el móvil.</p>
+
+  <div class="note">
+    <span class="tag">Los pasos son navegación, no una fila</span>
+    Puedes saltar a cualquier paso cuando quieras pulsando su número arriba. Si
+    detectas una errata del paso 2 estando en el 6, vas y vuelves.
+  </div>
+
+  <ol class="wizard">
+    <li>
+      <div>
+        <b>Categoría</b>
+        <p>Elige la categoría (apartamento, solar, local…), y si es <span class="badge sell">Venta</span> o <span class="badge rent">Alquiler</span>. En alquiler se añade el periodo: diario, mensual, trimestral o anual. La categoría decide qué características te pedirá el paso 3.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <b>Datos</b>
+        <p>Título y precio (obligatorios), condición (a estrenar / en construcción / de reventa), área construida y de terreno, y la URL del anuncio —si la dejas vacía se genera del título—. Abajo puedes escribir el título y la descripción en otros idiomas.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <b>Características</b>
+        <p>Primero los números (habitaciones, baños, parqueos…), luego las etiquetas de lo que tiene la propiedad: toca para activarlas. Debajo va la descripción, con el botón <span class="ui">Escribir con IA</span>.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <b>Cerca de</b>
+        <p>Marca lo que haya en la zona (colegio, supermercado, hospital…). La distancia en km es opcional.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <b>Ubicación</b>
+        <p>Escribe la dirección y elige una sugerencia: rellena ciudad, provincia, país y coloca el pin. También puedes tocar el mapa directamente. <strong>El pin es obligatorio.</strong> El campo «Dirección para el cliente» es opcional: es lo que ve quien contacta si prefieres no dar la exacta.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <b>Fotos</b>
+        <p>Foto principal obligatoria (JPG o PNG, hasta 3 MB) y galería —el número de fotos depende de tu plan—. Si tu plan lo incluye, también imagen 360° y enlace de YouTube. Documentos en PDF, DOC, DOCX o TXT, hasta 5 MB cada uno.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <b>SEO</b>
+        <p>Meta título, meta descripción, palabras clave separadas por comas e imagen para compartir. Todo opcional: mejora cómo se ve tu anuncio en Google y al compartirlo.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <b>Revisar</b>
+        <p>Un resumen por cada paso, cada uno con su enlace para volver a editarlo. Cuando esté todo, <span class="ui primary">Publicar</span>.</p>
+      </div>
+    </li>
+  </ol>
+
+  <h3>Escribir la descripción con IA</h3>
+  <p>El botón usa la categoría, el precio, la ubicación, las características y las fotos que ya cargaste.</p>
+  <ul>
+    <li>Necesita <strong>categoría y precio o ciudad</strong>, o al menos <strong>una foto</strong>. Debajo del botón se te dice cuál falta.</li>
+    <li>Si ya escribiste una descripción, te pregunta antes de reemplazarla. Nunca borra tu texto en silencio.</li>
+    <li>Si tu plan no la incluye, verás «Tu plan no incluye descripciones con IA».</li>
+  </ul>
+
+  <div class="note careful">
+    <span class="tag">Al publicar</span>
+    Si tu cuenta tiene aprobación automática, el anuncio queda publicado. Si no,
+    entra <span class="badge warn">En revisión</span> y un administrador lo aprueba.
+    Si tu plan no da para más anuncios, el error te lo dirá con un enlace directo a
+    <strong>Planes</strong>.
+  </div>
+</section>
+
+<section id="ficha-propiedad">
+  <div class="head">
+    <h2>Ficha de propiedad</h2>
+    <span class="route">/properties/:código</span>
+  </div>
+  <p class="purpose">Todo sobre un anuncio y, al final, la gente que preguntó por él.</p>
+
+  <ul>
+    <li><strong>Galería</strong> de fotos y la línea rápida: <span class="mono">3h · 2b · 210 m²</span> y la ciudad. Es lo que lees por teléfono.</li>
+    <li><strong>Sobre la propiedad</strong> — tu descripción. Si el anuncio aún no tiene, la sección no aparece.</li>
+    <li><strong>Ficha</strong> — precio, área, habitaciones y baños.</li>
+    <li><strong>Publicación</strong> — ciudad, código, fecha de creación, estado de moderación, hasta cuándo está destacado y cuántos leads acumula.</li>
+    <li><strong>Leads de este anuncio</strong> — cada uno con su temperatura, su etapa y cuándo fue la última actividad. Pulsa para abrir la ficha del lead.</li>
+  </ul>
+</section>
+
+<section id="proyectos">
+  <div class="head">
+    <h2>Proyectos</h2>
+    <span class="route">/projects</span>
+  </div>
+  <p class="purpose">Un proyecto agrupa modelos y unidades bajo una sola ficha. En el portal es <strong>una sola card</strong>, nunca una por unidad.</p>
+
+  <h3>Qué muestra cada tarjeta</h3>
+  <ul>
+    <li>Nombre y ciudad.</li>
+    <li>Etapa: <span class="badge brand">Preventa</span> o <span class="badge brand">En construcción</span>.</li>
+    <li><span class="badge neutral">Agotado</span> cuando ya no queda ninguna unidad disponible.</li>
+    <li>Precio «Desde», si hay unidades con precio.</li>
+    <li>Barra de disponibilidad con <em>disponibles / total</em>.</li>
+  </ul>
+
+  <div class="note">
+    <span class="tag">«Sin inventario» ≠ «Agotado»</span>
+    Si aún no has cargado unidades, la tarjeta dice <em>Sin inventario</em>. Una barra
+    vacía se leería como agotado, y no es lo mismo.
+  </div>
+
+  <h3>Crear un proyecto</h3>
+  <p>Con <span class="ui primary">Nuevo proyecto</span>. Pide nombre, descripción, categoría, etapa, país/provincia/ciudad, zona (opcional), pin en el mapa (opcional), imagen principal (obligatoria), galería, documentos, video de YouTube, URL y datos SEO. Al crearlo te lleva directo a su ficha, que es donde se cargan los modelos y las unidades.</p>
+
+  <div class="note careful">
+    <span class="tag">Antes de crear</span>
+    Crear un proyecto consume una plaza de tu plan. Si no te queda ninguna, el CRM
+    te lo dice <em>antes</em> de que llenes el formulario, con un enlace a Planes.
+    <strong>Editar</strong> un proyecto existente nunca está bloqueado: siempre puedes
+    corregir lo que ya publicaste, aunque tu plan haya caducado.
+  </div>
+</section>
+
+<section id="ficha-proyecto">
+  <div class="head">
+    <h2>Ficha de proyecto</h2>
+    <span class="route">/projects/:id</span>
+  </div>
+  <p class="purpose">Dos pestañas: <strong>Modelos</strong> (las tipologías que se publican) y <strong>Disponibilidad</strong> (tus unidades, una por una).</p>
+
+  <h3>Cabecera</h3>
+  <ul>
+    <li>Etapa, <span class="badge ok">Visible</span> u <span class="badge neutral">Oculto</span>, y <span class="badge neutral">Agotado</span> si aplica. Rango de precios.</li>
+    <li><span class="ui">Activar</span> / <span class="ui">Desactivar</span> — tu interruptor de publicación: es lo que pone el proyecto en el mapa y el inicio de la app.</li>
+    <li><span class="ui">Editar</span> — vuelve al formulario del proyecto.</li>
+    <li><span class="ui primary">Cerrar venta</span> — registra la venta de una unidad.</li>
+  </ul>
+
+  <div class="note careful">
+    <span class="tag">Si no puedes activarlo</span>
+    En lugar de un botón apagado sin explicación, verás el motivo:
+    <span class="badge warn">Pendiente de aprobación</span> o
+    <span class="badge warn">Rechazado por el administrador</span>. Eso lo mueve un
+    administrador, no tú.
+  </div>
+
+  <h3>Pestaña Modelos</h3>
+  <p>Una tipología es un modelo de unidad: <em>2 habitaciones, 90 m², desde RD$5,900,000</em>. Es lo que ve el comprador. Con <span class="ui">Nueva tipología</span> defines nombre (obligatorio), habitaciones, baños, área, precio base y orden de aparición.</p>
+
+  <div class="note">
+    <span class="tag">Borrar una tipología no borra unidades</span>
+    Sus unidades sobreviven: quedan como <em>Sin tipología</em> y siguen en el
+    inventario. El CRM te dice cuántas quedaron así. Puedes reasignarlas después.
+  </div>
+
+  <h3>Pestaña Disponibilidad</h3>
+  <p>La tabla de unidades: identificador, tipología, piso, precio y estado. Este detalle unidad por unidad es <strong>solo del CRM</strong>: el portal nunca lo muestra, solo el agregado por tipología.</p>
+
+  <h4>Generar unidades por rango</h4>
+  <ol class="steps">
+    <li>Pulsa <span class="ui">Generar unidades</span>.</li>
+    <li>Indica el identificador inicial y el final: <span class="mono">«301»</span> a <span class="mono">«312»</span>, o <span class="mono">«A-1»</span> a <span class="mono">«A-8»</span>. Deben compartir prefijo y terminar en número.</li>
+    <li>Opcionalmente asigna tipología, piso (acepta texto: «PB», «Mezzanine», «PH»), precio y estado inicial.</li>
+    <li><span class="ui primary">Crear</span>.</li>
+  </ol>
+
+  <div class="note careful">
+    <span class="tag">Lee siempre las dos cifras</span>
+    El resultado es <span class="mono">Creadas: N · Omitidas: M</span>. «Omitidas»
+    son identificadores que ya existían. Si lees <span class="mono">Creadas: 0 · Omitidas: 12</span>,
+    ese rango ya se había generado —probablemente enviaste el formulario dos veces.
+  </div>
+
+  <h4>Cerrar una venta</h4>
+  <ol class="steps">
+    <li>Pulsa <span class="ui primary">Cerrar venta</span>. Solo aparecen las unidades <span class="badge ok">Disponible</span>.</li>
+    <li>Elige la unidad y el comprador.</li>
+    <li>Guarda. La unidad pasa a <span class="badge neutral">Vendida</span> y baja la disponibilidad del proyecto.</li>
+  </ol>
+
+  <div class="note">
+    <span class="tag">Sobre el comprador</span>
+    Solo aparecen los contactos <strong>con cuenta en la app</strong>: la venta queda
+    registrada contra esa cuenta. Si no tienes ninguno, no se puede cerrar la venta
+    todavía. Y ojo: al sacar una unidad de «Vendida» se borran el comprador y la
+    fecha de venta.
+  </div>
+</section>
+
+<section id="inventario">
+  <div class="head">
+    <h2>Inventario global</h2>
+    <span class="route">/inventory</span>
+  </div>
+  <p class="purpose">Todas las unidades de tu cuenta en una tabla, agregadas por estado.</p>
+
+  <p>Una fila por proyecto con las columnas <strong>Disponible</strong>, <strong>Reservada</strong>, <strong>Vendida</strong>, <strong>No disponible</strong> y el total, más una fila final con los totales de toda la cuenta. El nombre de cada proyecto enlaza a su ficha.</p>
+
+  <div class="note">
+    <span class="tag">Para qué sirve</span>
+    Es la pantalla donde se detecta de un vistazo el proyecto al que se le olvidó
+    cargar el inventario: aparece con todos los estados en cero.
+  </div>
+</section>
+
+<!-- ============================================================= SISTEMA -->
+
+<section id="notificaciones">
+  <div class="head">
+    <h2>Notificaciones</h2>
+    <span class="route">/notifications</span>
+  </div>
+  <p class="purpose">La misma bandeja que ves en la app: mensajes, leads, pagos, aprobaciones, citas.</p>
+
+  <ul>
+    <li>Las no leídas llevan una franja teal a la izquierda y una insignia de color.</li>
+    <li><span class="ui">Marcar como leída</span> en cada una, o <span class="ui">Marcar todas como leídas</span> arriba.</li>
+    <li>Se muestran 20 por página, y el pie te dice «Mostrando 20 de 63» para que sepas que hay más.</li>
+  </ul>
+
+  <div class="note careful">
+    <span class="tag">«Marcar todas» va en serio</span>
+    Marca <em>todas</em> tus notificaciones, incluidas las que no caben en esta
+    página. El contador del menú lateral baja a cero.
+  </div>
+
+  <p>Las categorías que verás: Mensajes, Anuncios, Leads, Búsquedas guardadas, Favoritos, Reseñas, Pagos, Suscripción, Destacados, Citas, Consultas de anuncio y de proyecto, Verificación y General.</p>
+
+  <p>Para decidir <em>qué</em> te llega y por dónde, ve a <a href="#ajustes">Ajustes</a>.</p>
+</section>
+
+<section id="plan">
+  <div class="head">
+    <h2>Plan y facturación</h2>
+    <span class="route">/plan</span>
+  </div>
+  <p class="purpose">Qué plan tienes, cuánto has consumido de cada cosa y cómo contratar otro.</p>
+
+  <h3>Plan actual</h3>
+  <p>
+    Por cada plan activo verás su fecha de vencimiento y, característica por
+    característica, tu consumo: <span class="mono">7 de 20</span> o <em>Ilimitado</em>.
+    Esta es la pantalla que responde «¿por qué no me deja publicar?»: te dice
+    exactamente <strong>qué</strong> cupo se agotó.
+  </p>
+
+  <h3>Contratar un plan</h3>
+  <p>En <strong>Planes disponibles</strong>, pulsa <span class="ui primary">Contratar</span> y elige cómo pagar:</p>
+
+  <div class="scroller">
+  <table>
+    <thead><tr><th>Método</th><th>Cómo funciona</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Transferencia bancaria</td>
+        <td>Se muestran los datos de la cuenta. Haces la transferencia, subes el comprobante (JPG, PNG, PDF o Word, máximo 6 MB) y un administrador lo revisa. Mientras tanto, en esta pantalla aparece un aviso de que tu transferencia está en revisión.</td>
+      </tr>
+      <tr>
+        <td>PayPal</td>
+        <td>Se abre una ventana emergente. Si tu navegador la bloquea, aparece un botón <span class="ui">Abrir PayPal</span> para reintentar. Si cierras la ventana sin pagar, vuelves a la lista de métodos.</td>
+      </tr>
+      <tr>
+        <td>Tarjeta</td>
+        <td>Pago con tarjeta en el mismo diálogo. Si tu banco pide verificación (3D Secure), la página se recarga al volver y te dice si el pago se completó o no.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="tag">Tras un pago con tarjeta</span>
+    «Pago recibido» confirma el cobro, no la activación inmediata: el plan puede
+    tardar unos segundos en aparecer. Refresca la pantalla si no lo ves al momento.
+  </div>
+</section>
+
+<section id="ajustes">
+  <div class="head">
+    <h2>Ajustes</h2>
+    <span class="route">/settings</span>
+  </div>
+  <p class="purpose">Tu perfil, el idioma y —lo importante— qué notificaciones recibes.</p>
+
+  <h3>Perfil</h3>
+  <p>Nombre, correo e ID de agente. Son de solo lectura: se cambian desde tu perfil en la app de RentaFácil.</p>
+
+  <h3>Preferencias de notificaciones</h3>
+  <p>Una tabla de cinco tipos por dos canales. Marca o desmarca cada casilla y se guarda sola.</p>
+
+  <div class="scroller">
+  <table>
+    <thead><tr><th>Tipo</th><th>Qué te avisa</th><th>Canales</th></tr></thead>
+    <tbody>
+      <tr><td>Alertas de leads</td><td>Alguien preguntó por un anuncio tuyo</td><td>Push · Correo</td></tr>
+      <tr><td>Coincidencias de anuncios</td><td>Tu anuncio encaja con lo que alguien busca</td><td>Push · Correo</td></tr>
+      <tr><td>Suscripción</td><td>Vencimientos y estado de tu plan</td><td>Push · Correo</td></tr>
+      <tr><td>Reactivación</td><td>Recordatorios para volver a la actividad</td><td>Push · Correo</td></tr>
+      <tr><td>Actualizaciones de citas</td><td>Cambios en visitas y reuniones</td><td>Push · Correo</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p><span class="ui">Restablecer preferencias</span> devuelve las diez casillas a sus valores por defecto. Pide confirmación antes.</p>
+
+  <div class="note careful">
+    <span class="tag">Si una casilla se desmarca sola</span>
+    Significa que el servidor rechazó el cambio y aparece un aviso con
+    <span class="ui">Reintentar</span>. El estado que ves es siempre el guardado.
+  </div>
+</section>
+
+<!-- =========================================================== REFERENCIA -->
+
+<section id="glosario">
+  <div class="head">
+    <h2>Glosario de estados</h2>
+  </div>
+  <p class="purpose">Todo lo que aparece como insignia de color en el CRM, en un solo sitio.</p>
+
+  <h3>Etapas del lead</h3>
+  <div class="scroller">
+  <table>
+    <thead><tr><th>Etapa</th><th>Significa</th></tr></thead>
+    <tbody>
+      <tr><td>Nuevo</td><td>Entró y nadie lo ha tocado. El reloj de SLA está corriendo.</td></tr>
+      <tr><td>Contactado</td><td>Ya hubo un primer contacto real.</td></tr>
+      <tr><td>Visita agendada</td><td>Hay una visita puesta en el calendario.</td></tr>
+      <tr><td>Negociación</td><td>Se está discutiendo precio o condiciones.</td></tr>
+      <tr><td>Ganado</td><td>Se cerró la operación.</td></tr>
+      <tr><td>Perdido</td><td>No prosperó.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Estado del anuncio</h3>
+  <div class="scroller">
+  <table>
+    <thead><tr><th>Estado</th><th>Significa</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge neutral">Borrador</span></td><td>Aún no se ha enviado a publicar.</td></tr>
+      <tr><td><span class="badge ok">Publicada</span></td><td>Visible en el portal.</td></tr>
+      <tr><td><span class="badge neutral">Pausada</span></td><td>Retirada temporalmente. Se vuelve a publicar en un clic.</td></tr>
+      <tr><td><span class="badge warn">Vencida</span></td><td>Se acabó su periodo de publicación.</td></tr>
+      <tr><td><span class="badge neutral">Vendida</span> / <span class="badge neutral">Alquilada</span></td><td>Operación cerrada.</td></tr>
+      <tr><td><span class="badge danger">Rechazada</span></td><td>El administrador la devolvió. Hay que corregirla y reenviarla.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Moderación</h3>
+  <p>
+    <span class="badge warn">En revisión</span> el administrador aún no la ha visto ·
+    <span class="badge ok">Aprobada</span> lista para publicarse ·
+    <span class="badge danger">Rechazada</span> devuelta con observaciones.
+  </p>
+  <p class="purpose" style="font-size:14.5px">
+    Es un eje distinto del estado: <em>tú</em> mueves el estado (publicar, pausar,
+    cerrar); la moderación la mueve el administrador.
+  </p>
+
+  <h3>Origen del lead</h3>
+  <p>
+    <span class="badge neutral">Favorito</span>
+    <span class="badge neutral">Contacto directo</span>
+    <span class="badge neutral">WhatsApp</span>
+    <span class="badge neutral">Compartido</span>
+    <span class="badge warn">Bajada de precio</span>
+    <span class="badge neutral">Búsqueda guardada</span>
+  </p>
+
+  <h3>Temperatura del lead</h3>
+  <p>Muy caliente, Caliente, Tibio, Frío. Es una lectura de qué tan probable es que avance.</p>
+
+  <h3>Estado de unidad</h3>
+  <p>
+    <span class="badge ok">Disponible</span>
+    <span class="badge warn">Reservada</span>
+    <span class="badge neutral">Vendida</span>
+    <span class="badge neutral">No disponible</span>
+  </p>
+  <p class="purpose" style="font-size:14.5px">Solo <em>Disponible</em> cuenta como inventario vendible. <em>Vendida</em> únicamente se pone cerrando una venta con comprador.</p>
+</section>
+
+<section id="problemas">
+  <div class="head">
+    <h2>Si algo no funciona</h2>
+  </div>
+  <p class="purpose">Los mensajes que más aparecen y qué hacer con cada uno.</p>
+
+  <div class="scroller">
+  <table>
+    <thead><tr><th>Lo que ves</th><th>Qué hacer</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>«No pudimos contactar el servidor»</td>
+        <td>Revisa tu conexión y pulsa <span class="ui">Reintentar</span>. Tu sesión sigue abierta.</td>
+      </tr>
+      <tr>
+        <td>Vuelves de golpe al login</td>
+        <td>La sesión caducó. Entra de nuevo: te devuelve a la pantalla donde estabas.</td>
+      </tr>
+      <tr>
+        <td>Algo que moviste vuelve solo a su sitio</td>
+        <td>El servidor rechazó el cambio. Siempre viene con un aviso y un <span class="ui">Reintentar</span>. Lo que ves en pantalla es lo que está guardado.</td>
+      </tr>
+      <tr>
+        <td>La lista sale vacía</td>
+        <td>Casi siempre hay un filtro puesto. Mira las píldoras activas y el contador del botón de filtros avanzados, y pulsa <span class="ui">Limpiar filtros</span>.</td>
+      </tr>
+      <tr>
+        <td>No te deja publicar</td>
+        <td>Es un límite de plan. Ve a <a href="#plan">Plan</a> y mira qué cupo está agotado.</td>
+      </tr>
+      <tr>
+        <td>Un anuncio no aparece en el portal</td>
+        <td>Comprueba dos cosas distintas: su <strong>estado</strong> (¿está pausado?) y su <strong>moderación</strong> (¿sigue en revisión?).</td>
+      </tr>
+      <tr>
+        <td>«Créditos: no disponibles» en la barra de lote</td>
+        <td>No se pudo leer tu saldo. Las demás acciones siguen funcionando; recarga la pantalla para recuperar el número.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="tag">Una regla general</span>
+    El CRM nunca inventa datos. Un «—» significa que ese dato no existe, no que
+    valga cero. Y cuando una acción no se aplica, te dice el motivo exacto en vez
+    de un error genérico.
+  </div>
+</section>
+
+<p class="footer">RentaFácil CRM · Manual del agente</p>
+
+</main>
+</div>
+</body>
+</html>
