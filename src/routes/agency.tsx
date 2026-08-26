@@ -6,7 +6,6 @@ import {
   Badge,
   Button,
   Card,
-  EmptyState,
   ErrorState,
   Field,
   LoadingState,
@@ -51,10 +50,11 @@ export function AgencyPage() {
   const profile = useResource((signal) => getAgency(signal), [nonce])
   const isAdmin = profile.status === 'ready' && profile.data.is_admin
 
-  const roster = useResource(
-    (signal) => (isAdmin ? listMembers({ limit: 100 }, signal) : Promise.resolve(null)),
-    [isAdmin, nonce],
-  )
+  // El equipo lo lee cualquier miembro activo; las invitaciones, solo quien
+  // puede crearlas. Un asesor necesita ver con quién trabaja, y la lista no le
+  // da ninguna capacidad: cada escritura vuelve a exigir owner/admin en el
+  // servidor.
+  const roster = useResource((signal) => listMembers({ limit: 100 }, signal), [nonce])
   const invites = useResource(
     (signal) => (isAdmin ? listInvitations({ status: 'pending' }, signal) : Promise.resolve(null)),
     [isAdmin, nonce],
@@ -111,16 +111,15 @@ export function AgencyPage() {
         </Card>
       )}
 
-      {!isAdmin ? (
-        <EmptyState title={t('agency.memberOnly')} hint={t('agency.memberOnlyHint')} />
-      ) : (
-        <>
-          <InviteBox
-            disabled={!canInvite({ seats_used, seats_limit, over_capacity: overCapacity })}
-            onInvited={reload}
-          />
+      {isAdmin && (
+        <InviteBox
+          disabled={!canInvite({ seats_used, seats_limit, over_capacity: overCapacity })}
+          onInvited={reload}
+        />
+      )}
 
-          {roster.status === 'loading' && <LoadingState label={t('agency.loading')} />}
+      <>
+        {roster.status === 'loading' && <LoadingState label={t('agency.loading')} />}
           {roster.status === 'error' && (
             <ErrorState message={roster.message} onRetry={roster.reload} retryLabel={t('common.retry')} />
           )}
@@ -134,7 +133,7 @@ export function AgencyPage() {
                     <th className="px-3 py-2">{t('agency.col.role')}</th>
                     <th className="px-3 py-2">{t('agency.col.status')}</th>
                     <th className="px-3 py-2">{t('agency.col.joined')}</th>
-                    <th className="px-3 py-2">{t('agency.col.actions')}</th>
+                    {isAdmin && <th className="px-3 py-2">{t('agency.col.actions')}</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -153,6 +152,7 @@ export function AgencyPage() {
                       <td className="px-3 py-2 text-muted">
                         {member.joined_at === null ? '—' : formatDate(member.joined_at)}
                       </td>
+                      {isAdmin && (
                       <td className="px-3 py-2">
                         <MemberActions
                           member={member}
@@ -166,6 +166,7 @@ export function AgencyPage() {
                           onExit={() => setExiting(member)}
                         />
                       </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -196,8 +197,7 @@ export function AgencyPage() {
               </ul>
             </Card>
           )}
-        </>
-      )}
+      </>
 
       {transferring !== null && (
         <TransferDialog

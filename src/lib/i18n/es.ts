@@ -610,8 +610,6 @@ export const es = {
   'agency.loading': 'Cargando la agencia…',
   'agency.seats': 'Plazas',
   'agency.overCapacity': 'Tu equipo tiene más miembros que plazas cubre tu plan. Nadie ha sido suspendido, pero no podrás invitar ni reactivar a nadie hasta volver por debajo del límite.',
-  'agency.memberOnly': 'Solo la dirección ve el equipo',
-  'agency.memberOnlyHint': 'Puedes consultar y editar los datos de la agencia desde su ficha.',
   'agency.col.member': 'Miembro',
   'agency.col.role': 'Rol',
   'agency.col.status': 'Estado',

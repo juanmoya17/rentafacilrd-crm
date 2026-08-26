@@ -600,8 +600,6 @@ export const en: Record<TranslationKey, string> = {
   'agency.loading': 'Loading the agency…',
   'agency.seats': 'Seats',
   'agency.overCapacity': 'Your team has more members than your plan covers. Nobody has been suspended, but you cannot invite or reactivate anyone until you are back under the limit.',
-  'agency.memberOnly': 'Only management sees the team',
-  'agency.memberOnlyHint': 'You can view and edit the agency details from its profile.',
   'agency.col.member': 'Member',
   'agency.col.role': 'Role',
   'agency.col.status': 'Status',
