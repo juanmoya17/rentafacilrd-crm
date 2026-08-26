@@ -668,6 +668,17 @@ export const es = {
   'agencyProfile.saved': 'Datos guardados.',
   'agencyProfile.verified': 'Agencia verificada',
   'agencyProfile.readOnly': 'Solo la dirección de la agencia puede editar estos datos.',
+
+  'claim.title': 'Anuncios por incorporar',
+  'claim.hint': 'Los trajo consigo alguien de tu equipo. Hasta que los incorpores no aparecen en el inventario de la agencia.',
+  'claim.owner': 'De',
+  'claim.selected': '{count} seleccionados',
+  'claim.action': 'Incorporar {count} a la agencia',
+  'claim.tooMany': 'Como mucho {max} a la vez.',
+  'claim.confirm': 'Pasarán a ser de la agencia: los verá todo el equipo y, si esa persona se va, se quedan aquí.',
+  'claim.cancel': 'Cancelar',
+  'claim.type.property': 'Propiedad',
+  'claim.type.project': 'Proyecto',
 } as const
 
 export type TranslationKey = keyof typeof es

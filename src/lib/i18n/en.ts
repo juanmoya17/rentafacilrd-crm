@@ -658,4 +658,15 @@ export const en: Record<TranslationKey, string> = {
   'agencyProfile.saved': 'Details saved.',
   'agencyProfile.verified': 'Verified agency',
   'agencyProfile.readOnly': 'Only the agency management can edit these details.',
+  'claim.title': 'Listings to bring in',
+  'claim.hint': 'Someone on your team arrived with these. Until you bring them in they do not appear in the agency inventory.',
+  'claim.owner': 'From',
+  'claim.selected': '{count} selected',
+  'claim.action': 'Bring {count} into the agency',
+  'claim.tooMany': 'At most {max} at a time.',
+  'claim.confirm': 'They become the agency\u2019s: the whole team will see them, and if that person leaves they stay here.',
+  'claim.cancel': 'Cancel',
+  'claim.type.property': 'Property',
+  'claim.type.project': 'Project',
+
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   canInvite,
+  claimKey,
+  claimKeyToItem,
   exitReceivers,
   holdsSomething,
   seatsLabel,
@@ -88,5 +90,23 @@ describe('exitReceivers', () => {
     // llegar a ofrecerlos.
     const list = exitReceivers([member(1, 'active'), member(2, 'suspended')], 3)
     expect(list.map((m) => m.id)).toEqual([1])
+  })
+})
+
+describe('claimKey', () => {
+  it('keeps a property and a project with the same id apart', () => {
+    // Las dos tablas numeran por separado. Sin el tipo delante, marcar la
+    // propiedad 7 marcaría también el proyecto 7 — y se incorporaría el
+    // anuncio equivocado sin que nada falle a la vista.
+    expect(claimKey({ listing_type: 'property', id: 7 })).not.toBe(
+      claimKey({ listing_type: 'project', id: 7 }),
+    )
+  })
+
+  it('round-trips back into what the endpoint expects', () => {
+    expect(claimKeyToItem(claimKey({ listing_type: 'project', id: 12 }))).toEqual({
+      type: 'project',
+      id: 12,
+    })
   })
 })

@@ -316,3 +316,58 @@ export async function reassignListing(
     body: { type, id, to_customer_id: toCustomerId },
   })
 }
+
+/** Un anuncio que un miembro trajo consigo y la agencia aún no ha incorporado. */
+export interface ClaimableListing {
+  listing_type: 'property' | 'project'
+  id: number
+  title: string | null
+  slug_id: string | null
+  image: string | null
+  city: string | null
+  price: string | number | null
+  owner: string | null
+}
+
+/** El mismo techo que el lote de inventario. Uno para el producto, no dos. */
+export const MAX_CLAIM = 200
+
+/**
+ * Clave de selección.
+ *
+ * La lista mezcla propiedades y proyectos, que numeran por separado: sin el
+ * tipo delante, la propiedad 7 y el proyecto 7 son la misma entrada y marcar
+ * una marca la otra. Es el fallo que incorpora el anuncio equivocado sin que
+ * nada falle a la vista, por eso tiene test propio.
+ */
+export function claimKey(item: Pick<ClaimableListing, 'listing_type' | 'id'>): string {
+  return `${item.listing_type}:${item.id}`
+}
+
+/** De vuelta a lo que espera el endpoint. */
+export function claimKeyToItem(key: string): { type: 'property' | 'project'; id: number } {
+  const [type, id] = key.split(':')
+
+  return { type: type as 'property' | 'project', id: Number(id) }
+}
+
+export async function listClaimable(
+  filters: { offset?: number; limit?: number } = {},
+  signal?: AbortSignal,
+): Promise<{ items: ClaimableListing[]; total: number }> {
+  const envelope = await api<Envelope<ClaimableListing[]>>(
+    `crm/agency/claimable${query(filters)}`,
+    { signal },
+  )
+
+  return { items: envelope.data, total: envelope.total ?? envelope.data.length }
+}
+
+export async function claimListings(keys: string[]): Promise<number> {
+  const envelope = await api<Envelope<null> & { affected?: number }>('crm/agency/listings/claim', {
+    method: 'POST',
+    body: { items: keys.map(claimKeyToItem) },
+  })
+
+  return envelope.affected ?? 0
+}

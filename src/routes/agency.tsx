@@ -13,6 +13,7 @@ import {
   PageHeader,
   Select,
 } from '@/components/ui'
+import { ClaimListings } from '@/components/claim-listings'
 import {
   canInvite,
   cancelInvitation,
@@ -198,6 +199,10 @@ export function AgencyPage() {
             </Card>
           )}
       </>
+
+      {/* Solo la dirección incorpora inventario: es una decisión sobre lo que
+          entra en la empresa, no sobre lo que uno publicó. */}
+      {isAdmin && <ClaimListings onClaimed={reload} />}
 
       {transferring !== null && (
         <TransferDialog
