@@ -23,6 +23,8 @@ import { ProjectDetailPage } from '@/routes/project-detail'
 import { InventoryPage } from '@/routes/inventory'
 import { TasksPage } from '@/routes/tasks'
 import { NotificationsPage } from '@/routes/notifications'
+import { AgencyPage } from '@/routes/agency'
+import { AgencyProfilePage } from '@/routes/agency-profile'
 import { PlanPage } from '@/routes/plan'
 import { SettingsPage } from '@/routes/settings'
 import './index.css'
@@ -54,6 +56,8 @@ const router = createBrowserRouter([
           { path: '/inventory', element: <InventoryPage /> },
           { path: '/tasks', element: <TasksPage /> },
           { path: '/notifications', element: <NotificationsPage /> },
+          { path: '/agency', element: <AgencyPage /> },
+          { path: '/agency/profile', element: <AgencyProfilePage /> },
           { path: '/plan', element: <PlanPage /> },
           { path: '/settings', element: <SettingsPage /> },
         ],

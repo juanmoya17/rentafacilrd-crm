@@ -84,6 +84,7 @@ const SECTIONS: { title: TranslationKey; items: NavItem[] }[] = [
         icon: Bell,
         badge: 'unread',
       },
+      { to: '/agency', label: 'nav.agency', icon: Building2 },
       { to: '/plan', label: 'nav.plan', icon: CreditCard },
       { to: '/settings', label: 'nav.settings', icon: Settings },
       { to: '/manual-agente.html', label: 'nav.docs', icon: BookOpen, external: true },
