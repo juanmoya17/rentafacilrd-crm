@@ -655,7 +655,6 @@ export const es = {
   'agency.exit.contacts': 'contactos',
   'agency.exit.tasks': 'tareas pendientes',
 
-  'agencyProfile.title': 'Ficha de la agencia',
   'agencyProfile.subtitle': 'Los datos que ven tus clientes.',
   'agencyProfile.name': 'Nombre comercial',
   'agencyProfile.rnc': 'RNC',

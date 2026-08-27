@@ -91,11 +91,13 @@ export function AgencyProfileForm({
 
   return (
     <div>
-      {agency.is_verified && (
-        <div className="mb-4 flex justify-end">
-          <Badge tone="success">{t('agencyProfile.verified')}</Badge>
-        </div>
-      )}
+      {/* La pestaña ya dice "Datos", así que el título de la antigua pantalla
+          sobraría aquí. El subtítulo no: es lo único que avisa de que esto se
+          publica, y sin él el formulario parece configuración interna. */}
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <p className="text-sm text-muted">{t('agencyProfile.subtitle')}</p>
+        {agency.is_verified && <Badge tone="success">{t('agencyProfile.verified')}</Badge>}
+      </div>
 
       {!canEdit && (
         <Card className="mb-4 p-3 text-sm text-muted">{t('agencyProfile.readOnly')}</Card>

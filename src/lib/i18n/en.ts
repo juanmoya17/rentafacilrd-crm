@@ -645,7 +645,6 @@ export const en: Record<TranslationKey, string> = {
   'agency.exit.contacts': 'contacts',
   'agency.exit.tasks': 'pending tasks',
 
-  'agencyProfile.title': 'Agency profile',
   'agencyProfile.subtitle': 'What your clients see.',
   'agencyProfile.name': 'Trading name',
   'agencyProfile.rnc': 'RNC',
