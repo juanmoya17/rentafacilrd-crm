@@ -169,6 +169,32 @@ export function exitReceivers(members: AgencyMember[], leavingMemberId: number):
   return members.filter((m) => m.status === 'active' && m.id !== leavingMemberId)
 }
 
+/**
+ * Qué nombre pintar en la etiqueta "Asignada a [nombre]" de una tarjeta de
+ * propiedad o proyecto — o `null` si no hay que pintar nada.
+ *
+ * Dos guardas, y ninguna puede depender de que la otra corra primero:
+ * - Es mi propio anuncio: "Asignada a mí" en todas mis filas es ruido.
+ * - `myId` desconocido (la sesión todavía está cargando): falla cerrado —
+ *   mejor no pintar una etiqueta un instante que pintar "Asignada a Ana"
+ *   sobre el propio anuncio de Ana mientras el contexto de autenticación
+ *   resuelve.
+ *
+ * `?? null` en el retorno, no un simple `return addedByName`: `added_by` y
+ * `added_by_name` viajan tipados como requeridos porque el backend los manda
+ * siempre, pero la rama que los manda no está mergeada, así que hoy llegan
+ * `undefined` en cada fila. Sin esto, `undefined !== null` deja pasar el
+ * guard de quien llama y `t()` interpola literalmente "Asignada a undefined".
+ */
+export function assignedAgentName(
+  addedBy: number,
+  addedByName: string | null,
+  myId: number | undefined,
+): string | null {
+  if (myId === undefined || addedBy === myId) return null
+  return addedByName ?? null
+}
+
 /** Igual que el `query()` de crm/api.ts, que es privado de ese módulo. */
 function query(params: Record<string, string | number | boolean | undefined>): string {
   const search = new URLSearchParams()

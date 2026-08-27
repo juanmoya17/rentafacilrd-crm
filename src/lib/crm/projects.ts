@@ -56,6 +56,10 @@ export interface CrmProject {
   units_total: number
   units_available: number
   sold_out: boolean
+  /** Who runs this listing. The roster is agency-wide since phase 5. */
+  added_by: number
+  /** Their name, already resolved server-side. Null if the account was deleted. */
+  added_by_name: string | null
 }
 
 export interface CrmTypology {

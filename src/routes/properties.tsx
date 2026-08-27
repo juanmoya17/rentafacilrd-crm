@@ -18,6 +18,7 @@ import {
   StretchVertical,
   Upload,
 } from 'lucide-react'
+import { useAuth } from '@/lib/auth-context'
 import { useI18n } from '@/lib/i18n/context'
 import {
   Badge,
@@ -38,6 +39,7 @@ import { ActionRail } from '@/components/action-rail'
 import { useRecordMorph, useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { useToast } from '@/lib/toast-context'
+import { assignedAgentName } from '@/lib/crm/agency'
 import {
   classifyBatchError,
   formatSpecs,
@@ -225,88 +227,104 @@ function PropertyCardGrid({
   selected,
   onToggle,
   onPublish,
+  myId,
 }: {
   items: CrmProperty[]
   selected: Set<number>
   onToggle: (id: number) => void
   onPublish: (id: number) => void
+  /** Who is looking. `undefined` while the auth context is still resolving. */
+  myId: number | undefined
 }) {
   const { t, formatNumber } = useI18n()
   const reveal = useRowReveal()
 
   return (
     <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {items.map((property, index) => (
-        <motion.li
-          key={property.id}
-          {...reveal(index)}
-          /* relative: `.rf-cardlink` stretches the title's anchor across this
-             element, so anything else clickable inside it needs to paint
-             above that overlay — hence `relative` on the checkbox and on the
-             footer row, not here alone. */
-          className="relative flex flex-col rounded-lg border border-rule bg-surface-raised p-3 transition-colors duration-(--duration-base) ease-out hover:border-rule-2"
-        >
-          {/* The photo carries the checkbox rather than the title row: over an
-              image it is always on the same surface, and it keeps the identity
-              line's left edge flush with everything below it. */}
-          <figure
-            className="relative mb-3"
-            aria-label={
-              property.images.length === 0
-                ? t('properties.noPhotos')
-                : t('properties.photoCount', { count: property.images.length })
-            }
+      {items.map((property, index) => {
+        const assignedTo = assignedAgentName(property.added_by, property.added_by_name, myId)
+        return (
+          <motion.li
+            key={property.id}
+            {...reveal(index)}
+            /* relative: `.rf-cardlink` stretches the title's anchor across this
+               element, so anything else clickable inside it needs to paint
+               above that overlay — hence `relative` on the checkbox and on the
+               footer row, not here alone. */
+            className="relative flex flex-col rounded-lg border border-rule bg-surface-raised p-3 transition-colors duration-(--duration-base) ease-out hover:border-rule-2"
           >
-            <PropertyPhoto
-              src={property.images[0]}
-              alt=""
-              eager={index < 6}
-              className="aspect-[16/9] w-full"
-            />
-            <PhotoDots count={property.images.length} />
-            <input
-              type="checkbox"
-              checked={selected.has(property.id)}
-              onChange={() => onToggle(property.id)}
-              aria-label={property.title}
-              /* size-4 + the tinted plate: a bare checkbox on photography is
-                 invisible against a light sky and lost against a dark roof. */
-              className="absolute left-1.5 top-1.5 size-4 rounded-sm bg-surface-raised accent-[var(--color-accent)] shadow-[0_0_0_3px_var(--color-surface-raised)]"
-            />
-          </figure>
+            {/* The photo carries the checkbox rather than the title row: over an
+                image it is always on the same surface, and it keeps the identity
+                line's left edge flush with everything below it. */}
+            <figure
+              className="relative mb-3"
+              aria-label={
+                property.images.length === 0
+                  ? t('properties.noPhotos')
+                  : t('properties.photoCount', { count: property.images.length })
+              }
+            >
+              <PropertyPhoto
+                src={property.images[0]}
+                alt=""
+                eager={index < 6}
+                className="aspect-[16/9] w-full"
+              />
+              <PhotoDots count={property.images.length} />
+              <input
+                type="checkbox"
+                checked={selected.has(property.id)}
+                onChange={() => onToggle(property.id)}
+                aria-label={property.title}
+                /* size-4 + the tinted plate: a bare checkbox on photography is
+                   invisible against a light sky and lost against a dark roof. */
+                className="absolute left-1.5 top-1.5 size-4 rounded-sm bg-surface-raised accent-[var(--color-accent)] shadow-[0_0_0_3px_var(--color-surface-raised)]"
+              />
+            </figure>
 
-          <div className="min-w-0">
-            <div className="rf-cardlink text-sm [overflow-wrap:anywhere]">
-              <PropertyName property={property} />
+            <div className="min-w-0">
+              <div className="rf-cardlink text-sm [overflow-wrap:anywhere]">
+                <PropertyName property={property} />
+              </div>
+              <p className="mt-0.5 font-mono text-xs text-muted">
+                {property.city !== null ? `${property.code} · ${property.city}` : property.code}
+              </p>
+              {/* Absent for a listing that is mine, or whose colleague's name
+                  came back null — no reserved row, or a solo agent's grid (the
+                  common case) would carry an empty line on every card. Not a
+                  link: this is plain text, so it never needs `relative` over
+                  `.rf-cardlink`. */}
+              {assignedTo !== null && (
+                <p className="mt-0.5 text-xs text-muted">
+                  {t('common.assignedTo', { name: assignedTo })}
+                </p>
+              )}
             </div>
-            <p className="mt-0.5 font-mono text-xs text-muted">
-              {property.city !== null ? `${property.code} · ${property.city}` : property.code}
-            </p>
-          </div>
 
-          <div className="mt-3 flex items-baseline justify-between gap-3">
-            <span className="font-mono text-sm font-medium text-ink">
-              <PriceCell property={property} />
-            </span>
-            <span className="font-mono text-xs text-muted">
-              {formatSpecs(property, formatNumber)}
-            </span>
-          </div>
+            <div className="mt-3 flex items-baseline justify-between gap-3">
+              <span className="font-mono text-sm font-medium text-ink">
+                <PriceCell property={property} />
+              </span>
+              <span className="font-mono text-xs text-muted">
+                {formatSpecs(property, formatNumber)}
+              </span>
+            </div>
 
-          <div className="mt-2.5">
-            <StatusBadges property={property} />
-          </div>
+            <div className="mt-2.5">
+              <StatusBadges property={property} />
+            </div>
 
-          {/* mt-auto so a card whose neighbour wrapped to two title lines still
-              lines its action row up with theirs. */}
-          <div className="relative mt-auto flex items-center justify-between gap-2 pt-3">
-            <span className="text-xs text-muted">
-              {t('common.leads')} <LeadCount property={property} />
-            </span>
-            <InlineAction property={property} onPublish={onPublish} />
-          </div>
-        </motion.li>
-      ))}
+            {/* mt-auto so a card whose neighbour wrapped to two title lines still
+                lines its action row up with theirs. */}
+            <div className="relative mt-auto flex items-center justify-between gap-2 pt-3">
+              <span className="text-xs text-muted">
+                {t('common.leads')} <LeadCount property={property} />
+              </span>
+              <InlineAction property={property} onPublish={onPublish} />
+            </div>
+          </motion.li>
+        )
+      })}
     </ul>
   )
 }
@@ -458,6 +476,10 @@ function Pager({
 export function PropertiesPage() {
   const { t, formatNumber } = useI18n()
   const { fail } = useToast()
+  // Who is looking, for the "Asignada a" tag — undefined while the auth
+  // context is still resolving, which assignedAgentName fails closed on.
+  const { state: authState } = useAuth()
+  const myId = authState.status === 'authenticated' ? authState.user.id : undefined
   const [params, setParams] = useSearchParams()
   const [compact, setCompact] = useState(true)
   // Local, not in the URL, for the same reason `compact` is: this is a display
@@ -1104,6 +1126,7 @@ export function PropertiesPage() {
                 selected={selected}
                 onToggle={toggle}
                 onPublish={publishOne}
+                myId={myId}
               />
               <div className="mt-3">{pager}</div>
             </>

@@ -1,10 +1,12 @@
 import { Link } from 'react-router'
 import { motion } from 'motion/react'
 import { Plus } from 'lucide-react'
+import { useAuth } from '@/lib/auth-context'
 import { useI18n } from '@/lib/i18n/context'
 import { Badge, EmptyState, ErrorState, LinkButton, LoadingState, PageHeader } from '@/components/ui'
 import { useLift, useRecordMorph, useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
+import { assignedAgentName } from '@/lib/crm/agency'
 import { fetchProjects, inventoryState, type CrmProject } from '@/lib/crm/projects'
 
 /** Share of units still available — the one number this card exists to show. */
@@ -30,7 +32,16 @@ function AvailabilityBar({ available, total }: { available: number; total: numbe
   )
 }
 
-function ProjectCard({ project, index }: { project: CrmProject; index: number }) {
+function ProjectCard({
+  project,
+  index,
+  myId,
+}: {
+  project: CrmProject
+  index: number
+  /** Who is looking. `undefined` while the auth context is still resolving. */
+  myId: number | undefined
+}) {
   const { t, formatCurrency } = useI18n()
   const to = `/projects/${project.id}`
   const morph = useRecordMorph(to)
@@ -41,6 +52,7 @@ function ProjectCard({ project, index }: { project: CrmProject; index: number })
   // are real inventory and would be missing from that sum.
   const available = project.units_available
   const total = project.units_total
+  const assignedTo = assignedAgentName(project.added_by, project.added_by_name, myId)
 
   return (
     <motion.div {...reveal(index)} {...lift} className="h-full">
@@ -59,6 +71,15 @@ function ProjectCard({ project, index }: { project: CrmProject; index: number })
           </div>
 
           {project.city ? <p className="mt-0.5 text-xs text-muted">{project.city}</p> : null}
+
+          {/* Absent for a project that is mine, or whose colleague's name came
+              back null — no reserved row for the common case of a solo agent's
+              grid. The whole card is already the link, so this is just text. */}
+          {assignedTo !== null && (
+            <p className="mt-0.5 text-xs text-muted">
+              {t('common.assignedTo', { name: assignedTo })}
+            </p>
+          )}
 
           {/* E.5 — one card per project, never one per unit. Null price_from
               renders nothing: "Desde RD$0" is a lie, not a placeholder. */}
@@ -96,6 +117,10 @@ function ProjectCard({ project, index }: { project: CrmProject; index: number })
 export function ProjectsPage() {
   const { t } = useI18n()
   const projects = useResource((signal) => fetchProjects(signal), [])
+  // Who is looking, for the "Asignada a" tag — undefined while the auth
+  // context is still resolving, which assignedAgentName fails closed on.
+  const { state: authState } = useAuth()
+  const myId = authState.status === 'authenticated' ? authState.user.id : undefined
 
   if (projects.status === 'loading') return <LoadingState label={t('common.loading')} />
   if (projects.status === 'error') {
@@ -133,7 +158,7 @@ export function ProjectsPage() {
           content and pushes the grid past the viewport on mobile. */}
       <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,17rem),1fr))]">
         {projects.data.map((project, index) => (
-          <ProjectCard key={project.id} project={project} index={index} />
+          <ProjectCard key={project.id} project={project} index={index} myId={myId} />
         ))}
       </div>
     </>

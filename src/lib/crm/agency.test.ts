@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assignedAgentName,
   canInvite,
   claimKey,
   claimKeyToItem,
@@ -90,6 +91,41 @@ describe('exitReceivers', () => {
     // llegar a ofrecerlos.
     const list = exitReceivers([member(1, 'active'), member(2, 'suspended')], 3)
     expect(list.map((m) => m.id)).toEqual([1])
+  })
+})
+
+describe('assignedAgentName', () => {
+  it('says nothing on my own listing — that would be noise on every row I see', () => {
+    expect(assignedAgentName(1, 'Ana', 1)).toBeNull()
+  })
+
+  it('names a colleague', () => {
+    expect(assignedAgentName(1, 'Ana', 2)).toBe('Ana')
+  })
+
+  it('says nothing when the colleague\'s account was deleted', () => {
+    // "Asignada a —" no informa de nada.
+    expect(assignedAgentName(1, null, 2)).toBeNull()
+  })
+
+  it('says nothing on my own listing even if my name were null, guard order must not matter', () => {
+    expect(assignedAgentName(1, null, 1)).toBeNull()
+  })
+
+  it('says nothing while the session is still resolving who is looking', () => {
+    // Falla cerrado: mejor no pintar una etiqueta un instante que pintar
+    // "Asignada a Ana" sobre el propio anuncio de Ana mientras el contexto
+    // de autenticación todavía no sabe quién mira.
+    expect(assignedAgentName(1, 'Ana', undefined)).toBeNull()
+  })
+
+  it('says nothing when the backend has not shipped the fields yet and they arrive as undefined', () => {
+    // La rama que manda added_by/added_by_name no está mergeada: declararlos
+    // requeridos en TypeScript no impide que hoy lleguen `undefined` en
+    // ejecución. Sin esto, `t('…assignedTo', { name: undefined })` pinta
+    // literalmente "Asignada a undefined".
+    const addedByName = undefined as unknown as string | null
+    expect(assignedAgentName(2, addedByName, 1)).toBeNull()
   })
 })
 

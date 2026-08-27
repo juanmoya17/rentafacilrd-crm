@@ -88,6 +88,8 @@ export const en: Record<TranslationKey, string> = {
   'common.due': 'Due',
   'common.overdue': 'Overdue',
   'common.none': 'None',
+  // Only when the listing isn't the viewer's own — see assignedAgentName in crm/agency.ts.
+  'common.assignedTo': 'Assigned to {name}',
   'common.selectedCount': '{count} selected',
   'common.selectedCount_one': '{count} selected',
   'common.resultCount': '{count} results',
