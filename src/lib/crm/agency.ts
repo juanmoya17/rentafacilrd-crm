@@ -195,6 +195,21 @@ export function assignedAgentName(
   return addedByName ?? null
 }
 
+/**
+ * Whether the "filter inventory by agent" control on /properties earns a
+ * spot on screen.
+ *
+ * `ended` never counts even if the caller's roster somehow includes one
+ * (today's default `listMembers()` already excludes them): whoever left had
+ * their portfolio merged into a colleague's during the exit wizard, so there
+ * is nothing left under their name to filter for. With one or zero
+ * filterable members left, offering the control is offering a choice that
+ * cannot change the result.
+ */
+export function canFilterByMember(members: AgencyMember[]): boolean {
+  return members.filter((m) => m.status !== 'ended').length > 1
+}
+
 /** Igual que el `query()` de crm/api.ts, que es privado de ese módulo. */
 function query(params: Record<string, string | number | boolean | undefined>): string {
   const search = new URLSearchParams()

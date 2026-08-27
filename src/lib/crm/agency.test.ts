@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   assignedAgentName,
+  canFilterByMember,
   canInvite,
   claimKey,
   claimKeyToItem,
@@ -126,6 +127,40 @@ describe('assignedAgentName', () => {
     // literalmente "Asignada a undefined".
     const addedByName = undefined as unknown as string | null
     expect(assignedAgentName(2, addedByName, 1)).toBeNull()
+  })
+})
+
+describe('canFilterByMember', () => {
+  const member = (id: number, status: AgencyMember['status']): AgencyMember => ({
+    id,
+    customer_id: id * 10,
+    name: `M${id}`,
+    email: null,
+    mobile: null,
+    profile: null,
+    role: 'agent',
+    status,
+    joined_at: null,
+  })
+
+  it('offers nothing while the roster is empty — still loading, or the fetch failed', () => {
+    expect(canFilterByMember([])).toBe(false)
+  })
+
+  it('offers nothing for a single active member — filtering a one-person team cannot change the result', () => {
+    expect(canFilterByMember([member(1, 'active')])).toBe(false)
+  })
+
+  it('offers the filter for two active members', () => {
+    expect(canFilterByMember([member(1, 'active'), member(2, 'active')])).toBe(true)
+  })
+
+  it('offers the filter when one of the two is suspended — a suspended member still owns listings', () => {
+    expect(canFilterByMember([member(1, 'active'), member(2, 'suspended')])).toBe(true)
+  })
+
+  it('does not count a member who has exited — their portfolio was merged away in the exit wizard', () => {
+    expect(canFilterByMember([member(1, 'active'), member(2, 'ended')])).toBe(false)
   })
 })
 

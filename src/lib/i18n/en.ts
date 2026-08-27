@@ -242,6 +242,8 @@ export const en: Record<TranslationKey, string> = {
 
   'properties.filters': 'Filters',
   'properties.filtersAdvanced': 'Advanced filters',
+  'properties.filterByAgent': 'Agent',
+  'properties.filterByAgentAll': 'All agents',
   'properties.priceFrom': 'Price from',
   'properties.priceTo': 'Price to',
   'properties.areaFrom': 'Area from (m²)',

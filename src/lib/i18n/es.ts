@@ -247,6 +247,8 @@ export const es = {
 
   'properties.filters': 'Filtros',
   'properties.filtersAdvanced': 'Filtros avanzados',
+  'properties.filterByAgent': 'Asesor',
+  'properties.filterByAgentAll': 'Todos los asesores',
   'properties.priceFrom': 'Precio desde',
   'properties.priceTo': 'Precio hasta',
   'properties.areaFrom': 'Área desde (m²)',

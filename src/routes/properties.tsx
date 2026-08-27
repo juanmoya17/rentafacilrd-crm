@@ -28,6 +28,7 @@ import {
   LinkButton,
   LoadingState,
   PageHeader,
+  Select,
 } from '@/components/ui'
 import { FilterBar, Register, SearchField, Segmented, type Column } from '@/components/register'
 import { LifecycleBadge, ModerationBadge, OperationBadge } from '@/components/labels'
@@ -39,7 +40,7 @@ import { ActionRail } from '@/components/action-rail'
 import { useRecordMorph, useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { useToast } from '@/lib/toast-context'
-import { assignedAgentName } from '@/lib/crm/agency'
+import { assignedAgentName, canFilterByMember, listMembers } from '@/lib/crm/agency'
 import {
   classifyBatchError,
   formatSpecs,
@@ -85,6 +86,7 @@ function filtersFromParams(params: URLSearchParams): PropertyFilters {
     is_featured: featured === null ? undefined : featured === 'true',
     featured_expiring: featuredExpiring === null ? undefined : featuredExpiring === 'true',
     city_id: num('city_id'),
+    added_by: num('added_by'),
     price_min: num('price_min'),
     price_max: num('price_max'),
     area_min: num('area_min'),
@@ -552,6 +554,20 @@ export function PropertiesPage() {
   // can change any of the four bucket counts, so a bulk-bar success or a
   // stale (404) resync reloads this the same way it reloads the summary.
   const railResource = useResource((signal) => getActionRail(signal), [])
+
+  // Task 5 — the agency roster, for the "filter by agent" control below.
+  // Hoisted to the PAGE component rather than the filter bar on purpose:
+  // Task 6's Reassign action needs this exact same active+suspended roster
+  // to know who a listing can be handed to. Read `membersResource` here
+  // rather than adding a second `listMembers()` call for Reassign — one
+  // request serves both.
+  //
+  // A failure here must not take the properties list down: it only means
+  // `members` stays `[]`, which makes `canFilterByMember` say no, which
+  // hides the dropdown. No error banner, no effect on `resource` below —
+  // the listing is the page's job, this filter is a convenience on top.
+  const membersResource = useResource((signal) => listMembers({ limit: 100 }, signal), [])
+  const members = membersResource.status === 'ready' ? membersResource.data.members : []
 
   // A.8 — the chrome grows with the inventory. Gate on the UNFILTERED total
   // (the summary's, not the filtered list's), so filtering down to two rows
@@ -1035,6 +1051,26 @@ export function PropertiesPage() {
                 ]}
               />
             </div>
+            {/* Task 5 — toolbar, not the advanced panel: filtering inventory
+                by agent is new ground this phase adds, and burying it inside
+                the collapsed `<details>` above would hide it. Only earns a
+                spot once canFilterByMember says a filter could actually
+                change the result — a one-member team never sees it. */}
+            {canFilterByMember(members) && (
+              <Select
+                id="property-added-by"
+                label={t('properties.filterByAgent')}
+                value={filters.added_by === undefined ? '' : String(filters.added_by)}
+                onChange={(next) => setParam('added_by', next === '' ? null : next)}
+                options={[
+                  { value: '', label: t('properties.filterByAgentAll') },
+                  ...members.map((member) => ({
+                    value: String(member.customer_id),
+                    label: member.name ?? String(member.customer_id),
+                  })),
+                ]}
+              />
+            )}
             {advancedFilters}
           </>
         }
