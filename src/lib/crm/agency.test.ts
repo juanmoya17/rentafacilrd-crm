@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   assignedAgentName,
   canFilterByMember,
+  filterableMembers,
   canInvite,
   claimKey,
   claimKeyToItem,
@@ -141,6 +142,17 @@ describe('canFilterByMember', () => {
     role: 'agent',
     status,
     joined_at: null,
+  })
+
+  // La lista que se pinta y la que decide si se pinta tienen que ser la MISMA.
+  // Si divergen, el control aparece y ofrece a alguien cuya cartera se fusionó
+  // al salir: una opción que siempre devuelve cero filas, que en pantalla se lee
+  // como un fallo de datos y no como un filtro que no debió existir.
+  it('exposes the same list it gates on, so the options cannot offer who it excluded', () => {
+    const members = [member(1, 'active'), member(2, 'suspended'), member(3, 'ended')]
+
+    expect(filterableMembers(members).map((m) => m.customer_id)).toEqual([10, 20])
+    expect(canFilterByMember(members)).toBe(true)
   })
 
   it('offers nothing while the roster is empty — still loading, or the fetch failed', () => {

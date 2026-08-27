@@ -40,7 +40,7 @@ import { ActionRail } from '@/components/action-rail'
 import { useRecordMorph, useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { useToast } from '@/lib/toast-context'
-import { assignedAgentName, canFilterByMember, listMembers } from '@/lib/crm/agency'
+import { assignedAgentName, canFilterByMember, filterableMembers, listMembers } from '@/lib/crm/agency'
 import {
   classifyBatchError,
   formatSpecs,
@@ -1064,7 +1064,7 @@ export function PropertiesPage() {
                 onChange={(next) => setParam('added_by', next === '' ? null : next)}
                 options={[
                   { value: '', label: t('properties.filterByAgentAll') },
-                  ...members.map((member) => ({
+                  ...filterableMembers(members).map((member) => ({
                     value: String(member.customer_id),
                     label: member.name ?? String(member.customer_id),
                   })),

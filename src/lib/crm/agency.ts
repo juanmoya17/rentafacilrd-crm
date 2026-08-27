@@ -206,8 +206,18 @@ export function assignedAgentName(
  * filterable members left, offering the control is offering a choice that
  * cannot change the result.
  */
+export function filterableMembers(members: AgencyMember[]): AgencyMember[] {
+  return members.filter((m) => m.status !== 'ended')
+}
+
+/**
+ * Derived from the same list the dropdown renders, not from a second copy of
+ * the predicate: a gate that says "more than one" while the options below it
+ * offer someone the gate excluded is how a control ends up offering a choice
+ * that always returns nothing.
+ */
 export function canFilterByMember(members: AgencyMember[]): boolean {
-  return members.filter((m) => m.status !== 'ended').length > 1
+  return filterableMembers(members).length > 1
 }
 
 /** Igual que el `query()` de crm/api.ts, que es privado de ese módulo. */
