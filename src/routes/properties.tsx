@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { AnimatePresence, motion } from 'motion/react'
 import {
   AlignJustify,
+  ArrowRightLeft,
   ArrowUpDown,
   LayoutGrid,
   // Aliased: an unqualified `Map` import shadows the global constructor, and
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useI18n } from '@/lib/i18n/context'
+import type { Translate } from '@/lib/i18n/context'
 import {
   Badge,
   Button,
@@ -37,10 +39,19 @@ import { PropertyMap } from '@/components/property-map'
 import { KpiStrip } from '@/components/kpi-strip'
 import { BulkBar } from '@/components/bulk-bar'
 import { ActionRail } from '@/components/action-rail'
+import { ReassignDialog } from '@/components/reassign-dialog'
 import { useRecordMorph, useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { useToast } from '@/lib/toast-context'
-import { assignedAgentName, canFilterByMember, filterableMembers, listMembers } from '@/lib/crm/agency'
+import { useAgencyRole } from '@/lib/crm/use-agency-role'
+import {
+  assignedAgentName,
+  canFilterByMember,
+  filterableMembers,
+  listMembers,
+  reassignReceivers,
+  type AgencyMember,
+} from '@/lib/crm/agency'
 import {
   classifyBatchError,
   formatSpecs,
@@ -98,16 +109,17 @@ function filtersFromParams(params: URLSearchParams): PropertyFilters {
   }
 }
 
-/** A.7 — the one action this listing needs, without opening the detail. */
-function InlineAction({
-  property,
-  onPublish,
-}: {
-  property: CrmProperty
-  onPublish: (id: number) => void
-}) {
-  const { t } = useI18n()
-
+/**
+ * The lifecycle-driven half of A.7 — the one contextual action this listing
+ * needs, without opening the detail. Split out so `InlineAction` below can
+ * combine it with the reassign trigger, which has nothing to do with
+ * lifecycle and applies (or not) independently of whichever of these fires.
+ */
+function primaryInlineAction(
+  property: CrmProperty,
+  onPublish: (id: number) => void,
+  t: Translate,
+): ReactNode {
   // Each branch gets its own glyph, so the action a row is offering is legible
   // from the shape before the label is read — which is the point of icons in a
   // list where every row's button says something different.
@@ -156,6 +168,47 @@ function InlineAction({
     }
   }
   return null
+}
+
+/**
+ * A.7's one contextual action, plus Task 6's reassign trigger — the same
+ * per-row action slot every view (table, cards, map) already renders this
+ * component into.
+ *
+ * `members` and `isAdmin` travel down rather than a pre-computed boolean:
+ * `reassignReceivers` lives here, once, so the three call sites (table
+ * column, card grid, map view) cannot each reimplement — and drift from —
+ * the same "who's left to receive it" filter.
+ */
+function InlineAction({
+  property,
+  onPublish,
+  isAdmin,
+  members,
+  onReassign,
+}: {
+  property: CrmProperty
+  onPublish: (id: number) => void
+  /** `false` today for everyone — see Task 6 report: `agency_role` isn't served yet, so `useAgencyRole().known` is false and `isAdmin` fails closed. */
+  isAdmin: boolean
+  members: AgencyMember[]
+  onReassign: (property: CrmProperty) => void
+}) {
+  const { t } = useI18n()
+  const primary = primaryInlineAction(property, onPublish, t)
+  const receivers = isAdmin ? reassignReceivers(members, property.added_by) : []
+
+  if (receivers.length === 0) return primary
+
+  return (
+    <div className="flex items-center gap-1.5">
+      {primary}
+      <Button onClick={() => onReassign(property)}>
+        <ArrowRightLeft className="size-4" aria-hidden="true" />
+        {t('reassign.trigger')}
+      </Button>
+    </div>
+  )
 }
 
 function PropertyName({ property }: { property: CrmProperty }) {
@@ -230,6 +283,9 @@ function PropertyCardGrid({
   onToggle,
   onPublish,
   myId,
+  isAdmin,
+  members,
+  onReassign,
 }: {
   items: CrmProperty[]
   selected: Set<number>
@@ -237,6 +293,9 @@ function PropertyCardGrid({
   onPublish: (id: number) => void
   /** Who is looking. `undefined` while the auth context is still resolving. */
   myId: number | undefined
+  isAdmin: boolean
+  members: AgencyMember[]
+  onReassign: (property: CrmProperty) => void
 }) {
   const { t, formatNumber } = useI18n()
   const reveal = useRowReveal()
@@ -322,7 +381,13 @@ function PropertyCardGrid({
               <span className="text-xs text-muted">
                 {t('common.leads')} <LeadCount property={property} />
               </span>
-              <InlineAction property={property} onPublish={onPublish} />
+              <InlineAction
+                property={property}
+                onPublish={onPublish}
+                isAdmin={isAdmin}
+                members={members}
+                onReassign={onReassign}
+              />
             </div>
           </motion.li>
         )
@@ -346,9 +411,15 @@ function PropertyCardGrid({
 function PropertyMapView({
   items,
   onPublish,
+  isAdmin,
+  members,
+  onReassign,
 }: {
   items: CrmProperty[]
   onPublish: (id: number) => void
+  isAdmin: boolean
+  members: AgencyMember[]
+  onReassign: (property: CrmProperty) => void
 }) {
   const { t, formatNumber } = useI18n()
   const [activeId, setActiveId] = useState<number | null>(null)
@@ -405,7 +476,13 @@ function PropertyMapView({
                 {formatSpecs(property, formatNumber)}
               </p>
               <div className="relative mt-auto flex justify-end pt-1.5">
-                <InlineAction property={property} onPublish={onPublish} />
+                <InlineAction
+                  property={property}
+                  onPublish={onPublish}
+                  isAdmin={isAdmin}
+                  members={members}
+                  onReassign={onReassign}
+                />
               </div>
             </div>
           </li>
@@ -482,6 +559,15 @@ export function PropertiesPage() {
   // context is still resolving, which assignedAgentName fails closed on.
   const { state: authState } = useAuth()
   const myId = authState.status === 'authenticated' ? authState.user.id : undefined
+  // Task 6 — Reassign is admin-only, and fails closed: `useAgencyRole()`
+  // reads `agency_role` off the auth context, and until the branch that
+  // serves that field ships, `known` is false for everyone and `isAdmin`
+  // stays false with it. See the Task 6 report for what that looks like today.
+  const { isAdmin } = useAgencyRole()
+  // The listing being reassigned, or `null` for no dialog open. Holds the
+  // whole row, not just an id — the dialog's title reads the listing's own
+  // `title`.
+  const [reassigning, setReassigning] = useState<CrmProperty | null>(null)
   const [params, setParams] = useSearchParams()
   const [compact, setCompact] = useState(true)
   // Local, not in the URL, for the same reason `compact` is: this is a display
@@ -773,7 +859,15 @@ export function PropertiesPage() {
     {
       key: 'actions',
       header: t('common.actions'),
-      render: (property) => <InlineAction property={property} onPublish={publishOne} />,
+      render: (property) => (
+        <InlineAction
+          property={property}
+          onPublish={publishOne}
+          isAdmin={isAdmin}
+          members={members}
+          onReassign={setReassigning}
+        />
+      ),
     },
   ]
 
@@ -1152,7 +1246,13 @@ export function PropertiesPage() {
               working with no error (design.md § Layout invariants). */}
           {view === 'map' ? (
             <>
-              <PropertyMapView items={items} onPublish={publishOne} />
+              <PropertyMapView
+                items={items}
+                onPublish={publishOne}
+                isAdmin={isAdmin}
+                members={members}
+                onReassign={setReassigning}
+              />
               <div className="mt-3">{pager}</div>
             </>
           ) : view === 'cards' ? (
@@ -1163,6 +1263,9 @@ export function PropertiesPage() {
                 onToggle={toggle}
                 onPublish={publishOne}
                 myId={myId}
+                isAdmin={isAdmin}
+                members={members}
+                onReassign={setReassigning}
               />
               <div className="mt-3">{pager}</div>
             </>
@@ -1188,6 +1291,20 @@ export function PropertiesPage() {
             </>
           )}
         </div>
+      )}
+
+      {reassigning !== null && (
+        <ReassignDialog
+          type="property"
+          id={reassigning.id}
+          listingTitle={reassigning.title}
+          receivers={reassignReceivers(members, reassigning.added_by)}
+          onClose={() => setReassigning(null)}
+          // Only the row list changes — reassigning moves nothing the KPI
+          // strip or the action rail count (lifecycle, leads, featured
+          // windows are all untouched).
+          onReassigned={() => resource.reload()}
+        />
       )}
     </>
   )

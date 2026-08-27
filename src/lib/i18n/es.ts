@@ -659,6 +659,12 @@ export const es = {
   'agency.exit.contacts': 'contactos',
   'agency.exit.tasks': 'tareas pendientes',
 
+  'reassign.trigger': 'Reasignar',
+  'reassign.title': 'Reasignar {title}',
+  'reassign.receiver': 'Asignar a',
+  'reassign.confirm': 'Reasignar',
+  'reassign.done': 'Reasignado a {name}.',
+
   'agencyProfile.subtitle': 'Los datos que ven tus clientes.',
   'agencyProfile.name': 'Nombre comercial',
   'agencyProfile.rnc': 'RNC',

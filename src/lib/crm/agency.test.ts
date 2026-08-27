@@ -8,6 +8,7 @@ import {
   claimKeyToItem,
   exitReceivers,
   holdsSomething,
+  reassignReceivers,
   seatsLabel,
   type AgencyMember,
   type ExitPreflight,
@@ -93,6 +94,50 @@ describe('exitReceivers', () => {
     // llegar a ofrecerlos.
     const list = exitReceivers([member(1, 'active'), member(2, 'suspended')], 3)
     expect(list.map((m) => m.id)).toEqual([1])
+  })
+})
+
+describe('reassignReceivers', () => {
+  const member = (id: number, status: AgencyMember['status']): AgencyMember => ({
+    id,
+    customer_id: id * 10,
+    name: `M${id}`,
+    email: null,
+    mobile: null,
+    profile: null,
+    role: 'agent',
+    status,
+    joined_at: null,
+  })
+
+  it('excludes the two active members\' one who already owns the listing', () => {
+    // `ownerId` es un id de PERSONA (customer_id), no de membresía — la
+    // trampa que exitReceivers no comparte, porque la salida compara por
+    // membresía.
+    const list = reassignReceivers([member(1, 'active'), member(2, 'active')], 10)
+    expect(list.map((m) => m.customer_id)).toEqual([20])
+  })
+
+  it('never offers a suspended colleague, even if they are not the owner', () => {
+    const list = reassignReceivers([member(1, 'active'), member(2, 'suspended')], 10)
+    expect(list.map((m) => m.customer_id)).toEqual([])
+  })
+
+  it('never offers someone who has exited the agency', () => {
+    const list = reassignReceivers([member(1, 'active'), member(2, 'ended')], 999)
+    expect(list.map((m) => m.customer_id)).toEqual([10])
+  })
+
+  it('excludes nobody when the owner is not an agency member — they left and their portfolio was merged away', () => {
+    const list = reassignReceivers([member(1, 'active'), member(2, 'active')], 999)
+    expect(list.map((m) => m.customer_id)).toEqual([10, 20])
+  })
+
+  it('returns empty once nobody active is left to receive it', () => {
+    // La interfaz no debe ofrecer reasignar en este caso: un desplegable sin
+    // opciones es una vía muerta.
+    const list = reassignReceivers([member(1, 'suspended')], 10)
+    expect(list).toEqual([])
   })
 })
 

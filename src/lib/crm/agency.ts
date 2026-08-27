@@ -170,6 +170,25 @@ export function exitReceivers(members: AgencyMember[], leavingMemberId: number):
 }
 
 /**
+ * A quién se le puede reasignar un anuncio.
+ *
+ * `ownerId` es el `customer_id` de quien ya lo lleva (`Property.added_by` /
+ * `Project.added_by`), NO el `id` de membresía — al revés que
+ * `exitReceivers` de arriba, que compara por membresía porque la salida es
+ * de un miembro. Confundir los dos ids responde 404 o 422 desde
+ * `reassignListing`.
+ *
+ * Un suspendido tampoco entra, aunque sus anuncios existentes sigan siendo
+ * suyos y filtrables (`filterableMembers`): no se le carga trabajo nuevo. Si
+ * el dueño ya no es miembro de la agencia (salió y su cartera se fusionó en
+ * la salida), `ownerId` no coincide con nadie y salen todos los activos —
+ * no hay a quién excluir.
+ */
+export function reassignReceivers(members: AgencyMember[], ownerId: number): AgencyMember[] {
+  return members.filter((m) => m.status === 'active' && m.customer_id !== ownerId)
+}
+
+/**
  * Qué nombre pintar en la etiqueta "Asignada a [nombre]" de una tarjeta de
  * propiedad o proyecto — o `null` si no hay que pintar nada.
  *

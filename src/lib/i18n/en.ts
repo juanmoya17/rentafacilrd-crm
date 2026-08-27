@@ -649,6 +649,12 @@ export const en: Record<TranslationKey, string> = {
   'agency.exit.contacts': 'contacts',
   'agency.exit.tasks': 'pending tasks',
 
+  'reassign.trigger': 'Reassign',
+  'reassign.title': 'Reassign {title}',
+  'reassign.receiver': 'Assign to',
+  'reassign.confirm': 'Reassign',
+  'reassign.done': 'Reassigned to {name}.',
+
   'agencyProfile.subtitle': 'What your clients see.',
   'agencyProfile.name': 'Trading name',
   'agencyProfile.rnc': 'RNC',
