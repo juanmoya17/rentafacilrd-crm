@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router'
+import { motion } from 'motion/react'
 import { useI18n } from '@/lib/i18n/context'
 import { useToast } from '@/lib/toast-context'
 import { useResource } from '@/lib/use-resource'
@@ -14,6 +16,7 @@ import {
   Select,
 } from '@/components/ui'
 import { ClaimListings } from '@/components/claim-listings'
+import { AgencyProfileForm } from '@/components/agency-profile-form'
 import {
   canInvite,
   cancelInvitation,
@@ -36,6 +39,14 @@ import {
 const ROLE_TONE = { owner: 'brand', admin: 'success', agent: 'neutral' } as const
 const STATUS_TONE = { active: 'success', suspended: 'warning', ended: 'neutral' } as const
 
+type Tab = 'equipo' | 'datos' | 'recursos'
+const TABS: Tab[] = ['equipo', 'datos', 'recursos']
+
+/** Un valor ausente o irreconocible cae en Equipo — nunca una pantalla en blanco. */
+function tabFromParam(value: string | null): Tab {
+  return value === 'datos' || value === 'recursos' ? value : 'equipo'
+}
+
 /**
  * El equipo de la agencia.
  *
@@ -47,9 +58,22 @@ export function AgencyPage() {
   const { t, formatDate } = useI18n()
   const toast = useToast()
   const [nonce, setNonce] = useState(0)
+  const [params, setParams] = useSearchParams()
+  const requestedTab = tabFromParam(params.get('tab'))
+  const setTab = (next: Tab) => {
+    const updated = new URLSearchParams(params)
+    updated.set('tab', next)
+    setParams(updated, { replace: true })
+  }
 
   const profile = useResource((signal) => getAgency(signal), [nonce])
   const isAdmin = profile.status === 'ready' && profile.data.is_admin
+
+  // Recursos incorpora inventario a la agencia: es una decisión de dirección,
+  // no algo que un asesor pueda pedir por URL. Un no-admin que llega a
+  // ?tab=recursos cae en Equipo, igual que un tab que no se reconoce.
+  const tab: Tab = requestedTab === 'recursos' && !isAdmin ? 'equipo' : requestedTab
+  const visibleTabs = isAdmin ? TABS : TABS.filter((option) => option !== 'recursos')
 
   // El equipo lo lee cualquier miembro activo; las invitaciones, solo quien
   // puede crearlas. Un asesor necesita ver con quién trabaja, y la lista no le
@@ -106,103 +130,144 @@ export function AgencyPage() {
         }
       />
 
-      {overCapacity && (
-        <Card className="mb-4 border-warn/40 bg-warn/5 p-3 text-sm text-ink-2">
-          {t('agency.overCapacity')}
-        </Card>
-      )}
+      {/* El subrayado es un solo elemento que se desliza entre pestañas —
+          `layoutId` propio para no compartir el elemento animado con el
+          tablist de project-detail.tsx si algún día coinciden en pantalla. */}
+      <div role="tablist" aria-label={t('agency.title')} className="mb-4 flex gap-1 border-b border-rule">
+        {visibleTabs.map((option) => {
+          const selected = tab === option
+          return (
+            <button
+              key={option}
+              type="button"
+              role="tab"
+              id={`tab-${option}`}
+              aria-selected={selected}
+              aria-controls={`panel-${option}`}
+              onClick={() => setTab(option)}
+              className={`relative min-h-9 whitespace-nowrap px-3 py-2 text-sm transition-colors duration-(--duration-fast) ease-out ${
+                selected ? 'font-medium text-brand-700' : 'text-muted hover:text-ink'
+              }`}
+            >
+              {t(`agency.${option}`)}
+              {selected && (
+                <motion.span
+                  layoutId="agency-tab"
+                  aria-hidden="true"
+                  className="absolute inset-x-0 -bottom-px h-0.5 bg-accent"
+                  transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                />
+              )}
+            </button>
+          )
+        })}
+      </div>
 
-      {isAdmin && (
-        <InviteBox
-          disabled={!canInvite({ seats_used, seats_limit, over_capacity: overCapacity })}
-          onInvited={reload}
-        />
-      )}
+      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
+        {tab === 'equipo' && (
+          <>
+            {overCapacity && (
+              <Card className="mb-4 border-warn/40 bg-warn/5 p-3 text-sm text-ink-2">
+                {t('agency.overCapacity')}
+              </Card>
+            )}
 
-      <>
-        {roster.status === 'loading' && <LoadingState label={t('agency.loading')} />}
-          {roster.status === 'error' && (
-            <ErrorState message={roster.message} onRetry={roster.reload} retryLabel={t('common.retry')} />
-          )}
+            {isAdmin && (
+              <InviteBox
+                disabled={!canInvite({ seats_used, seats_limit, over_capacity: overCapacity })}
+                onInvited={reload}
+              />
+            )}
 
-          {rosterData !== null && (
-            <Card className="mt-4 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b border-rule text-left text-xs uppercase text-muted">
-                  <tr>
-                    <th className="px-3 py-2">{t('agency.col.member')}</th>
-                    <th className="px-3 py-2">{t('agency.col.role')}</th>
-                    <th className="px-3 py-2">{t('agency.col.status')}</th>
-                    <th className="px-3 py-2">{t('agency.col.joined')}</th>
-                    {isAdmin && <th className="px-3 py-2">{t('agency.col.actions')}</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rosterData.members.map((member) => (
-                    <tr key={member.id} className="border-b border-rule/60 last:border-0">
-                      <td className="px-3 py-2">
-                        <div className="text-ink">{member.name ?? '—'}</div>
-                        <div className="text-xs text-muted">{member.email ?? member.mobile ?? ''}</div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <Badge tone={ROLE_TONE[member.role]}>{t(`agency.role.${member.role}`)}</Badge>
-                      </td>
-                      <td className="px-3 py-2">
-                        <Badge tone={STATUS_TONE[member.status]}>{t(`agency.status.${member.status}`)}</Badge>
-                      </td>
-                      <td className="px-3 py-2 text-muted">
-                        {member.joined_at === null ? '—' : formatDate(member.joined_at)}
-                      </td>
-                      {isAdmin && (
-                      <td className="px-3 py-2">
-                        <MemberActions
-                          member={member}
-                          onRole={(role) =>
-                            void run(() => changeMemberRole(member.id, role))
-                          }
-                          onStatus={(status) =>
-                            void run(() => changeMemberStatus(member.id, status))
-                          }
-                          onTransfer={() => setTransferring(member)}
-                          onExit={() => setExiting(member)}
-                        />
-                      </td>
-                      )}
+            {roster.status === 'loading' && <LoadingState label={t('agency.loading')} />}
+            {roster.status === 'error' && (
+              <ErrorState message={roster.message} onRetry={roster.reload} retryLabel={t('common.retry')} />
+            )}
+
+            {rosterData !== null && (
+              <Card className="mt-4 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-rule text-left text-xs uppercase text-muted">
+                    <tr>
+                      <th className="px-3 py-2">{t('agency.col.member')}</th>
+                      <th className="px-3 py-2">{t('agency.col.role')}</th>
+                      <th className="px-3 py-2">{t('agency.col.status')}</th>
+                      <th className="px-3 py-2">{t('agency.col.joined')}</th>
+                      {isAdmin && <th className="px-3 py-2">{t('agency.col.actions')}</th>}
                     </tr>
+                  </thead>
+                  <tbody>
+                    {rosterData.members.map((member) => (
+                      <tr key={member.id} className="border-b border-rule/60 last:border-0">
+                        <td className="px-3 py-2">
+                          <div className="text-ink">{member.name ?? '—'}</div>
+                          <div className="text-xs text-muted">{member.email ?? member.mobile ?? ''}</div>
+                        </td>
+                        <td className="px-3 py-2">
+                          <Badge tone={ROLE_TONE[member.role]}>{t(`agency.role.${member.role}`)}</Badge>
+                        </td>
+                        <td className="px-3 py-2">
+                          <Badge tone={STATUS_TONE[member.status]}>{t(`agency.status.${member.status}`)}</Badge>
+                        </td>
+                        <td className="px-3 py-2 text-muted">
+                          {member.joined_at === null ? '—' : formatDate(member.joined_at)}
+                        </td>
+                        {isAdmin && (
+                        <td className="px-3 py-2">
+                          <MemberActions
+                            member={member}
+                            onRole={(role) =>
+                              void run(() => changeMemberRole(member.id, role))
+                            }
+                            onStatus={(status) =>
+                              void run(() => changeMemberStatus(member.id, status))
+                            }
+                            onTransfer={() => setTransferring(member)}
+                            onExit={() => setExiting(member)}
+                          />
+                        </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+            )}
+
+            {invites.status === 'ready' && invites.data !== null && invites.data.invitations.length > 0 && (
+              <Card className="mt-4 p-3">
+                <h2 className="mb-2 text-sm font-semibold text-ink">{t('agency.pendingInvites')}</h2>
+                <ul className="space-y-1 text-sm">
+                  {invites.data.invitations.map((invitation) => (
+                    <li key={invitation.id} className="flex items-center justify-between gap-2">
+                      <span className="text-ink-2">
+                        {invitation.email ?? invitation.phone} · {t(`agency.role.${invitation.role}`)}
+                        {!invitation.is_open && <> · {t('agency.inviteExpired')}</>}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        onClick={() =>
+                          void run(() => cancelInvitation(invitation.id))
+                        }
+                      >
+                        {t('agency.cancelInvite')}
+                      </Button>
+                    </li>
                   ))}
-                </tbody>
-              </table>
-            </Card>
-          )}
+                </ul>
+              </Card>
+            )}
+          </>
+        )}
 
-          {invites.status === 'ready' && invites.data !== null && invites.data.invitations.length > 0 && (
-            <Card className="mt-4 p-3">
-              <h2 className="mb-2 text-sm font-semibold text-ink">{t('agency.pendingInvites')}</h2>
-              <ul className="space-y-1 text-sm">
-                {invites.data.invitations.map((invitation) => (
-                  <li key={invitation.id} className="flex items-center justify-between gap-2">
-                    <span className="text-ink-2">
-                      {invitation.email ?? invitation.phone} · {t(`agency.role.${invitation.role}`)}
-                      {!invitation.is_open && <> · {t('agency.inviteExpired')}</>}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      onClick={() =>
-                        void run(() => cancelInvitation(invitation.id))
-                      }
-                    >
-                      {t('agency.cancelInvite')}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          )}
-      </>
+        {tab === 'datos' && (
+          <AgencyProfileForm agency={agency} canEdit={isAdmin} onSaved={reload} />
+        )}
 
-      {/* Solo la dirección incorpora inventario: es una decisión sobre lo que
-          entra en la empresa, no sobre lo que uno publicó. */}
-      {isAdmin && <ClaimListings onClaimed={reload} />}
+        {/* Solo la dirección incorpora inventario: es una decisión sobre lo
+            que entra en la empresa, no sobre lo que uno publicó. */}
+        {tab === 'recursos' && <ClaimListings onClaimed={reload} />}
+      </div>
 
       {transferring !== null && (
         <TransferDialog

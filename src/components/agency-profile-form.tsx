@@ -1,19 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '@/lib/i18n/context'
 import { useToast } from '@/lib/toast-context'
-import { useResource } from '@/lib/use-resource'
-import {
-  Badge,
-  Button,
-  Card,
-  ErrorState,
-  Field,
-  FileField,
-  LoadingState,
-  PageHeader,
-  TextArea,
-} from '@/components/ui'
-import { getAgency, updateAgency, uploadAgencyImage, type AgencyDraft } from '@/lib/crm/agency'
+import { Badge, Button, Card, Field, FileField, TextArea } from '@/components/ui'
+import { updateAgency, uploadAgencyImage, type Agency, type AgencyDraft } from '@/lib/crm/agency'
 
 /**
  * Todo string, nunca null: un <input> controlado con `value={null}` se vuelve
@@ -34,45 +23,43 @@ const EMPTY: AgencyForm = {
 }
 
 /**
- * La ficha de la agencia.
+ * La ficha de la agencia — pestaña «Datos» de `/agency`.
  *
- * Lectura para cualquier miembro activo —un asesor necesita ver bajo qué marca
- * trabaja—; escritura solo para owner/admin, que es lo que el servidor impone
- * y `is_admin` permite reflejar sin tener que provocar un 403.
+ * `agency` llega ya cargado por quien monta este componente: `getAgency()` se
+ * pide una sola vez para toda la página, no aquí. Escritura solo para
+ * owner/admin, que es lo que el servidor impone y `canEdit` permite reflejar
+ * sin tener que provocar un 403.
  *
  * `is_verified` no se edita aquí ni existe una ruta para hacerlo: la
  * verificación la concede el panel de administración.
  */
-export function AgencyProfilePage() {
+export function AgencyProfileForm({
+  agency,
+  canEdit,
+  onSaved,
+}: {
+  agency: Agency
+  canEdit: boolean
+  onSaved: () => void
+}) {
   const { t } = useI18n()
   const toast = useToast()
-  const [nonce, setNonce] = useState(0)
-  const profile = useResource((signal) => getAgency(signal), [nonce])
-
   const [draft, setDraft] = useState<AgencyForm>(EMPTY)
   const [saving, setSaving] = useState(false)
 
-  const loaded = profile.status === 'ready' ? profile.data.agency : null
   useEffect(() => {
-    if (loaded === null) return
     setDraft({
-      name: loaded.name ?? '',
-      rnc: loaded.rnc ?? '',
-      phone: loaded.phone ?? '',
-      email: loaded.email ?? '',
-      website: loaded.website ?? '',
-      description: loaded.description ?? '',
-      instagram: loaded.instagram ?? '',
-      facebook: loaded.facebook ?? '',
+      name: agency.name ?? '',
+      rnc: agency.rnc ?? '',
+      phone: agency.phone ?? '',
+      email: agency.email ?? '',
+      website: agency.website ?? '',
+      description: agency.description ?? '',
+      instagram: agency.instagram ?? '',
+      facebook: agency.facebook ?? '',
     })
-  }, [loaded])
+  }, [agency])
 
-  if (profile.status === 'loading') return <LoadingState label={t('agency.loading')} />
-  if (profile.status === 'error') {
-    return <ErrorState message={profile.message} onRetry={profile.reload} retryLabel={t('common.retry')} />
-  }
-
-  const { agency, is_admin: canEdit } = profile.data
   const set = (key: keyof AgencyDraft) => (value: string) =>
     setDraft((current) => ({ ...current, [key]: value }))
 
@@ -80,7 +67,7 @@ export function AgencyProfilePage() {
     setSaving(true)
     try {
       await updateAgency(draft)
-      setNonce((n) => n + 1)
+      onSaved()
     } catch (caught: unknown) {
       toast.fail(caught instanceof Error ? caught.message : t('error.generic'))
     } finally {
@@ -94,7 +81,7 @@ export function AgencyProfilePage() {
 
     try {
       await uploadAgencyImage(kind, file)
-      setNonce((n) => n + 1)
+      onSaved()
     } catch (caught: unknown) {
       // Una subida rechazada deja la imagen anterior intacta en el servidor, así
       // que recargar no es necesario — pero el motivo sí hay que enseñarlo.
@@ -104,11 +91,11 @@ export function AgencyProfilePage() {
 
   return (
     <div>
-      <PageHeader
-        title={t('agencyProfile.title')}
-        subtitle={t('agencyProfile.subtitle')}
-        actions={agency.is_verified ? <Badge tone="success">{t('agencyProfile.verified')}</Badge> : undefined}
-      />
+      {agency.is_verified && (
+        <div className="mb-4 flex justify-end">
+          <Badge tone="success">{t('agencyProfile.verified')}</Badge>
+        </div>
+      )}
 
       {!canEdit && (
         <Card className="mb-4 p-3 text-sm text-muted">{t('agencyProfile.readOnly')}</Card>
