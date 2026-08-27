@@ -215,25 +215,24 @@ export function assignedAgentName(
 }
 
 /**
- * Whether the "filter inventory by agent" control on /properties earns a
- * spot on screen.
+ * Si el control de "filtrar el inventario por asesor" de /properties se gana
+ * un sitio en pantalla.
  *
- * `ended` never counts even if the caller's roster somehow includes one
- * (today's default `listMembers()` already excludes them): whoever left had
- * their portfolio merged into a colleague's during the exit wizard, so there
- * is nothing left under their name to filter for. With one or zero
- * filterable members left, offering the control is offering a choice that
- * cannot change the result.
+ * Quien salió no cuenta nunca, aunque la lista que llegue lo incluya (hoy el
+ * `listMembers()` por defecto ya lo excluye): su cartera se fusionó con la de
+ * un compañero en el wizard de salida, así que no queda nada a su nombre que
+ * filtrar. Con uno o cero miembros filtrables, ofrecer el control es ofrecer
+ * una elección que no puede cambiar el resultado.
  */
 export function filterableMembers(members: AgencyMember[]): AgencyMember[] {
   return members.filter((m) => m.status !== 'ended')
 }
 
 /**
- * Derived from the same list the dropdown renders, not from a second copy of
- * the predicate: a gate that says "more than one" while the options below it
- * offer someone the gate excluded is how a control ends up offering a choice
- * that always returns nothing.
+ * Sale de la MISMA lista que pinta el desplegable, no de una segunda copia del
+ * predicado: una puerta que dice "hay más de uno" mientras las opciones de
+ * debajo ofrecen a alguien que la puerta excluyó es como un control acaba
+ * ofreciendo una elección que siempre devuelve cero filas.
  */
 export function canFilterByMember(members: AgencyMember[]): boolean {
   return filterableMembers(members).length > 1

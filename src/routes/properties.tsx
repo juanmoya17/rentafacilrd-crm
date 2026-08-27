@@ -357,7 +357,7 @@ function PropertyCardGrid({
                   `.rf-cardlink`. */}
               {assignedTo !== null && (
                 <p className="mt-0.5 text-xs text-muted">
-                  {t('common.assignedTo', { name: assignedTo })}
+                  {t('properties.assignedTo', { name: assignedTo })}
                 </p>
               )}
             </div>
@@ -563,7 +563,7 @@ export function PropertiesPage() {
   // reads `agency_role` off the auth context, and until the branch that
   // serves that field ships, `known` is false for everyone and `isAdmin`
   // stays false with it. See the Task 6 report for what that looks like today.
-  const { isAdmin } = useAgencyRole()
+  const { isAdmin, known: agencyKnown } = useAgencyRole()
   // The listing being reassigned, or `null` for no dialog open. Holds the
   // whole row, not just an id — the dialog's title reads the listing's own
   // `title`.
@@ -1149,8 +1149,15 @@ export function PropertiesPage() {
                 by agent is new ground this phase adds, and burying it inside
                 the collapsed `<details>` above would hide it. Only earns a
                 spot once canFilterByMember says a filter could actually
-                change the result — a one-member team never sees it. */}
-            {canFilterByMember(members) && (
+                change the result — a one-member team never sees it.
+
+                And only once `known` says the server can honour it. The
+                `added_by` filter ships in the same backend branch as
+                `agency_role`, so before that lands the parameter is dropped
+                in silence and the full list comes back: a control that looks
+                like it worked and did nothing. Every other surface on this
+                branch fails closed; this one has to as well. */}
+            {canFilterByMember(members) && agencyKnown && (
               <Select
                 id="property-added-by"
                 label={t('properties.filterByAgent')}

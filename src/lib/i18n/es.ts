@@ -93,7 +93,10 @@ export const es = {
   'common.overdue': 'Vencido',
   'common.none': 'Ninguno',
   // Solo cuando el anuncio no es de quien mira — ver assignedAgentName en crm/agency.ts.
-  'common.assignedTo': 'Asignada a {name}',
+  // Dos claves y no una: en español el participio concuerda, y la propiedad
+  // es femenina donde el proyecto es masculino. En inglés coinciden.
+  'properties.assignedTo': 'Asignada a {name}',
+  'projects.assignedTo': 'Asignado a {name}',
   // Base key is the plural ("other") form; `_one` is picked by Intl.PluralRules.
   'common.selectedCount': '{count} seleccionados',
   'common.selectedCount_one': '{count} seleccionado',

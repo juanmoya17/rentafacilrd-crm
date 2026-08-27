@@ -80,11 +80,11 @@ function ProjectCard({
     <motion.div {...reveal(index)} {...lift} className="relative h-full">
       <div className="flex h-full flex-col rounded-lg border border-rule bg-surface-raised p-4 transition-colors duration-(--duration-base) ease-out hover:border-rule-2">
         <div className="flex items-start justify-between gap-2">
-          <div className="rf-cardlink min-w-0 text-sm font-semibold text-ink [overflow-wrap:anywhere]">
+          <h2 className="rf-cardlink min-w-0 text-sm font-semibold text-ink [overflow-wrap:anywhere]">
             <Link to={to} viewTransition style={morph}>
               {project.title}
             </Link>
-          </div>
+          </h2>
           {/* The stage, not a lifecycle. sold_out is derived and rides
               beside it — a project can be "Preventa" and sold out at once. */}
           <div className="flex shrink-0 gap-1">
@@ -100,7 +100,7 @@ function ProjectCard({
             grid. The whole card is already the link, so this is just text. */}
         {assignedTo !== null && (
           <p className="mt-0.5 text-xs text-muted">
-            {t('common.assignedTo', { name: assignedTo })}
+            {t('projects.assignedTo', { name: assignedTo })}
           </p>
         )}
 
@@ -159,8 +159,14 @@ export function ProjectsPage() {
   // nothing on this page fetched the roster before Task 6 — there is no
   // existing `listMembers()` call to reuse here.
   const { isAdmin } = useAgencyRole()
-  const membersResource = useResource((signal) => listMembers({ limit: 100 }, signal), [])
-  const members = membersResource.status === 'ready' ? membersResource.data.members : []
+  // Solo la dirección puede reasignar, y `members` no alimenta nada más en
+  // esta pantalla: pedir el equipo para alguien que nunca verá el control es
+  // una petición que no puede cambiar nada de lo que se pinta.
+  const membersResource = useResource(
+    (signal) => (isAdmin ? listMembers({ limit: 100 }, signal) : Promise.resolve(null)),
+    [isAdmin],
+  )
+  const members = membersResource.status === 'ready' ? (membersResource.data?.members ?? []) : []
   // The project being reassigned, or `null` for no dialog open.
   const [reassigning, setReassigning] = useState<CrmProject | null>(null)
 

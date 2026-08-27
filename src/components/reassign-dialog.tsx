@@ -93,7 +93,11 @@ export function ReassignDialog({
     <Modal
       title={t('reassign.title', { title: listingTitle })}
       closeLabel={t('common.close')}
-      onClose={onClose}
+      // Cancelar ya se apaga mientras se envía, pero la × de la cabecera no:
+      // cerrar por ahí desmonta el diálogo con la petición en vuelo, y volver a
+      // abrirlo y confirmar deja DOS reasignaciones compitiendo por la misma
+      // fila. Es una mutación; que la × espere también.
+      onClose={busy ? () => {} : onClose}
       footer={
         <div className="flex justify-end gap-2">
           <Button onClick={onClose} disabled={busy}>
