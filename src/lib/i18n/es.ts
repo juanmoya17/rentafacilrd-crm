@@ -92,6 +92,11 @@ export const es = {
   'common.due': 'Vence',
   'common.overdue': 'Vencido',
   'common.none': 'Ninguno',
+  // Solo cuando el anuncio no es de quien mira — ver assignedAgentName en crm/agency.ts.
+  // Dos claves y no una: en español el participio concuerda, y la propiedad
+  // es femenina donde el proyecto es masculino. En inglés coinciden.
+  'properties.assignedTo': 'Asignada a {name}',
+  'projects.assignedTo': 'Asignado a {name}',
   // Base key is the plural ("other") form; `_one` is picked by Intl.PluralRules.
   'common.selectedCount': '{count} seleccionados',
   'common.selectedCount_one': '{count} seleccionado',
@@ -245,6 +250,8 @@ export const es = {
 
   'properties.filters': 'Filtros',
   'properties.filtersAdvanced': 'Filtros avanzados',
+  'properties.filterByAgent': 'Asesor',
+  'properties.filterByAgentAll': 'Todos los asesores',
   'properties.priceFrom': 'Precio desde',
   'properties.priceTo': 'Precio hasta',
   'properties.areaFrom': 'Área desde (m²)',
@@ -609,6 +616,9 @@ export const es = {
   'agency.title': 'Mi agencia',
   'agency.loading': 'Cargando la agencia…',
   'agency.seats': 'Plazas',
+  'agency.equipo': 'Equipo',
+  'agency.datos': 'Datos',
+  'agency.recursos': 'Recursos',
   'agency.overCapacity': 'Tu equipo tiene más miembros que plazas cubre tu plan. Nadie ha sido suspendido, pero no podrás invitar ni reactivar a nadie hasta volver por debajo del límite.',
   'agency.col.member': 'Miembro',
   'agency.col.role': 'Rol',
@@ -652,7 +662,12 @@ export const es = {
   'agency.exit.contacts': 'contactos',
   'agency.exit.tasks': 'tareas pendientes',
 
-  'agencyProfile.title': 'Ficha de la agencia',
+  'reassign.trigger': 'Reasignar',
+  'reassign.title': 'Reasignar {title}',
+  'reassign.receiver': 'Asignar a',
+  'reassign.confirm': 'Reasignar',
+  'reassign.done': 'Reasignado a {name}.',
+
   'agencyProfile.subtitle': 'Los datos que ven tus clientes.',
   'agencyProfile.name': 'Nombre comercial',
   'agencyProfile.rnc': 'RNC',

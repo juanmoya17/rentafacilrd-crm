@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assignedAgentName,
+  canFilterByMember,
+  filterableMembers,
   canInvite,
   claimKey,
   claimKeyToItem,
   exitReceivers,
   holdsSomething,
+  reassignReceivers,
   seatsLabel,
   type AgencyMember,
   type ExitPreflight,
@@ -90,6 +94,130 @@ describe('exitReceivers', () => {
     // llegar a ofrecerlos.
     const list = exitReceivers([member(1, 'active'), member(2, 'suspended')], 3)
     expect(list.map((m) => m.id)).toEqual([1])
+  })
+})
+
+describe('reassignReceivers', () => {
+  const member = (id: number, status: AgencyMember['status']): AgencyMember => ({
+    id,
+    customer_id: id * 10,
+    name: `M${id}`,
+    email: null,
+    mobile: null,
+    profile: null,
+    role: 'agent',
+    status,
+    joined_at: null,
+  })
+
+  it('excludes the two active members\' one who already owns the listing', () => {
+    // `ownerId` es un id de PERSONA (customer_id), no de membresía — la
+    // trampa que exitReceivers no comparte, porque la salida compara por
+    // membresía.
+    const list = reassignReceivers([member(1, 'active'), member(2, 'active')], 10)
+    expect(list.map((m) => m.customer_id)).toEqual([20])
+  })
+
+  it('never offers a suspended colleague, even if they are not the owner', () => {
+    const list = reassignReceivers([member(1, 'active'), member(2, 'suspended')], 10)
+    expect(list.map((m) => m.customer_id)).toEqual([])
+  })
+
+  it('never offers someone who has exited the agency', () => {
+    const list = reassignReceivers([member(1, 'active'), member(2, 'ended')], 999)
+    expect(list.map((m) => m.customer_id)).toEqual([10])
+  })
+
+  it('excludes nobody when the owner is not an agency member — they left and their portfolio was merged away', () => {
+    const list = reassignReceivers([member(1, 'active'), member(2, 'active')], 999)
+    expect(list.map((m) => m.customer_id)).toEqual([10, 20])
+  })
+
+  it('returns empty once nobody active is left to receive it', () => {
+    // La interfaz no debe ofrecer reasignar en este caso: un desplegable sin
+    // opciones es una vía muerta.
+    const list = reassignReceivers([member(1, 'suspended')], 10)
+    expect(list).toEqual([])
+  })
+})
+
+describe('assignedAgentName', () => {
+  it('says nothing on my own listing — that would be noise on every row I see', () => {
+    expect(assignedAgentName(1, 'Ana', 1)).toBeNull()
+  })
+
+  it('names a colleague', () => {
+    expect(assignedAgentName(1, 'Ana', 2)).toBe('Ana')
+  })
+
+  it('says nothing when the colleague\'s account was deleted', () => {
+    // "Asignada a —" no informa de nada.
+    expect(assignedAgentName(1, null, 2)).toBeNull()
+  })
+
+  it('says nothing on my own listing even if my name were null, guard order must not matter', () => {
+    expect(assignedAgentName(1, null, 1)).toBeNull()
+  })
+
+  it('says nothing while the session is still resolving who is looking', () => {
+    // Falla cerrado: mejor no pintar una etiqueta un instante que pintar
+    // "Asignada a Ana" sobre el propio anuncio de Ana mientras el contexto
+    // de autenticación todavía no sabe quién mira.
+    expect(assignedAgentName(1, 'Ana', undefined)).toBeNull()
+  })
+
+  it('says nothing when the backend has not shipped the fields yet and they arrive as undefined', () => {
+    // La rama que manda added_by/added_by_name no está mergeada: declararlos
+    // requeridos en TypeScript no impide que hoy lleguen `undefined` en
+    // ejecución. Sin esto, `t('…assignedTo', { name: undefined })` pinta
+    // literalmente "Asignada a undefined".
+    const addedByName = undefined as unknown as string | null
+    expect(assignedAgentName(2, addedByName, 1)).toBeNull()
+  })
+})
+
+describe('canFilterByMember', () => {
+  const member = (id: number, status: AgencyMember['status']): AgencyMember => ({
+    id,
+    customer_id: id * 10,
+    name: `M${id}`,
+    email: null,
+    mobile: null,
+    profile: null,
+    role: 'agent',
+    status,
+    joined_at: null,
+  })
+
+  // La lista que se pinta y la que decide si se pinta tienen que ser la MISMA.
+  // Si divergen, el control aparece y ofrece a alguien cuya cartera se fusionó
+  // al salir: una opción que siempre devuelve cero filas, que en pantalla se lee
+  // como un fallo de datos y no como un filtro que no debió existir.
+  it('exposes the same list it gates on, so the options cannot offer who it excluded', () => {
+    const members = [member(1, 'active'), member(2, 'suspended'), member(3, 'ended')]
+
+    expect(filterableMembers(members).map((m) => m.customer_id)).toEqual([10, 20])
+    expect(canFilterByMember(members)).toBe(true)
+  })
+
+  it('offers nothing while the roster is empty — still loading, or the fetch failed', () => {
+    expect(canFilterByMember([])).toBe(false)
+  })
+
+  it('offers nothing for a single active member — filtering a one-person team cannot change the result', () => {
+    expect(canFilterByMember([member(1, 'active')])).toBe(false)
+  })
+
+  it('offers the filter for two active members', () => {
+    expect(canFilterByMember([member(1, 'active'), member(2, 'active')])).toBe(true)
+  })
+
+  it('offers the filter when one of the two is suspended — a suspended member still owns listings', () => {
+    expect(canFilterByMember([member(1, 'active'), member(2, 'suspended')])).toBe(true)
+  })
+
+  it('does not count a member who has exited — their portfolio was merged away in the exit wizard', () => {
+    expect(canFilterByMember([member(1, 'active'), member(2, 'ended')])).toBe(false)
   })
 })
 

@@ -38,6 +38,10 @@ export interface PropertyFilters {
    *  "featured" in general — is_featured stays the advanced-filter checkbox. */
   featured_expiring?: boolean
   city_id?: number
+  /** `CrmProperty.added_by` — filters to one agency member's own listings.
+   *  Offered only when `canFilterByMember` (agency.ts) says a team has more
+   *  than one member who could hold one. */
+  added_by?: number
   price_min?: number
   price_max?: number
   area_min?: number

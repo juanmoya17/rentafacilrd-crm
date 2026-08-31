@@ -127,6 +127,10 @@ export interface CrmProperty {
   created_at: string | null
   /** The agent's own listing copy. Null on a draft nobody has written yet. */
   description: string | null
+  /** Who runs this listing. The roster is agency-wide since phase 5. */
+  added_by: number
+  /** Their name, already resolved server-side. Null if the account was deleted. */
+  added_by_name: string | null
   /**
    * Photo URLs, listing order, cover first. Always an array — a listing with
    * no photos sends `[]`, never null, so every consumer can `.length` it

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { AnimatePresence, motion } from 'motion/react'
 import {
   AlignJustify,
+  ArrowRightLeft,
   ArrowUpDown,
   LayoutGrid,
   // Aliased: an unqualified `Map` import shadows the global constructor, and
@@ -18,7 +19,9 @@ import {
   StretchVertical,
   Upload,
 } from 'lucide-react'
+import { useAuth } from '@/lib/auth-context'
 import { useI18n } from '@/lib/i18n/context'
+import type { Translate } from '@/lib/i18n/context'
 import {
   Badge,
   Button,
@@ -27,6 +30,7 @@ import {
   LinkButton,
   LoadingState,
   PageHeader,
+  Select,
 } from '@/components/ui'
 import { FilterBar, Register, SearchField, Segmented, type Column } from '@/components/register'
 import { LifecycleBadge, ModerationBadge, OperationBadge } from '@/components/labels'
@@ -35,9 +39,19 @@ import { PropertyMap } from '@/components/property-map'
 import { KpiStrip } from '@/components/kpi-strip'
 import { BulkBar } from '@/components/bulk-bar'
 import { ActionRail } from '@/components/action-rail'
+import { ReassignDialog } from '@/components/reassign-dialog'
 import { useRecordMorph, useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { useToast } from '@/lib/toast-context'
+import { useAgencyRole } from '@/lib/crm/use-agency-role'
+import {
+  assignedAgentName,
+  canFilterByMember,
+  filterableMembers,
+  listMembers,
+  reassignReceivers,
+  type AgencyMember,
+} from '@/lib/crm/agency'
 import {
   classifyBatchError,
   formatSpecs,
@@ -83,6 +97,7 @@ function filtersFromParams(params: URLSearchParams): PropertyFilters {
     is_featured: featured === null ? undefined : featured === 'true',
     featured_expiring: featuredExpiring === null ? undefined : featuredExpiring === 'true',
     city_id: num('city_id'),
+    added_by: num('added_by'),
     price_min: num('price_min'),
     price_max: num('price_max'),
     area_min: num('area_min'),
@@ -94,16 +109,17 @@ function filtersFromParams(params: URLSearchParams): PropertyFilters {
   }
 }
 
-/** A.7 — the one action this listing needs, without opening the detail. */
-function InlineAction({
-  property,
-  onPublish,
-}: {
-  property: CrmProperty
-  onPublish: (id: number) => void
-}) {
-  const { t } = useI18n()
-
+/**
+ * The lifecycle-driven half of A.7 — the one contextual action this listing
+ * needs, without opening the detail. Split out so `InlineAction` below can
+ * combine it with the reassign trigger, which has nothing to do with
+ * lifecycle and applies (or not) independently of whichever of these fires.
+ */
+function primaryInlineAction(
+  property: CrmProperty,
+  onPublish: (id: number) => void,
+  t: Translate,
+): ReactNode {
   // Each branch gets its own glyph, so the action a row is offering is legible
   // from the shape before the label is read — which is the point of icons in a
   // list where every row's button says something different.
@@ -152,6 +168,47 @@ function InlineAction({
     }
   }
   return null
+}
+
+/**
+ * A.7's one contextual action, plus Task 6's reassign trigger — the same
+ * per-row action slot every view (table, cards, map) already renders this
+ * component into.
+ *
+ * `members` and `isAdmin` travel down rather than a pre-computed boolean:
+ * `reassignReceivers` lives here, once, so the three call sites (table
+ * column, card grid, map view) cannot each reimplement — and drift from —
+ * the same "who's left to receive it" filter.
+ */
+function InlineAction({
+  property,
+  onPublish,
+  isAdmin,
+  members,
+  onReassign,
+}: {
+  property: CrmProperty
+  onPublish: (id: number) => void
+  /** `false` today for everyone — see Task 6 report: `agency_role` isn't served yet, so `useAgencyRole().known` is false and `isAdmin` fails closed. */
+  isAdmin: boolean
+  members: AgencyMember[]
+  onReassign: (property: CrmProperty) => void
+}) {
+  const { t } = useI18n()
+  const primary = primaryInlineAction(property, onPublish, t)
+  const receivers = isAdmin ? reassignReceivers(members, property.added_by) : []
+
+  if (receivers.length === 0) return primary
+
+  return (
+    <div className="flex items-center gap-1.5">
+      {primary}
+      <Button onClick={() => onReassign(property)}>
+        <ArrowRightLeft className="size-4" aria-hidden="true" />
+        {t('reassign.trigger')}
+      </Button>
+    </div>
+  )
 }
 
 function PropertyName({ property }: { property: CrmProperty }) {
@@ -225,88 +282,116 @@ function PropertyCardGrid({
   selected,
   onToggle,
   onPublish,
+  myId,
+  isAdmin,
+  members,
+  onReassign,
 }: {
   items: CrmProperty[]
   selected: Set<number>
   onToggle: (id: number) => void
   onPublish: (id: number) => void
+  /** Who is looking. `undefined` while the auth context is still resolving. */
+  myId: number | undefined
+  isAdmin: boolean
+  members: AgencyMember[]
+  onReassign: (property: CrmProperty) => void
 }) {
   const { t, formatNumber } = useI18n()
   const reveal = useRowReveal()
 
   return (
     <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {items.map((property, index) => (
-        <motion.li
-          key={property.id}
-          {...reveal(index)}
-          /* relative: `.rf-cardlink` stretches the title's anchor across this
-             element, so anything else clickable inside it needs to paint
-             above that overlay — hence `relative` on the checkbox and on the
-             footer row, not here alone. */
-          className="relative flex flex-col rounded-lg border border-rule bg-surface-raised p-3 transition-colors duration-(--duration-base) ease-out hover:border-rule-2"
-        >
-          {/* The photo carries the checkbox rather than the title row: over an
-              image it is always on the same surface, and it keeps the identity
-              line's left edge flush with everything below it. */}
-          <figure
-            className="relative mb-3"
-            aria-label={
-              property.images.length === 0
-                ? t('properties.noPhotos')
-                : t('properties.photoCount', { count: property.images.length })
-            }
+      {items.map((property, index) => {
+        const assignedTo = assignedAgentName(property.added_by, property.added_by_name, myId)
+        return (
+          <motion.li
+            key={property.id}
+            {...reveal(index)}
+            /* relative: `.rf-cardlink` stretches the title's anchor across this
+               element, so anything else clickable inside it needs to paint
+               above that overlay — hence `relative` on the checkbox and on the
+               footer row, not here alone. */
+            className="relative flex flex-col rounded-lg border border-rule bg-surface-raised p-3 transition-colors duration-(--duration-base) ease-out hover:border-rule-2"
           >
-            <PropertyPhoto
-              src={property.images[0]}
-              alt=""
-              eager={index < 6}
-              className="aspect-[16/9] w-full"
-            />
-            <PhotoDots count={property.images.length} />
-            <input
-              type="checkbox"
-              checked={selected.has(property.id)}
-              onChange={() => onToggle(property.id)}
-              aria-label={property.title}
-              /* size-4 + the tinted plate: a bare checkbox on photography is
-                 invisible against a light sky and lost against a dark roof. */
-              className="absolute left-1.5 top-1.5 size-4 rounded-sm bg-surface-raised accent-[var(--color-accent)] shadow-[0_0_0_3px_var(--color-surface-raised)]"
-            />
-          </figure>
+            {/* The photo carries the checkbox rather than the title row: over an
+                image it is always on the same surface, and it keeps the identity
+                line's left edge flush with everything below it. */}
+            <figure
+              className="relative mb-3"
+              aria-label={
+                property.images.length === 0
+                  ? t('properties.noPhotos')
+                  : t('properties.photoCount', { count: property.images.length })
+              }
+            >
+              <PropertyPhoto
+                src={property.images[0]}
+                alt=""
+                eager={index < 6}
+                className="aspect-[16/9] w-full"
+              />
+              <PhotoDots count={property.images.length} />
+              <input
+                type="checkbox"
+                checked={selected.has(property.id)}
+                onChange={() => onToggle(property.id)}
+                aria-label={property.title}
+                /* size-4 + the tinted plate: a bare checkbox on photography is
+                   invisible against a light sky and lost against a dark roof. */
+                className="absolute left-1.5 top-1.5 size-4 rounded-sm bg-surface-raised accent-[var(--color-accent)] shadow-[0_0_0_3px_var(--color-surface-raised)]"
+              />
+            </figure>
 
-          <div className="min-w-0">
-            <div className="rf-cardlink text-sm [overflow-wrap:anywhere]">
-              <PropertyName property={property} />
+            <div className="min-w-0">
+              <div className="rf-cardlink text-sm [overflow-wrap:anywhere]">
+                <PropertyName property={property} />
+              </div>
+              <p className="mt-0.5 font-mono text-xs text-muted">
+                {property.city !== null ? `${property.code} · ${property.city}` : property.code}
+              </p>
+              {/* Absent for a listing that is mine, or whose colleague's name
+                  came back null — no reserved row, or a solo agent's grid (the
+                  common case) would carry an empty line on every card. Not a
+                  link: this is plain text, so it never needs `relative` over
+                  `.rf-cardlink`. */}
+              {assignedTo !== null && (
+                <p className="mt-0.5 text-xs text-muted">
+                  {t('properties.assignedTo', { name: assignedTo })}
+                </p>
+              )}
             </div>
-            <p className="mt-0.5 font-mono text-xs text-muted">
-              {property.city !== null ? `${property.code} · ${property.city}` : property.code}
-            </p>
-          </div>
 
-          <div className="mt-3 flex items-baseline justify-between gap-3">
-            <span className="font-mono text-sm font-medium text-ink">
-              <PriceCell property={property} />
-            </span>
-            <span className="font-mono text-xs text-muted">
-              {formatSpecs(property, formatNumber)}
-            </span>
-          </div>
+            <div className="mt-3 flex items-baseline justify-between gap-3">
+              <span className="font-mono text-sm font-medium text-ink">
+                <PriceCell property={property} />
+              </span>
+              <span className="font-mono text-xs text-muted">
+                {formatSpecs(property, formatNumber)}
+              </span>
+            </div>
 
-          <div className="mt-2.5">
-            <StatusBadges property={property} />
-          </div>
+            <div className="mt-2.5">
+              <StatusBadges property={property} />
+            </div>
 
-          {/* mt-auto so a card whose neighbour wrapped to two title lines still
-              lines its action row up with theirs. */}
-          <div className="relative mt-auto flex items-center justify-between gap-2 pt-3">
-            <span className="text-xs text-muted">
-              {t('common.leads')} <LeadCount property={property} />
-            </span>
-            <InlineAction property={property} onPublish={onPublish} />
-          </div>
-        </motion.li>
-      ))}
+            {/* mt-auto so a card whose neighbour wrapped to two title lines still
+                lines its action row up with theirs. */}
+            <div className="relative mt-auto flex items-center justify-between gap-2 pt-3">
+              <span className="text-xs text-muted">
+                {t('common.leads')} <LeadCount property={property} />
+              </span>
+              <InlineAction
+                property={property}
+                onPublish={onPublish}
+                isAdmin={isAdmin}
+                members={members}
+                onReassign={onReassign}
+              />
+            </div>
+          </motion.li>
+        )
+      })}
     </ul>
   )
 }
@@ -326,9 +411,15 @@ function PropertyCardGrid({
 function PropertyMapView({
   items,
   onPublish,
+  isAdmin,
+  members,
+  onReassign,
 }: {
   items: CrmProperty[]
   onPublish: (id: number) => void
+  isAdmin: boolean
+  members: AgencyMember[]
+  onReassign: (property: CrmProperty) => void
 }) {
   const { t, formatNumber } = useI18n()
   const [activeId, setActiveId] = useState<number | null>(null)
@@ -385,7 +476,13 @@ function PropertyMapView({
                 {formatSpecs(property, formatNumber)}
               </p>
               <div className="relative mt-auto flex justify-end pt-1.5">
-                <InlineAction property={property} onPublish={onPublish} />
+                <InlineAction
+                  property={property}
+                  onPublish={onPublish}
+                  isAdmin={isAdmin}
+                  members={members}
+                  onReassign={onReassign}
+                />
               </div>
             </div>
           </li>
@@ -458,6 +555,19 @@ function Pager({
 export function PropertiesPage() {
   const { t, formatNumber } = useI18n()
   const { fail } = useToast()
+  // Who is looking, for the "Asignada a" tag — undefined while the auth
+  // context is still resolving, which assignedAgentName fails closed on.
+  const { state: authState } = useAuth()
+  const myId = authState.status === 'authenticated' ? authState.user.id : undefined
+  // Task 6 — Reassign is admin-only, and fails closed: `useAgencyRole()`
+  // reads `agency_role` off the auth context, and until the branch that
+  // serves that field ships, `known` is false for everyone and `isAdmin`
+  // stays false with it. See the Task 6 report for what that looks like today.
+  const { isAdmin, known: agencyKnown } = useAgencyRole()
+  // The listing being reassigned, or `null` for no dialog open. Holds the
+  // whole row, not just an id — the dialog's title reads the listing's own
+  // `title`.
+  const [reassigning, setReassigning] = useState<CrmProperty | null>(null)
   const [params, setParams] = useSearchParams()
   const [compact, setCompact] = useState(true)
   // Local, not in the URL, for the same reason `compact` is: this is a display
@@ -530,6 +640,20 @@ export function PropertiesPage() {
   // can change any of the four bucket counts, so a bulk-bar success or a
   // stale (404) resync reloads this the same way it reloads the summary.
   const railResource = useResource((signal) => getActionRail(signal), [])
+
+  // Task 5 — the agency roster, for the "filter by agent" control below.
+  // Hoisted to the PAGE component rather than the filter bar on purpose:
+  // Task 6's Reassign action needs this exact same active+suspended roster
+  // to know who a listing can be handed to. Read `membersResource` here
+  // rather than adding a second `listMembers()` call for Reassign — one
+  // request serves both.
+  //
+  // A failure here must not take the properties list down: it only means
+  // `members` stays `[]`, which makes `canFilterByMember` say no, which
+  // hides the dropdown. No error banner, no effect on `resource` below —
+  // the listing is the page's job, this filter is a convenience on top.
+  const membersResource = useResource((signal) => listMembers({ limit: 100 }, signal), [])
+  const members = membersResource.status === 'ready' ? membersResource.data.members : []
 
   // A.8 — the chrome grows with the inventory. Gate on the UNFILTERED total
   // (the summary's, not the filtered list's), so filtering down to two rows
@@ -735,7 +859,15 @@ export function PropertiesPage() {
     {
       key: 'actions',
       header: t('common.actions'),
-      render: (property) => <InlineAction property={property} onPublish={publishOne} />,
+      render: (property) => (
+        <InlineAction
+          property={property}
+          onPublish={publishOne}
+          isAdmin={isAdmin}
+          members={members}
+          onReassign={setReassigning}
+        />
+      ),
     },
   ]
 
@@ -1013,6 +1145,33 @@ export function PropertiesPage() {
                 ]}
               />
             </div>
+            {/* Task 5 — toolbar, not the advanced panel: filtering inventory
+                by agent is new ground this phase adds, and burying it inside
+                the collapsed `<details>` above would hide it. Only earns a
+                spot once canFilterByMember says a filter could actually
+                change the result — a one-member team never sees it.
+
+                And only once `known` says the server can honour it. The
+                `added_by` filter ships in the same backend branch as
+                `agency_role`, so before that lands the parameter is dropped
+                in silence and the full list comes back: a control that looks
+                like it worked and did nothing. Every other surface on this
+                branch fails closed; this one has to as well. */}
+            {canFilterByMember(members) && agencyKnown && (
+              <Select
+                id="property-added-by"
+                label={t('properties.filterByAgent')}
+                value={filters.added_by === undefined ? '' : String(filters.added_by)}
+                onChange={(next) => setParam('added_by', next === '' ? null : next)}
+                options={[
+                  { value: '', label: t('properties.filterByAgentAll') },
+                  ...filterableMembers(members).map((member) => ({
+                    value: String(member.customer_id),
+                    label: member.name ?? String(member.customer_id),
+                  })),
+                ]}
+              />
+            )}
             {advancedFilters}
           </>
         }
@@ -1094,7 +1253,13 @@ export function PropertiesPage() {
               working with no error (design.md § Layout invariants). */}
           {view === 'map' ? (
             <>
-              <PropertyMapView items={items} onPublish={publishOne} />
+              <PropertyMapView
+                items={items}
+                onPublish={publishOne}
+                isAdmin={isAdmin}
+                members={members}
+                onReassign={setReassigning}
+              />
               <div className="mt-3">{pager}</div>
             </>
           ) : view === 'cards' ? (
@@ -1104,6 +1269,10 @@ export function PropertiesPage() {
                 selected={selected}
                 onToggle={toggle}
                 onPublish={publishOne}
+                myId={myId}
+                isAdmin={isAdmin}
+                members={members}
+                onReassign={setReassigning}
               />
               <div className="mt-3">{pager}</div>
             </>
@@ -1129,6 +1298,20 @@ export function PropertiesPage() {
             </>
           )}
         </div>
+      )}
+
+      {reassigning !== null && (
+        <ReassignDialog
+          type="property"
+          id={reassigning.id}
+          listingTitle={reassigning.title}
+          receivers={reassignReceivers(members, reassigning.added_by)}
+          onClose={() => setReassigning(null)}
+          // Only the row list changes — reassigning moves nothing the KPI
+          // strip or the action rail count (lifecycle, leads, featured
+          // windows are all untouched).
+          onReassigned={() => resource.reload()}
+        />
       )}
     </>
   )

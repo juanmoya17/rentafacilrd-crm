@@ -169,6 +169,75 @@ export function exitReceivers(members: AgencyMember[], leavingMemberId: number):
   return members.filter((m) => m.status === 'active' && m.id !== leavingMemberId)
 }
 
+/**
+ * A quién se le puede reasignar un anuncio.
+ *
+ * `ownerId` es el `customer_id` de quien ya lo lleva (`Property.added_by` /
+ * `Project.added_by`), NO el `id` de membresía — al revés que
+ * `exitReceivers` de arriba, que compara por membresía porque la salida es
+ * de un miembro. Confundir los dos ids responde 404 o 422 desde
+ * `reassignListing`.
+ *
+ * Un suspendido tampoco entra, aunque sus anuncios existentes sigan siendo
+ * suyos y filtrables (`filterableMembers`): no se le carga trabajo nuevo. Si
+ * el dueño ya no es miembro de la agencia (salió y su cartera se fusionó en
+ * la salida), `ownerId` no coincide con nadie y salen todos los activos —
+ * no hay a quién excluir.
+ */
+export function reassignReceivers(members: AgencyMember[], ownerId: number): AgencyMember[] {
+  return members.filter((m) => m.status === 'active' && m.customer_id !== ownerId)
+}
+
+/**
+ * Qué nombre pintar en la etiqueta "Asignada a [nombre]" de una tarjeta de
+ * propiedad o proyecto — o `null` si no hay que pintar nada.
+ *
+ * Dos guardas, y ninguna puede depender de que la otra corra primero:
+ * - Es mi propio anuncio: "Asignada a mí" en todas mis filas es ruido.
+ * - `myId` desconocido (la sesión todavía está cargando): falla cerrado —
+ *   mejor no pintar una etiqueta un instante que pintar "Asignada a Ana"
+ *   sobre el propio anuncio de Ana mientras el contexto de autenticación
+ *   resuelve.
+ *
+ * `?? null` en el retorno, no un simple `return addedByName`: `added_by` y
+ * `added_by_name` viajan tipados como requeridos porque el backend los manda
+ * siempre, pero la rama que los manda no está mergeada, así que hoy llegan
+ * `undefined` en cada fila. Sin esto, `undefined !== null` deja pasar el
+ * guard de quien llama y `t()` interpola literalmente "Asignada a undefined".
+ */
+export function assignedAgentName(
+  addedBy: number,
+  addedByName: string | null,
+  myId: number | undefined,
+): string | null {
+  if (myId === undefined || addedBy === myId) return null
+  return addedByName ?? null
+}
+
+/**
+ * Si el control de "filtrar el inventario por asesor" de /properties se gana
+ * un sitio en pantalla.
+ *
+ * Quien salió no cuenta nunca, aunque la lista que llegue lo incluya (hoy el
+ * `listMembers()` por defecto ya lo excluye): su cartera se fusionó con la de
+ * un compañero en el wizard de salida, así que no queda nada a su nombre que
+ * filtrar. Con uno o cero miembros filtrables, ofrecer el control es ofrecer
+ * una elección que no puede cambiar el resultado.
+ */
+export function filterableMembers(members: AgencyMember[]): AgencyMember[] {
+  return members.filter((m) => m.status !== 'ended')
+}
+
+/**
+ * Sale de la MISMA lista que pinta el desplegable, no de una segunda copia del
+ * predicado: una puerta que dice "hay más de uno" mientras las opciones de
+ * debajo ofrecen a alguien que la puerta excluyó es como un control acaba
+ * ofreciendo una elección que siempre devuelve cero filas.
+ */
+export function canFilterByMember(members: AgencyMember[]): boolean {
+  return filterableMembers(members).length > 1
+}
+
 /** Igual que el `query()` de crm/api.ts, que es privado de ese módulo. */
 function query(params: Record<string, string | number | boolean | undefined>): string {
   const search = new URLSearchParams()

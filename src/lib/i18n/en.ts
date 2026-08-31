@@ -88,6 +88,9 @@ export const en: Record<TranslationKey, string> = {
   'common.due': 'Due',
   'common.overdue': 'Overdue',
   'common.none': 'None',
+  // Only when the listing isn't the viewer's own — see assignedAgentName in crm/agency.ts.
+  'properties.assignedTo': 'Assigned to {name}',
+  'projects.assignedTo': 'Assigned to {name}',
   'common.selectedCount': '{count} selected',
   'common.selectedCount_one': '{count} selected',
   'common.resultCount': '{count} results',
@@ -240,6 +243,8 @@ export const en: Record<TranslationKey, string> = {
 
   'properties.filters': 'Filters',
   'properties.filtersAdvanced': 'Advanced filters',
+  'properties.filterByAgent': 'Agent',
+  'properties.filterByAgentAll': 'All agents',
   'properties.priceFrom': 'Price from',
   'properties.priceTo': 'Price to',
   'properties.areaFrom': 'Area from (m²)',
@@ -599,6 +604,9 @@ export const en: Record<TranslationKey, string> = {
   'agency.title': 'My agency',
   'agency.loading': 'Loading the agency…',
   'agency.seats': 'Seats',
+  'agency.equipo': 'Team',
+  'agency.datos': 'Details',
+  'agency.recursos': 'Resources',
   'agency.overCapacity': 'Your team has more members than your plan covers. Nobody has been suspended, but you cannot invite or reactivate anyone until you are back under the limit.',
   'agency.col.member': 'Member',
   'agency.col.role': 'Role',
@@ -642,7 +650,12 @@ export const en: Record<TranslationKey, string> = {
   'agency.exit.contacts': 'contacts',
   'agency.exit.tasks': 'pending tasks',
 
-  'agencyProfile.title': 'Agency profile',
+  'reassign.trigger': 'Reassign',
+  'reassign.title': 'Reassign {title}',
+  'reassign.receiver': 'Assign to',
+  'reassign.confirm': 'Reassign',
+  'reassign.done': 'Reassigned to {name}.',
+
   'agencyProfile.subtitle': 'What your clients see.',
   'agencyProfile.name': 'Trading name',
   'agencyProfile.rnc': 'RNC',

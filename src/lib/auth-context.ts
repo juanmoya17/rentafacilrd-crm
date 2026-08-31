@@ -12,6 +12,10 @@ export interface CrmUser {
   /** Derived server-side from a successful verify_customers row. */
   is_verified_agent?: boolean
   verification_status?: 'unverified_user' | 'verified_user' | 'verified_agent'
+  /** 'owner' | 'admin' | 'agent'. Ausente = backend sin `feature/m12-app-prerequisites`. */
+  agency_role?: 'owner' | 'admin' | 'agent' | null
+  /** La agencia de quien pregunta. Ausente por el mismo motivo. */
+  agency_id?: number | null
 }
 
 /**
