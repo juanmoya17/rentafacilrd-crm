@@ -97,10 +97,21 @@ async function parseBody(response: Response): Promise<unknown> {
   }
 }
 
+/**
+ * La URL absoluta de un endpoint, con el mismo ORIGIN y PREFIX que usa api().
+ *
+ * Exportada para lo que NO pasa por fetch: un PDF que se abre en una pestaña,
+ * por ejemplo. Rederivarla en el módulo que la necesita es cómo una de las dos
+ * copias se queda atrás cuando cambia el prefijo.
+ */
+export function apiUrl(path: string): string {
+  return `${ORIGIN}${PREFIX}${path.replace(/^\//, '')}`
+}
+
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, signal, silent401 = false } = options
   const mutates = method !== 'GET'
-  const url = `${ORIGIN}${PREFIX}${path.replace(/^\//, '')}`
+  const url = apiUrl(path)
 
   const multipart = body instanceof FormData
 

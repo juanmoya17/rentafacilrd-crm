@@ -7,6 +7,9 @@ import { PropertyGallery } from '@/components/property-gallery'
 import { LifecycleBadge, OperationBadge, StageBadge } from '@/components/labels'
 import { useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
+import { useAuth } from '@/lib/auth-context'
+import { useAgencyRole } from '@/lib/crm/use-agency-role'
+import { PropertyCollaborations } from '@/components/property-collaborations'
 import { listLeads, type Page } from '@/lib/crm/api'
 import { formatSpecs, listProperties } from '@/lib/crm/properties'
 import type { CrmLead } from '@/lib/crm/types'
@@ -16,6 +19,8 @@ const EMPTY_LEADS: Page<CrmLead> = { items: [], total: 0 }
 export function PropertyDetailPage() {
   const { code } = useParams()
   const { t, formatCurrency, formatNumber, formatDate, formatRelativeTime } = useI18n()
+  const { state } = useAuth()
+  const { isAdmin } = useAgencyRole()
   const reveal = useRowReveal()
 
   // There is no detail-by-code endpoint yet. `search` is a fuzzy OR across
@@ -234,6 +239,19 @@ export function PropertyDetailPage() {
               </ul>
             ))}
         </section>
+
+        {/* Compartir es la regla de Editar: el asesor sobre lo suyo, owner y
+            admin sobre cualquier anuncio de la agencia. El servidor la vuelve
+            a aplicar; esto solo evita ofrecer un botón que daría 403. */}
+        {property !== undefined && (
+          <PropertyCollaborations
+            propertyId={property.id}
+            canShare={
+              isAdmin ||
+              (state.status === 'authenticated' && property.added_by === state.user.id)
+            }
+          />
+        )}
       </div>
     </>
   )

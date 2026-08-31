@@ -9,6 +9,14 @@ export interface CrmUser {
   name: string
   email: string
   profile?: string | null
+  /**
+   * `update_profile` EXIGE los cuatro: name, email, mobile y country_code.
+   * `get-user-data` devuelve el Customer entero, así que ya llegaban por el
+   * cable — solo faltaba declararlos. Sin ellos el formulario mandaría vacío
+   * y borraría el teléfono de quien solo quería cambiarse el nombre.
+   */
+  mobile?: string | null
+  country_code?: string | null
   /** Derived server-side from a successful verify_customers row. */
   is_verified_agent?: boolean
   verification_status?: 'unverified_user' | 'verified_user' | 'verified_agent'
@@ -43,6 +51,8 @@ export interface AuthContextValue {
   loginWithGoogle: () => Promise<void>
   logout: () => Promise<void>
   retry: () => void
+  /** Relee al usuario SIN pasar por `loading`: `retry()` desmonta la pantalla. */
+  refreshUser: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

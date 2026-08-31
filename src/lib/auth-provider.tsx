@@ -89,14 +89,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  /**
+   * Tras guardar el perfil. No reutiliza `retry()` a propósito: aquel pasa por
+   * `loading`, que desmonta la pantalla de ajustes y devuelve al usuario a un
+   * spinner justo después de pulsar Guardar.
+   *
+   * Un fallo aquí se traga: el guardado YA ocurrió y el servidor es la verdad.
+   * Lo único que queda desactualizado es la copia en memoria, hasta la próxima
+   * carga.
+   */
+  const refreshUser = useCallback(async () => {
+    try {
+      const response = await api<Envelope<CrmUser>>('get-user-data')
+      if (response.data) setState({ status: 'authenticated', user: response.data })
+    } catch {
+      // Deliberado: ver el comentario de arriba.
+    }
+  }, [])
+
   const retry = useCallback(() => {
     setState({ status: 'loading' })
     setProbe((n) => n + 1)
   }, [])
 
   const value = useMemo(
-    () => ({ state, login, loginWithGoogle, logout, retry }),
-    [state, login, loginWithGoogle, logout, retry],
+    () => ({ state, login, loginWithGoogle, logout, retry, refreshUser }),
+    [state, login, loginWithGoogle, logout, retry, refreshUser],
   )
 
   return <AuthContext value={value}>{children}</AuthContext>
