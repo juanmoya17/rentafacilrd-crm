@@ -15,6 +15,7 @@ import {
   PageHeader,
   Select,
 } from '@/components/ui'
+import { AgencyActivity } from '@/components/agency-activity'
 import { ClaimListings } from '@/components/claim-listings'
 import { AgencyProfileForm } from '@/components/agency-profile-form'
 import {
@@ -39,12 +40,24 @@ import {
 const ROLE_TONE = { owner: 'brand', admin: 'success', agent: 'neutral' } as const
 const STATUS_TONE = { active: 'success', suspended: 'warning', ended: 'neutral' } as const
 
-type Tab = 'equipo' | 'datos' | 'recursos'
-const TABS: Tab[] = ['equipo', 'datos', 'recursos']
+type Tab = 'equipo' | 'datos' | 'recursos' | 'actividad'
+const TABS: Tab[] = ['equipo', 'datos', 'recursos', 'actividad']
 
-/** Un valor ausente o irreconocible cae en Equipo — nunca una pantalla en blanco. */
+/**
+ * Incorporar inventario y leer quién tocó qué son las dos cosas que un asesor
+ * no puede pedir, ni por la interfaz ni por la URL. El servidor las vuelve a
+ * comprobar; esto solo evita enseñar una pestaña que respondería 403.
+ */
+const ADMIN_ONLY: Tab[] = ['recursos', 'actividad']
+
+/**
+ * Un valor ausente o irreconocible cae en Equipo — nunca una pantalla en blanco.
+ *
+ * Contra TABS y no contra una lista escrita a mano: la anterior enumeraba los
+ * valores y una pestaña nueva quedaba inalcanzable por URL sin que nada fallara.
+ */
 function tabFromParam(value: string | null): Tab {
-  return value === 'datos' || value === 'recursos' ? value : 'equipo'
+  return TABS.includes(value as Tab) ? (value as Tab) : 'equipo'
 }
 
 /**
@@ -72,8 +85,8 @@ export function AgencyPage() {
   // Recursos incorpora inventario a la agencia: es una decisión de dirección,
   // no algo que un asesor pueda pedir por URL. Un no-admin que llega a
   // ?tab=recursos cae en Equipo, igual que un tab que no se reconoce.
-  const tab: Tab = requestedTab === 'recursos' && !isAdmin ? 'equipo' : requestedTab
-  const visibleTabs = isAdmin ? TABS : TABS.filter((option) => option !== 'recursos')
+  const tab: Tab = ADMIN_ONLY.includes(requestedTab) && !isAdmin ? 'equipo' : requestedTab
+  const visibleTabs = isAdmin ? TABS : TABS.filter((option) => !ADMIN_ONLY.includes(option))
 
   // El equipo lo lee cualquier miembro activo; las invitaciones, solo quien
   // puede crearlas. Un asesor necesita ver con quién trabaja, y la lista no le
@@ -267,6 +280,10 @@ export function AgencyPage() {
         {/* Solo la dirección incorpora inventario: es una decisión sobre lo
             que entra en la empresa, no sobre lo que uno publicó. */}
         {tab === 'recursos' && <ClaimListings onClaimed={reload} />}
+
+        {/* El equipo ya está cargado para la pestaña de al lado; pasarlo evita
+            que dos listas del mismo equipo puedan discrepar en pantalla. */}
+        {tab === 'actividad' && <AgencyActivity members={rosterData?.members ?? []} />}
       </div>
 
       {transferring !== null && (

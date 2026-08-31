@@ -26,7 +26,7 @@ const USERS = [
     email: 'agente@test.com',
     password: 'secret',
     active: true,
-    data: { id: 42, name: 'Agente Demo', email: 'agente@test.com', is_verified_agent: true, verification_status: 'verified_agent' },
+    data: { id: 42, name: 'Agente Demo', email: 'agente@test.com', mobile: '8095550142', country_code: '1', is_verified_agent: true, verification_status: 'verified_agent' },
   },
   {
     email: 'sinverificar@test.com',
@@ -203,6 +203,31 @@ createServer(async (request, response) => {
       'crm_session=; Path=/; HttpOnly; Max-Age=0',
     ])
     return
+  }
+
+  // `update_profile` exige los cuatro campos. Los valida como el servidor para
+  // que un formulario que olvide uno falle AQUÍ, en desarrollo, y no en la
+  // primera prueba contra la API real.
+  if (url.pathname === '/api/update_profile') {
+    const user = sessions.get(jar.crm_session)
+    if (!user) return json(response, 401, { error: true, message: 'No autorizado' })
+
+    const payload = (await readBody(request)) ?? {}
+    const missing = ['name', 'email', 'mobile', 'country_code'].filter(
+      (field) => String(payload[field] ?? '').trim() === '',
+    )
+    if (missing.length > 0) {
+      return json(response, 400, { error: true, message: `Falta ${missing[0]}` })
+    }
+
+    Object.assign(user, {
+      name: payload.name,
+      email: payload.email,
+      mobile: payload.mobile,
+      country_code: payload.country_code,
+    })
+
+    return json(response, 200, { error: false, message: 'Perfil actualizado', data: user })
   }
 
   if (url.pathname === '/api/get-user-data') {

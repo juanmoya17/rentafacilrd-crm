@@ -308,6 +308,68 @@ export async function listMembers(
   }
 }
 
+/**
+ * Espeja el enum de `agency_activity_log.action`, y en ese orden: es el que
+ * ve el usuario en el desplegable de filtros.
+ *
+ * El tipo se DERIVA de la lista en vez de declararse aparte. Con las dos cosas
+ * escritas a mano, añadir una acción al tipo y olvidarla en la lista compila
+ * sin quejarse y deja un filtro que el usuario no puede elegir.
+ */
+export const ACTIVITY_ACTIONS = [
+  'created',
+  'updated',
+  'deleted',
+  'reassigned',
+  'role_changed',
+  'owner_transferred',
+  'member_ended',
+  'credit_adjusted',
+] as const
+
+export type ActivityAction = (typeof ACTIVITY_ACTIONS)[number]
+
+export interface AgencyActivityEntry {
+  id: number
+  action: ActivityAction
+  /** null cuando la escribió un webhook de pago, o si la persona ya no existe. */
+  actor_id: number | null
+  actor_name: string | null
+  /** Nombre corto de la clase: "Property", "CrmLead". Nunca la FQCN. */
+  subject_type: string
+  subject_id: number
+  /** Foto del título al escribir la entrada; sobrevive al borrado del sujeto. */
+  subject_label: string
+  /** Solo en `updated` y `reassigned`; null en el resto. */
+  changes: Record<string, { from: string | number | boolean | null; to: string | number | boolean | null }> | null
+  created_at: string | null
+}
+
+export type ActivityFilters = {
+  actor_id?: number
+  action?: ActivityAction
+  offset?: number
+  limit?: number
+}
+
+/**
+ * El feed de actividad. Owner/admin: a un asesor el servidor responde 403.
+ *
+ * Filtrar por alguien de otra agencia es un 422 y no una lista vacía — una
+ * lista vacía se leería como "no ha hecho nada".
+ */
+export async function listActivity(
+  filters: ActivityFilters = {},
+  signal?: AbortSignal,
+): Promise<{ entries: AgencyActivityEntry[]; total: number }> {
+  const envelope = await api<Envelope<AgencyActivityEntry[]>>(
+    `crm/agency/activity${query(filters)}`,
+    { signal },
+  )
+
+  return { entries: envelope.data, total: envelope.total ?? envelope.data.length }
+}
+
 export type InvitationFilters = {
   status?: 'pending' | 'all'
   offset?: number

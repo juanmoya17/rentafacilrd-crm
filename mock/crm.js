@@ -151,6 +151,88 @@ function defaultNotificationMap() {
   return defaults
 }
 
+// --------------------------------------------------------------------- agency
+const agencySeed = {
+  id: 1,
+  slug_id: 'inmobiliaria-ejemplo',
+  name: 'Inmobiliaria Ejemplo',
+  rnc: '131-12345-6',
+  phone: '+1 809 555 0100',
+  email: 'contacto@ejemplo.do',
+  website: 'https://ejemplo.do',
+  description: 'Vendemos y alquilamos en el Distrito Nacional desde 2011.',
+  instagram: 'inmobiliariaejemplo',
+  facebook: 'inmobiliariaejemplo',
+  logo: null,
+  cover: null,
+  is_verified: true,
+}
+
+const agencyMembersSeed = [
+  { id: 1, customer_id: 201, name: 'Ana Pérez', email: 'ana@ejemplo.do', mobile: '+1 809 555 0101', profile: null, role: 'owner', status: 'active', joined_at: at(-400 * DAY) },
+  { id: 2, customer_id: 202, name: 'Luis Objío', email: 'luis@ejemplo.do', mobile: '+1 829 555 0102', profile: null, role: 'admin', status: 'active', joined_at: at(-300 * DAY) },
+  { id: 3, customer_id: 203, name: 'Carla Méndez', email: 'carla@ejemplo.do', mobile: '+1 849 555 0103', profile: null, role: 'agent', status: 'active', joined_at: at(-120 * DAY) },
+  { id: 4, customer_id: 204, name: 'Rafael Núñez', email: 'rafael@ejemplo.do', mobile: null, profile: null, role: 'agent', status: 'suspended', joined_at: at(-90 * DAY) },
+]
+
+const agencyInvitationsSeed = [
+  { id: 1, role: 'agent', email: 'nuevo@ejemplo.do', phone: null, status: 'pending', is_open: true, invited_by: 'Ana Pérez', expires_at: at(5 * DAY), created_at: at(-2 * DAY) },
+]
+
+// Una entrada de cada forma que la pestaña tiene que saber pintar: con diff y
+// sin él, con actor y sin actor (el webhook de pago), y una del panel, cuyo
+// `actor_id` es null pero cuyo `actor_label` NO lo es.
+const agencyActivitySeed = [
+  { id: 6, action: 'updated', actor_id: 203, actor_name: 'Carla Méndez', subject_type: 'Property', subject_id: 1, subject_label: 'Apto. Piantini 3H', changes: { price: { from: 180000, to: 165000 } }, created_at: at(-2 * HOUR) },
+  { id: 5, action: 'reassigned', actor_id: 201, actor_name: 'Ana Pérez', subject_type: 'Property', subject_id: 2, subject_label: 'Villa Cap Cana', changes: { added_by: { from: 203, to: 202 } }, created_at: at(-6 * HOUR) },
+  { id: 4, action: 'created', actor_id: 202, actor_name: 'Luis Objío', subject_type: 'CrmLead', subject_id: 9, subject_label: 'María Peralta', changes: null, created_at: at(-1 * DAY) },
+  { id: 3, action: 'credit_adjusted', actor_id: null, actor_name: null, subject_type: 'FeaturedCredit', subject_id: 3, subject_label: 'Ana Pérez', changes: { quantity: { from: 0, to: 10 } }, created_at: at(-3 * DAY) },
+  { id: 2, action: 'member_ended', actor_id: null, actor_name: 'Soporte · Admin RF', subject_type: 'AgencyMember', subject_id: 5, subject_label: 'Pedro Objío', changes: { reassigned_to: { from: 205, to: 201 } }, created_at: at(-9 * DAY) },
+  { id: 1, action: 'role_changed', actor_id: 201, actor_name: 'Ana Pérez', subject_type: 'AgencyMember', subject_id: 2, subject_label: 'Luis Objío', changes: { role: { from: 'agent', to: 'admin' } }, created_at: at(-30 * DAY) },
+]
+
+// -------------------------------------------------------------- colaboración
+const collaboratorsSeed = [
+  { id: 301, name: 'Marisol Tavárez', profile: null, agency_name: 'Tavárez & Asociados' },
+  { id: 302, name: 'Iván Bonnelly', profile: null, agency_name: 'Bonnelly Realty' },
+  { id: 303, name: 'Marta Espaillat', profile: null, agency_name: 'Espaillat Inmuebles' },
+]
+
+const party = (id, name, agency) => ({
+  customer_id: id, name, identification: '001-1234567-8', agency_id: 1, agency_name: agency,
+})
+
+// Una de cada forma que la sección tiene que saber pintar: pendiente recibida
+// (con Aceptar/Rechazar), activa compartida por mí (con Revocar), y una
+// revocada, que conserva su motivo.
+const propertySharesSeed = [
+  {
+    id: 1, status: 'pending', contract_type: 'co_brokerage', commission_pct: 50,
+    property_id: 1, property: { id: 1, title: 'Apto. Piantini 3H', slug_id: 'RF0412', address: 'C/ Gustavo Mejía Ricart 100' },
+    owner: party(301, 'Marisol Tavárez', 'Tavárez & Asociados'),
+    collaborator: party(42, 'Agente Demo', 'Inmobiliaria Ejemplo'),
+    is_owner: false,
+    accepted_at: null, rejected_at: null, revoked_at: null, revoked_reason: null, created_at: at(-2 * HOUR),
+  },
+  {
+    id: 2, status: 'active', contract_type: 'shared_exclusive', commission_pct: 30,
+    property_id: 1, property: { id: 1, title: 'Apto. Piantini 3H', slug_id: 'RF0412', address: 'C/ Gustavo Mejía Ricart 100' },
+    owner: party(42, 'Agente Demo', 'Inmobiliaria Ejemplo'),
+    collaborator: party(302, 'Iván Bonnelly', 'Bonnelly Realty'),
+    is_owner: true,
+    accepted_at: at(-1 * DAY), rejected_at: null, revoked_at: null, revoked_reason: null, created_at: at(-3 * DAY),
+  },
+  {
+    id: 3, status: 'revoked', contract_type: 'referral', commission_pct: 15,
+    property_id: 2, property: { id: 2, title: 'Villa Cap Cana', slug_id: 'RF0517', address: 'Cap Cana' },
+    owner: party(42, 'Agente Demo', 'Inmobiliaria Ejemplo'),
+    collaborator: party(303, 'Marta Espaillat', 'Espaillat Inmuebles'),
+    is_owner: true,
+    accepted_at: at(-20 * DAY), rejected_at: null, revoked_at: at(-2 * DAY),
+    revoked_reason: 'El propietario retiró el encargo', created_at: at(-30 * DAY),
+  },
+]
+
 const state = {
   contacts,
   properties: seedProperties,
@@ -196,6 +278,12 @@ const state = {
     { id: 5, lead_id: null, title: 'Renovar destacado de RF0412', due_at: at(2 * DAY), remind_at: null, done_at: null },
     { id: 6, lead_id: 11, title: 'Enviar planos a Alejandra Nin', due_at: at(-1 * DAY), remind_at: null, done_at: at(-20 * HOUR) },
   ],
+  agency: { ...agencySeed },
+  agencyMembers: agencyMembersSeed,
+  agencyInvitations: agencyInvitationsSeed,
+  agencyActivity: agencyActivitySeed,
+  propertyShares: propertySharesSeed,
+  collaborators: collaboratorsSeed,
   nextId: 100,
 }
 
@@ -756,6 +844,202 @@ export function handleCrm(method, path, params, body) {
       status: 200,
       body: { error: false, message: 'Preferences reset', data: notificationSnapshot(), code: 200 },
     }
+  }
+
+  // ---------------------------------------------------------- colaboración
+  if (path === '/property-shares/collaborators' && method === 'GET') {
+    const q = (params.get('q') ?? '').trim().toLowerCase()
+    // El mismo 422 que el servidor: sin término esto sería un censo.
+    if (q.length < 2) {
+      return { status: 422, body: { error: true, message: 'Escribe al menos dos letras.' } }
+    }
+    return {
+      status: 200,
+      body: {
+        error: false,
+        data: state.collaborators.filter((c) => c.name.toLowerCase().includes(q)),
+      },
+    }
+  }
+
+  if (path === '/property-shares' && method === 'GET') {
+    let rows = [...state.propertyShares]
+    const role = params.get('role')
+    if (role === 'owner') rows = rows.filter((r) => r.is_owner)
+    if (role === 'collaborator') rows = rows.filter((r) => !r.is_owner)
+    const status = params.get('status')
+    if (status) rows = rows.filter((r) => r.status === status)
+
+    return { status: 200, body: { error: false, data: paginate(rows, params), total: rows.length } }
+  }
+
+  if (path === '/property-shares' && method === 'POST') {
+    const body_ = body ?? {}
+    const mate = state.collaborators.find((c) => c.id === Number(body_.collaborator_id))
+
+    // `open_key` del servidor, en pequeño: una sola colaboración viva por
+    // (propiedad, colaborador).
+    const clash = state.propertyShares.some(
+      (r) =>
+        r.property_id === Number(body_.property_id) &&
+        r.collaborator?.customer_id === Number(body_.collaborator_id) &&
+        (r.status === 'pending' || r.status === 'active'),
+    )
+    if (clash) {
+      return {
+        status: 422,
+        body: { error: true, message: 'Ya tienes una colaboración viva con esa persona sobre este anuncio.' },
+      }
+    }
+
+    const row = {
+      id: state.nextId++,
+      status: 'pending',
+      contract_type: body_.contract_type,
+      commission_pct: Number(body_.commission_pct),
+      property_id: Number(body_.property_id),
+      property: { id: Number(body_.property_id), title: 'Apto. Piantini 3H', slug_id: 'RF0412', address: 'C/ Gustavo Mejía Ricart 100' },
+      owner: party(42, 'Agente Demo', 'Inmobiliaria Ejemplo'),
+      collaborator: party(Number(body_.collaborator_id), mate?.name ?? 'Agente', mate?.agency_name ?? '—'),
+      is_owner: true,
+      accepted_at: null, rejected_at: null, revoked_at: null, revoked_reason: null,
+      created_at: at(0),
+    }
+    state.propertyShares.unshift(row)
+
+    return { status: 200, body: { error: false, data: row } }
+  }
+
+  const shareAction = path.match(/^\/property-shares\/(\d+)\/(accept|reject|revoke)$/)
+  if (shareAction && method === 'POST') {
+    const row = state.propertyShares.find((r) => r.id === Number(shareAction[1]))
+    if (!row) return { status: 404, body: { error: true, message: 'Colaboración no encontrada' } }
+
+    if (shareAction[2] === 'accept') {
+      // `exclusive_key`: una sola exclusiva activa por inmueble.
+      const taken = state.propertyShares.some(
+        (r) => r.property_id === row.property_id && r.status === 'active' && r.contract_type === 'shared_exclusive',
+      )
+      if (row.contract_type === 'shared_exclusive' && taken) {
+        return { status: 422, body: { error: true, message: 'Otro agente ya aceptó la exclusiva de este anuncio.' } }
+      }
+      row.status = 'active'
+      row.accepted_at = at(0)
+    } else if (shareAction[2] === 'reject') {
+      row.status = 'rejected'
+      row.rejected_at = at(0)
+    } else {
+      const reason = String((body ?? {}).reason ?? '').trim()
+      if (reason === '') {
+        return { status: 422, body: { error: true, message: 'Indica el motivo de la revocación.' } }
+      }
+      row.status = 'revoked'
+      row.revoked_at = at(0)
+      row.revoked_reason = reason
+    }
+
+    return { status: 200, body: { error: false, message: 'ok' } }
+  }
+
+  const collaboratorLeads = path.match(/^\/properties\/(\d+)\/collaborator-leads$/)
+  if (collaboratorLeads && method === 'GET') {
+    const propertyId = Number(collaboratorLeads[1])
+    const groups = state.propertyShares
+      .filter((r) => r.property_id === propertyId && (r.status === 'active' || r.status === 'revoked'))
+      .map((r) => ({
+        collaborator_id: r.collaborator.customer_id,
+        collaborator_name: r.collaborator.name,
+        share_status: r.status,
+        leads: [{ id: 9001, stage: 'contacted', contact: { name: 'Cliente del colaborador' } }],
+      }))
+
+    return {
+      status: 200,
+      body: { error: false, data: groups, total: groups.reduce((n, g) => n + g.leads.length, 0) },
+    }
+  }
+
+  // ----------------------------------------------------------------- agency
+  //
+  // Las cinco rutas que la pantalla /agency necesita para montar. Faltaban
+  // todas: getAgency() y listMembers() respondían 404 y la pantalla no se
+  // podía abrir sin parchear esto a mano en cada sesión.
+  //
+  // `is_admin: true` porque las cuatro pestañas solo existen para owner/admin;
+  // un mock que devolviera un asesor dejaría tres de ellas sin poder verse.
+  if (path === '/agency' && method === 'GET') {
+    return {
+      status: 200,
+      body: {
+        error: false,
+        data: {
+          agency: state.agency,
+          seats_used: state.agencyMembers.filter((m) => m.status === 'active').length,
+          seats_limit: 5,
+          role: 'owner',
+          is_admin: true,
+        },
+      },
+    }
+  }
+
+  if (path === '/agency' && method === 'PATCH') {
+    Object.assign(state.agency, body ?? {})
+    return { status: 200, body: { error: false, data: state.agency } }
+  }
+
+  if (path === '/agency/members' && method === 'GET') {
+    const status = params.get('status')
+    let rows = [...state.agencyMembers]
+    if (status === null) rows = rows.filter((m) => m.status !== 'ended')
+    else if (status !== 'all') rows = rows.filter((m) => m.status === status)
+
+    const active = state.agencyMembers.filter((m) => m.status === 'active').length
+
+    return {
+      status: 200,
+      body: {
+        error: false,
+        data: paginate(rows, params),
+        total: rows.length,
+        seats_used: active,
+        seats_limit: 5,
+        over_capacity: active > 5,
+      },
+    }
+  }
+
+  if (path === '/agency/invitations' && method === 'GET') {
+    return {
+      status: 200,
+      body: { error: false, data: state.agencyInvitations, total: state.agencyInvitations.length },
+    }
+  }
+
+  // Nada que incorporar: ClaimListings se desmonta sola con la lista vacía, que
+  // es el estado normal de una agencia y por tanto el que debe traer el mock.
+  if (path === '/agency/claimable' && method === 'GET') {
+    return { status: 200, body: { error: false, data: [], total: 0 } }
+  }
+
+  if (path === '/agency/activity' && method === 'GET') {
+    let rows = [...state.agencyActivity]
+    const actor = params.get('actor_id')
+    const action = params.get('action')
+
+    // Mismo 422 que el servidor: filtrar por alguien de otra agencia no puede
+    // contestar una lista vacía, que se leería como "no ha hecho nada".
+    if (actor !== null && !state.agencyMembers.some((m) => String(m.customer_id) === actor)) {
+      return {
+        status: 422,
+        body: { error: true, message: 'Ese miembro no es de esta agencia.' },
+      }
+    }
+
+    if (actor !== null) rows = rows.filter((e) => String(e.actor_id) === actor)
+    if (action !== null && action !== '') rows = rows.filter((e) => e.action === action)
+
+    return { status: 200, body: { error: false, data: paginate(rows, params), total: rows.length } }
   }
 
   // --------------------------------------------------------------- contacts

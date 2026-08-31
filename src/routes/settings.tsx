@@ -3,7 +3,8 @@ import { motion } from 'motion/react'
 import { useAuth } from '@/lib/auth-context'
 import { useI18n } from '@/lib/i18n/context'
 import { Button, Card, ErrorState, LoadingState, PageHeader } from '@/components/ui'
-import { FactList, RecordSectionHead } from '@/components/record'
+import { RecordSectionHead } from '@/components/record'
+import { ProfileForm } from '@/components/profile-form'
 import { Register, type Column } from '@/components/register'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { useRowReveal } from '@/lib/motion'
@@ -27,12 +28,6 @@ export function SettingsPage() {
   const reveal = useRowReveal()
   if (state.status !== 'authenticated') return null
 
-  const profile = [
-    { label: t('settings.name'), value: state.user.name },
-    { label: t('auth.email'), value: state.user.email },
-    { label: t('settings.agentId'), value: String(state.user.id), numeric: true },
-  ]
-
   return (
     <>
       <PageHeader title={t('settings.title')} />
@@ -42,9 +37,7 @@ export function SettingsPage() {
       <div className="grid max-w-2xl gap-6">
         <motion.section {...reveal(0)}>
           <RecordSectionHead label={t('settings.profile')} />
-          <Card className="p-4">
-            <FactList facts={profile} />
-          </Card>
+          <ProfileForm user={state.user} />
         </motion.section>
 
         <motion.section {...reveal(1)}>
