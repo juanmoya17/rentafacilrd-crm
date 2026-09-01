@@ -1,3 +1,7 @@
+/* eslint-disable react/only-export-components -- main.tsx es el punto de
+   entrada: no exporta nada, así que Fast Refresh nunca actuó sobre él. La
+   regla se dispara por los `const X = lazy(...)` de abajo, que están aquí
+   justamente porque son la definición del router. */
 import { StrictMode, lazy } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, Navigate } from 'react-router'
