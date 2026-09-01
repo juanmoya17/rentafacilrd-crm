@@ -2,7 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '@/lib/i18n/context'
 import { useToast } from '@/lib/toast-context'
 import { useResource } from '@/lib/use-resource'
-import { Badge, Button, Card, ErrorState, LoadingState } from '@/components/ui'
+import {
+  Badge,
+  Button,
+  Card,
+  CheckField,
+  ErrorState,
+  LoadingState,
+} from '@/components/ui'
 import {
   MAX_CLAIM,
   claimKey,
@@ -118,13 +125,7 @@ export function ClaimListings({ onClaimed }: { onClaimed: () => void }) {
           <thead className="border-b border-rule text-left text-xs uppercase text-muted">
             <tr>
               <th className="px-3 py-2">
-                <input
-                  type="checkbox"
-                  className="size-4"
-                  checked={allShown}
-                  onChange={toggleAll}
-                  aria-label={t('claim.title')}
-                />
+                <CheckField checked={allShown} onChange={toggleAll} ariaLabel={t('claim.title')} />
               </th>
               <th className="px-3 py-2">{t('agency.col.member')}</th>
               <th className="px-3 py-2">{t('claim.owner')}</th>
@@ -137,12 +138,10 @@ export function ClaimListings({ onClaimed }: { onClaimed: () => void }) {
               return (
                 <tr key={key} className="border-b border-rule/60 last:border-0">
                   <td className="px-3 py-2">
-                    <input
-                      type="checkbox"
-                      className="size-4"
+                    <CheckField
                       checked={selected.has(key)}
                       onChange={() => toggle(key)}
-                      aria-label={item.title ?? key}
+                      ariaLabel={item.title ?? key}
                     />
                   </td>
                   <td className="px-3 py-2">

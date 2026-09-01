@@ -604,6 +604,56 @@ export function Modal({
   )
 }
 
+/**
+ * A checkbox you can actually hit.
+ *
+ * The visual box stays small — 18px, because a 44px checkbox looks like a
+ * button — and the label around it carries the target. That split is the whole
+ * point: WCAG asks for 24px, Apple for 44pt and Material for 48dp, and none of
+ * that means drawing a bigger square. It means the row is what you press,
+ * which is what people try to do anyway.
+ *
+ * `label` is optional: some checkboxes sit in a table cell or over a photo and
+ * have only an aria-label. They still get the padded target.
+ */
+export function CheckField({
+  id,
+  label,
+  checked,
+  onChange,
+  disabled,
+  ariaLabel,
+  className = '',
+}: {
+  id?: string
+  label?: ReactNode
+  checked: boolean
+  onChange: (next: boolean) => void
+  disabled?: boolean
+  /** Required when there is no visible `label`. */
+  ariaLabel?: string
+  className?: string
+}) {
+  return (
+    <label
+      className={`inline-flex min-h-(--control-h) cursor-pointer items-center gap-2 text-sm ${
+        disabled ? 'cursor-not-allowed opacity-55' : ''
+      } ${label === undefined ? 'justify-center px-2' : ''} ${className}`}
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        aria-label={label === undefined ? ariaLabel : undefined}
+        className="size-[18px] shrink-0 accent-[var(--color-accent)] disabled:cursor-not-allowed"
+      />
+      {label !== undefined && <span className="min-w-0">{label}</span>}
+    </label>
+  )
+}
+
 /* ------------------------------------------------------------------ static */
 
 const BADGE_TONES = {
