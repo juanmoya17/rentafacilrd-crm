@@ -1085,9 +1085,11 @@ export function PropertiesPage() {
 
             {/* Density is a row-height control on the table only — in the card
                 grid it has nothing to act on, so it goes rather than sitting
-                there inert. */}
+                there inert. Hidden below lg for the same reason: that is where
+                the table renders as cards, so row height means nothing. */}
             {showChrome && view === 'table' && (
               <Segmented
+                className="hidden lg:flex"
                 group="property-density"
                 label={t('properties.density')}
                 value={compact ? 'compact' : 'comfortable'}
@@ -1254,6 +1256,10 @@ export function PropertiesPage() {
                 members={members}
                 onReassign={setReassigning}
               />
+              {/* The pager sits under a 448px map on a 640px screen, so on a
+                  phone it was below the fold with nothing to say it was there.
+                  The map fills the viewport instead (see property-map.tsx) and
+                  this scrolls into view after it. */}
               <div className="mt-3">{pager}</div>
             </>
           ) : view === 'cards' ? (

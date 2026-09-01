@@ -212,6 +212,7 @@ export function Segmented<T extends string>({
   value,
   onChange,
   iconOnly = false,
+  className = '',
 }: {
   group: string
   label: string
@@ -227,12 +228,16 @@ export function Segmented<T extends string>({
    * / Paused / Expired" is a quiz, not a filter.
    */
   iconOnly?: boolean
+  /** For hiding a control at a breakpoint where it has nothing to act on. */
+  className?: string
 }) {
   return (
     <div
       role="group"
       aria-label={label}
-      className="flex flex-wrap items-center gap-0.5 rounded-md border border-rule bg-surface-raised p-0.5"
+      className={`flex-wrap items-center gap-0.5 rounded-md border border-rule bg-surface-raised p-0.5 ${
+        className === '' ? 'flex' : className
+      }`}
     >
       {options.map((option) => {
         const selected = option.value === value

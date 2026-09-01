@@ -137,7 +137,11 @@ export function PropertyMap({
     <div
       ref={containerRef}
       /* Leaflet needs a resolved height or it renders 0px tall. */
-      className="h-[28rem] w-full rounded-lg border border-rule lg:h-[calc(100vh-16rem)] lg:min-h-[32rem]"
+      /* Full viewport height minus the chrome on a phone: 28rem left a map you
+         had to scroll inside of, on the one screen whose whole point is seeing
+         where things are. 100dvh, not vh, so the browser's collapsing address
+         bar does not crop it. */
+      className="h-[calc(100dvh-14rem)] min-h-[20rem] w-full rounded-lg border border-rule lg:h-[calc(100vh-16rem)] lg:min-h-[32rem]"
     />
   )
 }

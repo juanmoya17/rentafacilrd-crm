@@ -218,7 +218,7 @@ export const en: Record<TranslationKey, string> = {
   'properties.densityCompact': 'Compact',
   'properties.densityComfortable': 'Comfortable',
   'properties.view': 'View',
-  'properties.viewTable': 'Table',
+  'properties.viewTable': 'Compact list',
   'properties.viewCards': 'Cards',
   'properties.viewMap': 'Map',
   'properties.noPhotos': 'No photos',

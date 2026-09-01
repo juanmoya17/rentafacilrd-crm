@@ -225,7 +225,7 @@ export const es = {
   'properties.densityCompact': 'Compacto',
   'properties.densityComfortable': 'Cómodo',
   'properties.view': 'Vista',
-  'properties.viewTable': 'Tabla',
+  'properties.viewTable': 'Lista compacta',
   'properties.viewCards': 'Fichas',
   'properties.viewMap': 'Mapa',
   'properties.noPhotos': 'Sin fotos',
