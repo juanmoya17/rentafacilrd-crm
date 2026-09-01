@@ -198,9 +198,17 @@ function extensionOf(file: File): string {
  * without it the agent loses a full multi-megabyte upload to a rule the form
  * could have named before the round trip.
  *
- * Returns the first offending field, in wizard order, or null.
+ * Returns EVERY offending field, in validation order (which is wizard order
+ * with `description` sitting on the parameters step — see stepOf).
+ *
+ * The whole list, not the first one, because the two callers want different
+ * halves of the same question: Review lists what is still missing so Publish
+ * can stay disabled until none of it is, and the jump-to-field wants the
+ * earliest. A second validator built for the list would drift from this one,
+ * and the way that drift shows up is Publish enabled over a form the server
+ * then rejects — worse than the bounce it was meant to replace.
  */
-export function validateProperty(
+export function propertyOffenders(
   form: PropertyForm,
   media: PropertyMedia,
   parameters: ParameterValues,
@@ -209,21 +217,23 @@ export function validateProperty(
   galleryLimit: number | null,
   /** False hides 3D + video; the server answers `media_rich_locked` for either. */
   mediaRich: boolean,
-): PropertyField | null {
-  if (form.category_id === '') return 'category_id'
-  if (form.property_type === '1' && form.rentduration.trim() === '') return 'rentduration'
+): PropertyField[] {
+  const offenders: PropertyField[] = []
 
-  if (form.title.trim() === '') return 'title'
-  if (form.description.trim() === '') return 'description'
+  if (form.category_id === '') offenders.push('category_id')
+  if (form.property_type === '1' && form.rentduration.trim() === '') offenders.push('rentduration')
+
+  if (form.title.trim() === '') offenders.push('title')
+  if (form.description.trim() === '') offenders.push('description')
 
   // `min:1` — not just numeric. A listing at 0 is a data-entry slip, and the
   // server refuses it after the upload has already been paid for.
   const price = form.price.trim()
-  if (price === '' || !DECIMAL.test(price) || Number(price) < 1) return 'price'
+  if (price === '' || !DECIMAL.test(price) || Number(price) < 1) offenders.push('price')
 
   for (const field of ['area', 'land_area'] as const) {
     const raw = form[field].trim()
-    if (raw !== '' && !DECIMAL.test(raw)) return field
+    if (raw !== '' && !DECIMAL.test(raw)) offenders.push(field)
   }
 
   for (const parameter of required) {
@@ -232,42 +242,77 @@ export function validateProperty(
     const filled =
       value instanceof File ||
       (Array.isArray(value) ? value.length > 0 : (value ?? '').toString().trim() !== '')
-    if (!filled) return `param:${parameter.id}`
+    if (!filled) offenders.push(`param:${parameter.id}`)
   }
 
-  if (form.address.trim() === '') return 'address'
+  if (form.address.trim() === '') offenders.push('address')
   // Both or neither is not enough here: the server requires both.
-  if (form.latitude.trim() === '' || form.longitude.trim() === '') return 'latitude'
+  if (form.latitude.trim() === '' || form.longitude.trim() === '') offenders.push('latitude')
 
-  if (media.title_image === null) return 'title_image'
-  if (!TITLE_IMAGE_TYPES.includes(media.title_image.type)) return 'title_image'
-  if (media.title_image.size > IMAGE_MAX_BYTES) return 'title_image'
+  if (
+    media.title_image === null ||
+    !TITLE_IMAGE_TYPES.includes(media.title_image.type) ||
+    media.title_image.size > IMAGE_MAX_BYTES
+  ) {
+    offenders.push('title_image')
+  }
 
-  if (galleryLimit !== null && media.gallery_images.length > galleryLimit) return 'gallery_images'
-  for (const image of media.gallery_images) {
-    if (!TITLE_IMAGE_TYPES.includes(image.type) || image.size > IMAGE_MAX_BYTES) {
-      return 'gallery_images'
-    }
+  // One entry however many files offend: these name a control, not a file, and
+  // three bad photos are still one thing to go and fix. The early `return` this
+  // replaced gave that for free; a push inside the loop would not.
+  if (
+    (galleryLimit !== null && media.gallery_images.length > galleryLimit) ||
+    media.gallery_images.some(
+      (image) => !TITLE_IMAGE_TYPES.includes(image.type) || image.size > IMAGE_MAX_BYTES,
+    )
+  ) {
+    offenders.push('gallery_images')
   }
 
   if (media.three_d_image !== null) {
-    if (!mediaRich) return 'three_d_image'
-    if (!THREE_D_TYPES.includes(media.three_d_image.type)) return 'three_d_image'
-    if (media.three_d_image.size > IMAGE_MAX_BYTES) return 'three_d_image'
+    if (
+      !mediaRich ||
+      !THREE_D_TYPES.includes(media.three_d_image.type) ||
+      media.three_d_image.size > IMAGE_MAX_BYTES
+    ) {
+      offenders.push('three_d_image')
+    }
   }
 
-  for (const document of media.documents) {
-    if (!DOCUMENT_EXTENSIONS.includes(extensionOf(document))) return 'documents'
-    if (document.size > DOCUMENT_MAX_BYTES) return 'documents'
+  if (
+    media.documents.some(
+      (document) =>
+        !DOCUMENT_EXTENSIONS.includes(extensionOf(document)) ||
+        document.size > DOCUMENT_MAX_BYTES,
+    )
+  ) {
+    offenders.push('documents')
   }
 
   const video = form.video_link.trim()
-  if (video !== '') {
-    if (!mediaRich) return 'video_link'
-    if (!YOUTUBE.test(video)) return 'video_link'
-  }
+  if (video !== '' && (!mediaRich || !YOUTUBE.test(video))) offenders.push('video_link')
 
-  return null
+  return offenders
+}
+
+/**
+ * The first offending field, in wizard order, or null.
+ *
+ * The head of propertyOffenders() and nothing else: this is what sends the
+ * agent to the step that needs them, and it must never disagree with the list
+ * the Review screen shows.
+ */
+export function validateProperty(
+  form: PropertyForm,
+  media: PropertyMedia,
+  parameters: ParameterValues,
+  required: { id: number; is_required: number }[],
+  galleryLimit: number | null,
+  mediaRich: boolean,
+): PropertyField | null {
+  return (
+    propertyOffenders(form, media, parameters, required, galleryLimit, mediaRich)[0] ?? null
+  )
 }
 
 /* ---------------------------------------------------------------- payload */

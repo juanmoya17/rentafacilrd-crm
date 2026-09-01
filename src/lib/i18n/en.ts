@@ -494,6 +494,8 @@ export const en: Record<TranslationKey, string> = {
   'newProperty.photos': 'Photos',
   'newProperty.reviewNote':
     'If your account has auto-approval the listing goes live; otherwise it goes to review.',
+  'newProperty.pendingTitle': 'Still needed before you can publish:',
+
   'newProperty.error.category_id': 'Pick a category.',
   'newProperty.error.property_type': 'Pick sale or rent.',
   'newProperty.error.rentduration': 'Pick the rent period.',

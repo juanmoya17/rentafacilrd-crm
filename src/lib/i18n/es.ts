@@ -506,6 +506,8 @@ export const es = {
   'newProperty.photos': 'Fotos',
   'newProperty.reviewNote':
     'Si tu cuenta tiene aprobación automática el anuncio queda publicado; si no, entra en revisión.',
+  'newProperty.pendingTitle': 'Falta esto para poder publicar:',
+
   'newProperty.error.category_id': 'Elige una categoría.',
   'newProperty.error.property_type': 'Elige venta o alquiler.',
   'newProperty.error.rentduration': 'Elige el periodo de alquiler.',
