@@ -485,6 +485,8 @@ export const es = {
   'newProperty.clientAddress': 'Dirección para el cliente',
   'newProperty.clientAddressHint': 'Opcional. Lo que ve quien contacta, si prefieres no dar la exacta.',
   'newProperty.pin': 'Ubicación en el mapa',
+  'newProperty.mapUnavailable':
+    'No se pudo cargar el mapa. Escribe la dirección y elige una sugerencia: eso fija la ubicación igual que el pin.',
   'newProperty.pinHint': 'Toca el mapa para colocar el pin. Es obligatorio.',
   'newProperty.titleImage': 'Foto principal',
   'newProperty.imageRule': 'JPG o PNG, hasta 3 MB.',

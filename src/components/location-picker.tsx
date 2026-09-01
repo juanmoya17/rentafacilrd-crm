@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { useI18n } from '@/lib/i18n/context'
 import { loadMaps, mapsConfigured } from '@/lib/google-maps'
 
 /**
@@ -42,6 +43,7 @@ interface PickerProps {
 }
 
 function GooglePicker({ lat, lng, onChange, label }: PickerProps) {
+  const { t } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<google.maps.Map | null>(null)
   const markerRef = useRef<google.maps.Marker | null>(null)
@@ -57,38 +59,53 @@ function GooglePicker({ lat, lng, onChange, label }: PickerProps) {
    */
   const [ready, setReady] = useState(false)
 
+  /**
+   * Google failing to load used to leave this component with a rejected
+   * promise nobody caught: an empty bordered box, no message, and the only
+   * trace in the console. The agent's next move was to guess.
+   */
+  const [failed, setFailed] = useState(false)
+
   useEffect(() => {
     if (containerRef.current === null) return
     let live = true
 
     void (async () => {
-      await loadMaps()
-      const { Map } = await google.maps.importLibrary('maps')
-      if (!live || containerRef.current === null) return
+      try {
+        await loadMaps()
+        const { Map } = await google.maps.importLibrary('maps')
+        if (!live || containerRef.current === null) return
 
-      const map = new Map(containerRef.current, {
-        center: DEFAULT_CENTER,
-        zoom: CITY_ZOOM,
-        // No mapId, deliberately. It is required by AdvancedMarkerElement and
-        // by nothing else here, and a mapId that does not resolve — created in
-        // a different Cloud project, or not a JavaScript-type style — renders
-        // the base map and then silently refuses every advanced marker. That
-        // is what "the map works but clicking does nothing" looked like in
-        // production. One draggable dot does not need advanced markers, so the
-        // dependency is gone rather than documented.
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false,
-        // The page already scrolls; a wheel that zooms the map instead of
-        // moving the page is the most hated thing an embedded map does.
-        gestureHandling: 'cooperative',
-      })
-      map.addListener('click', (event: google.maps.MapMouseEvent) => {
-        const position = event.latLng
-        if (position !== null) onChangeRef.current(position.lat(), position.lng())
-      })
-      mapRef.current = map
-      setReady(true)
+        const map = new Map(containerRef.current, {
+          center: DEFAULT_CENTER,
+          zoom: CITY_ZOOM,
+          // No mapId, deliberately. It is required by AdvancedMarkerElement and
+          // by nothing else here, and a mapId that does not resolve — created
+          // in a different Cloud project, or not a JavaScript-type style —
+          // renders the base map and then silently refuses every advanced
+          // marker. That is what "the map works but clicking does nothing"
+          // looked like in production. One draggable dot does not need advanced
+          // markers, so the dependency is gone rather than documented.
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+          // The page already scrolls; a wheel that zooms the map instead of
+          // moving the page is the most hated thing an embedded map does.
+          gestureHandling: 'cooperative',
+        })
+        map.addListener('click', (event: google.maps.MapMouseEvent) => {
+          const position = event.latLng
+          if (position !== null) onChangeRef.current(position.lat(), position.lng())
+        })
+        mapRef.current = map
+        setReady(true)
+      } catch {
+        // No key, a blocked script, a referrer restriction, an API not enabled
+        // on the Cloud project: all of them land here, and all of them mean the
+        // same thing to the agent — type the address, the suggestion still
+        // fills the coordinates.
+        if (live) setFailed(true)
+      }
     })()
 
     return () => {
@@ -96,6 +113,7 @@ function GooglePicker({ lat, lng, onChange, label }: PickerProps) {
       mapRef.current = null
       markerRef.current = null
       setReady(false)
+      setFailed(false)
     }
   }, [])
 
@@ -144,12 +162,23 @@ function GooglePicker({ lat, lng, onChange, label }: PickerProps) {
   }, [lat, lng, ready])
 
   return (
-    <div
-      ref={containerRef}
-      role="application"
-      aria-label={label}
-      className="h-72 w-full overflow-hidden rounded-lg border border-rule"
-    />
+    <>
+      {failed && (
+        <p role="alert" className="mb-2 rounded-md bg-warning-bg px-3 py-2 text-sm text-warning">
+          {t('newProperty.mapUnavailable')}
+        </p>
+      )}
+
+      {/* Stays mounted even when the load failed: unmounting it would drop the
+          ref the retry-on-remount path needs, and an empty framed area beside
+          the message reads as "this is where the map goes". */}
+      <div
+        ref={containerRef}
+        role="application"
+        aria-label={label}
+        className="h-72 w-full overflow-hidden rounded-lg border border-rule"
+      />
+    </>
   )
 }
 

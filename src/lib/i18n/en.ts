@@ -473,6 +473,8 @@ export const en: Record<TranslationKey, string> = {
   'newProperty.clientAddress': 'Address shown to clients',
   'newProperty.clientAddressHint': 'Optional. What enquirers see if you would rather not give the exact one.',
   'newProperty.pin': 'Map location',
+  'newProperty.mapUnavailable':
+    'The map could not load. Type the address and pick a suggestion: that sets the location just like the pin.',
   'newProperty.pinHint': 'Tap the map to drop the pin. Required.',
   'newProperty.titleImage': 'Cover photo',
   'newProperty.imageRule': 'JPG or PNG, up to 3 MB.',

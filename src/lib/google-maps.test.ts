@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ADDRESS_COMPONENTS, componentOf } from './google-maps'
+import { ADDRESS_COMPONENTS, componentOf, mapsBootstrapUrl } from './google-maps'
 
 /**
  * The priority order in ADDRESS_COMPONENTS is the entire behaviour of the
@@ -59,5 +59,29 @@ describe('componentOf', () => {
     // the agent typed instead of blanking it.
     expect(pick([component('República Dominicana', 'country')], ADDRESS_COMPONENTS.zone)).toBe('')
     expect(pick([], ADDRESS_COMPONENTS.city)).toBe('')
+  })
+})
+
+/**
+ * The bootstrap URL. `script.onload` fires before the loader has installed
+ * `google.maps.importLibrary`, so a caller that awaits onload and then calls
+ * importLibrary throws "is not a function" — which is precisely what an empty
+ * location map in production turned out to be. The `callback` parameter is the
+ * fix, and it is the whole reason this URL is built here rather than inline.
+ */
+describe('mapsBootstrapUrl', () => {
+  it('asks Google to call back when the loader is actually ready', () => {
+    const url = new URL(mapsBootstrapUrl('KEY-DE-PRUEBA', '__rfMapsReady'))
+
+    expect(url.searchParams.get('callback')).toBe('__rfMapsReady')
+    expect(url.searchParams.get('loading')).toBe('async')
+    expect(url.searchParams.get('key')).toBe('KEY-DE-PRUEBA')
+    expect(url.searchParams.get('v')).toBe('weekly')
+  })
+
+  it('points at the documented bootstrap endpoint', () => {
+    const url = new URL(mapsBootstrapUrl('K', 'cb'))
+
+    expect(url.origin + url.pathname).toBe('https://maps.googleapis.com/maps/api/js')
   })
 })
