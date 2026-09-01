@@ -43,6 +43,8 @@ export const es = {
   'auth.google.rejected': 'No pudimos verificar tu cuenta de Google.',
   'auth.google.conflict': 'Ese correo ya tiene cuenta. Entra con tu contraseña.',
   'auth.google.emailUnverified': 'Verifica tu correo en Google antes de continuar.',
+  'auth.google.redirectStorage':
+    'Tu navegador bloqueó el inicio con Google. Permite los datos de sitio para crm.rentafacilrd.com, o entra con tu correo y contraseña.',
   'auth.google.noPassword': 'Ese correo ya tiene cuenta. Contacta a soporte para recuperarla.',
   'auth.google.generic': 'No pudimos completar el inicio de sesión con Google.',
 

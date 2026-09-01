@@ -49,6 +49,15 @@ export interface AuthContextValue {
   state: AuthState
   login: (email: string, password: string) => Promise<void>
   loginWithGoogle: () => Promise<void>
+  /**
+   * Canjea el resultado de un redirect de Google, si esta carga viene de uno.
+   * `false` es la respuesta de cualquier visita normal a /login.
+   *
+   * Vive aquí y no en la pantalla porque el `setState` de autenticado es de
+   * este provider: canjear por fuera abre la sesión en el servidor y deja la
+   * aplicación enseñando el formulario.
+   */
+  completeGoogleRedirect: () => Promise<boolean>
   logout: () => Promise<void>
   retry: () => void
   /** Relee al usuario SIN pasar por `loading`: `retry()` desmonta la pantalla. */

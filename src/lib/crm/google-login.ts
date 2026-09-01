@@ -31,6 +31,7 @@ export type GoogleErrorKey =
   | 'conflict'
   | 'emailUnverified'
   | 'noPassword'
+  | 'redirectStorage'
   | 'generic'
 
 function firebaseCode(error: unknown): string | null {
@@ -57,6 +58,13 @@ export function googleErrorKey(error: unknown): GoogleErrorKey {
       return 'popupBlocked'
     case 'auth/unauthorized-domain':
       return 'unauthorizedDomain'
+    // Redirect-only: the browser refused the third-party storage the flow
+    // needs to remember it started (Safari's tracking prevention, or a
+    // "block all cookies" setting). Its own message says nothing actionable,
+    // and without a case here it lands in `generic` — which tells the agent
+    // to try again, the one thing that cannot work.
+    case 'auth/missing-initial-state':
+      return 'redirectStorage'
   }
 
   // All three refusals are 409, so the status alone cannot tell them apart
@@ -78,9 +86,14 @@ export function googleErrorKey(error: unknown): GoogleErrorKey {
   return 'generic'
 }
 
-/** Popup → token → session. Throws; the caller maps with googleErrorKey. */
-export async function signInWithGoogle(): Promise<CrmUser> {
-  const credential = await getGoogleIdToken()
+/**
+ * Credential → CRM session. The half the popup and the redirect share: they
+ * differ only in how the credential was obtained, and duplicating this is how
+ * one flow quietly stops sending what the other sends.
+ */
+export async function exchangeGoogleCredential(
+  credential: GoogleCredential,
+): Promise<CrmUser> {
   const response = await api<Envelope<CrmUser>>('user_signup', {
     method: 'POST',
     body: googleSignupBody(credential),
@@ -88,5 +101,11 @@ export async function signInWithGoogle(): Promise<CrmUser> {
   if (!response.data) {
     throw new ApiError('El servidor no devolvió el usuario.', 200, response)
   }
+
   return response.data
+}
+
+/** Popup → token → session. Throws; the caller maps with googleErrorKey. */
+export async function signInWithGoogle(): Promise<CrmUser> {
+  return exchangeGoogleCredential(await getGoogleIdToken())
 }

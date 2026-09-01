@@ -39,6 +39,8 @@ export const en: Record<TranslationKey, string> = {
   'auth.google.rejected': 'We could not verify your Google account.',
   'auth.google.conflict': 'That email already has an account. Sign in with your password.',
   'auth.google.emailUnverified': 'Verify your email with Google before continuing.',
+  'auth.google.redirectStorage':
+    'Your browser blocked the Google sign-in. Allow site data for crm.rentafacilrd.com, or sign in with your email and password.',
   'auth.google.noPassword': 'That email already has an account. Contact support to recover it.',
   'auth.google.generic': 'We could not finish signing in with Google.',
 

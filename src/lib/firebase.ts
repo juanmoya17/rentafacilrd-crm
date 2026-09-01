@@ -1,5 +1,13 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
-import { GoogleAuthProvider, getAuth, signInWithPopup, signOut } from 'firebase/auth'
+import type { Auth, UserCredential } from 'firebase/auth'
+import {
+  GoogleAuthProvider,
+  getAuth,
+  getRedirectResult,
+  signInWithPopup,
+  signInWithRedirect,
+  signOut,
+} from 'firebase/auth'
 
 /**
  * Firebase, not Google Identity Services.
@@ -46,25 +54,30 @@ export interface GoogleCredential {
   name: string
 }
 
-/**
- * Opens the Google popup and returns a fresh ID token. Throws the raw
- * Firebase error.
- *
- * Firebase's own session is signed out immediately after: it has no further
- * job once the ID token is in hand, and `getAuth()` defaults to IndexedDB
- * persistence, so leaving it signed in would hold a long-lived Google
- * refresh token on the origin — readable by any script — long after the CRM
- * session (a Laravel cookie) ends. `signOut` runs even when `getIdToken`
- * itself throws, so a failed exchange never leaves that session behind.
- */
-export async function getGoogleIdToken(): Promise<GoogleCredential> {
-  const auth = getAuth(firebaseApp())
+function googleProvider(): GoogleAuthProvider {
   const provider = new GoogleAuthProvider()
   // Otherwise a browser with one signed-in Google account re-authenticates
   // that account with no popup — including the previous agent's, on a
   // shared machine, after a logout that only ever cleared the Laravel cookie.
   provider.setCustomParameters({ prompt: 'select_account' })
-  const result = await signInWithPopup(auth, provider)
+
+  return provider
+}
+
+/**
+ * Token out, Firebase session gone.
+ *
+ * Firebase's own session has no further job once the ID token is in hand, and
+ * `getAuth()` defaults to IndexedDB persistence, so leaving it signed in would
+ * hold a long-lived Google refresh token on the origin — readable by any
+ * script — long after the CRM session (a Laravel cookie) ends. `signOut` runs
+ * even when `getIdToken` itself throws, so a failed exchange never leaves that
+ * session behind.
+ *
+ * Shared by both flows: the popup and the redirect differ only in how the
+ * credential arrives, never in what happens to it afterwards.
+ */
+async function credentialFrom(auth: Auth, result: UserCredential): Promise<GoogleCredential> {
   try {
     return {
       idToken: await result.user.getIdToken(),
@@ -73,4 +86,34 @@ export async function getGoogleIdToken(): Promise<GoogleCredential> {
   } finally {
     await signOut(auth)
   }
+}
+
+/**
+ * Opens the Google popup and returns a fresh ID token. Throws the raw
+ * Firebase error. Desktop only — see prefersRedirect().
+ */
+export async function getGoogleIdToken(): Promise<GoogleCredential> {
+  const auth = getAuth(firebaseApp())
+
+  return credentialFrom(auth, await signInWithPopup(auth, googleProvider()))
+}
+
+/**
+ * Leaves the page for Google. Nothing follows it in this tab: the answer
+ * arrives as a fresh load, through finishGoogleRedirect().
+ */
+export async function startGoogleRedirect(): Promise<void> {
+  await signInWithRedirect(getAuth(firebaseApp()), googleProvider())
+}
+
+/**
+ * The other half. `null` means this load did not come back from Google, which
+ * is what it returns on every ordinary visit to /login.
+ */
+export async function finishGoogleRedirect(): Promise<GoogleCredential | null> {
+  const auth = getAuth(firebaseApp())
+  const result = await getRedirectResult(auth)
+  if (result === null) return null
+
+  return credentialFrom(auth, result)
 }
