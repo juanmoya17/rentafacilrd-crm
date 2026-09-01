@@ -176,7 +176,7 @@ export function LeadsPage() {
               type="button"
               aria-pressed={sla === 'breached'}
               onClick={toggleBreached}
-              className={`inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1 text-sm font-medium transition-colors duration-(--duration-fast) ease-out active:translate-y-px ${
+              className={`inline-flex min-h-(--control-h) items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1 text-sm font-medium transition-colors duration-(--duration-fast) ease-out active:translate-y-px ${
                 sla === 'breached'
                   ? 'border-error bg-error text-white'
                   : 'border-rule-2 text-error hover:bg-error-bg'
@@ -195,7 +195,7 @@ export function LeadsPage() {
                 type="button"
                 onClick={clearPropertyFilter}
                 aria-label={t('leads.clearPropertyFilter')}
-                className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken active:translate-y-px"
+                className="inline-flex min-h-(--control-h) items-center gap-1.5 whitespace-nowrap rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken active:translate-y-px"
               >
                 {t('leads.filteredByProperty')}
                 {/* A drawn × rather than the character: the glyph sat on the

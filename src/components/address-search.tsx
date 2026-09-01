@@ -151,7 +151,7 @@ export function AddressSearch({
           aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
           aria-invalid={invalid || undefined}
           aria-describedby={`${id}-msg`}
-          className={`min-h-9 w-full rounded-md border bg-surface-raised px-3 py-1.5 pr-9 text-sm text-ink transition-colors duration-(--duration-fast) ease-(--ease-out) placeholder:text-muted hover:bg-surface-sunken focus:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-55 ${
+          className={`min-h-(--control-h) w-full rounded-md border bg-surface-raised px-3 py-1.5 pr-9 text-sm text-ink transition-colors duration-(--duration-fast) ease-(--ease-out) placeholder:text-muted hover:bg-surface-sunken focus:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-55 ${
             invalid === true ? 'border-error' : 'border-rule-2'
           }`}
         />

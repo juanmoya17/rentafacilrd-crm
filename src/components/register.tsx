@@ -250,12 +250,16 @@ export function Segmented<T extends string>({
             onClick={() => onChange(option.value)}
             /* whitespace-nowrap: a filter chip that wraps to two lines is one
              * of the mobile gates — clickable text stays on one line.
-             * min-h-8 + active: the press state is part of the eight, and a
-             * chip without one feels dead next to buttons that have it.
+             * --control-h-sm + active: the press state is part of that height,
+             * and a chip without one feels dead next to buttons that have it.
              * Icon-only gets a square footprint so the row reads as a set of
-             * equal switches rather than ragged chips. */
-            className={`relative min-h-8 whitespace-nowrap rounded-sm text-sm font-medium transition-colors duration-(--duration-fast) ease-out active:translate-y-px ${
-              iconOnly ? 'grid size-8 place-items-center' : 'px-2.5 py-1'
+             * equal switches rather than ragged chips — square off the same
+             * token, so it grows with the rest on a phone instead of staying
+             * a 32px target under a 40px row. */
+            className={`relative min-h-(--control-h-sm) whitespace-nowrap rounded-sm text-sm font-medium transition-colors duration-(--duration-fast) ease-out active:translate-y-px ${
+              iconOnly
+                ? 'grid size-(--control-h-sm) place-items-center'
+                : 'px-2.5 py-1'
             }`}
           >
             {selected && (
@@ -317,7 +321,7 @@ export function SearchField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="min-h-9 w-full rounded-md border border-rule-2 bg-surface-raised px-3 py-1.5 text-sm text-ink transition-colors duration-(--duration-base) ease-out placeholder:text-muted hover:bg-surface-sunken focus:bg-surface-raised sm:w-64"
+        className="min-h-(--control-h) w-full rounded-md border border-rule-2 bg-surface-raised px-3 py-1.5 text-sm text-ink transition-colors duration-(--duration-base) ease-out placeholder:text-muted hover:bg-surface-sunken focus:bg-surface-raised sm:w-64"
       />
       {resultLabel !== undefined && (
         <output

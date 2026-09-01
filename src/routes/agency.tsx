@@ -158,7 +158,7 @@ export function AgencyPage() {
               aria-selected={selected}
               aria-controls={`panel-${option}`}
               onClick={() => setTab(option)}
-              className={`relative min-h-9 whitespace-nowrap px-3 py-2 text-sm transition-colors duration-(--duration-fast) ease-out ${
+              className={`relative min-h-(--control-h) whitespace-nowrap px-3 py-2 text-sm transition-colors duration-(--duration-fast) ease-out ${
                 selected ? 'font-medium text-brand-700' : 'text-muted hover:text-ink'
               }`}
             >

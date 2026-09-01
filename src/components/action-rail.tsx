@@ -37,7 +37,7 @@ export function ActionRail({ rail }: { rail: ActionRailData }) {
             <Link
               to={railBucketTarget(bucket.key)}
               viewTransition
-              className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-rule bg-surface-raised px-2.5 py-1.5 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:border-rule-2 hover:bg-surface-sunken active:translate-y-px"
+              className="inline-flex min-h-(--control-h) items-center gap-1.5 whitespace-nowrap rounded-md border border-rule bg-surface-raised px-2.5 py-1.5 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:border-rule-2 hover:bg-surface-sunken active:translate-y-px"
             >
               <span className="font-mono text-sm font-semibold text-warning">
                 {formatNumber(bucket.count)}

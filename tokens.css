@@ -35,6 +35,15 @@
   --text-sm: 0.8125rem; /* 13px — labels, secondary */
   --text-base: 0.875rem; /* 14px — body */
 
+  /* ---- Control height ---------------------------------------------------
+   * A variable rather than a utility class because it has two values: 36px
+   * here (the density a CRM lives on) and 44px on a phone, where Apple asks
+   * for 44pt and Material for 48dp. Every control reads it, so a new one
+   * inherits the behaviour without anyone remembering to. The mobile values
+   * are in index.css — the one media query in the app. */
+  --control-h: 2.25rem; /* 36px — buttons, inputs, selects */
+  --control-h-sm: 2rem; /* 32px — segments, chips, compact inputs */
+
   /* ---- Brand (preserved verbatim from the public site) ------------------- */
   --color-brand-50: #f0fafa;
   --color-brand-100: #d7f0f0;

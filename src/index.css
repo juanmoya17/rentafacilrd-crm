@@ -45,6 +45,35 @@ body {
   border-radius: inherit;
 }
 
+/* ------------------------------------------------------------------ mobile
+ *
+ * The only max-width query in the app, and it moves four tokens. Everything
+ * else already reads them, so the phone gets 44px controls and 16px fields
+ * without a single `sm:` prefix anywhere in the components.
+ *
+ * Outside `@layer`, deliberately: the tokens are emitted inside
+ * `@layer theme`, and an unlayered rule beats a layered one whatever the
+ * specificity. This is what makes the override actually land.
+ *
+ * The 16px on fields is not taste. Safari iOS zooms the page when a field
+ * smaller than that takes focus, and it does not zoom back out — the agent is
+ * left on a page wider than the screen after every tap into a form. */
+@media (max-width: 639px) {
+  :root {
+    --text-xs: 0.8125rem; /* 13px — was 11 */
+    --text-sm: 0.875rem; /* 14px — was 13 */
+    --text-base: 1rem; /* 16px — was 14 */
+    --control-h: 2.75rem; /* 44px — was 36 */
+    --control-h-sm: 2.5rem; /* 40px — was 32 */
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 @keyframes rf-spin {
   to {
     rotate: 360deg;
@@ -107,7 +136,11 @@ body {
   background: var(--color-surface-raised);
   color: var(--color-ink);
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  /* Literal, not var(--text-xs). Here the size is spatial, not hierarchical:
+   * pins compete for room on the map, and the mobile bump from 11 to 13px
+   * would fatten every label by 18% on the screen where they already collide.
+   * The map is the one place a bigger number reads as less information. */
+  font-size: 11px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   box-shadow: 0 1px 3px var(--color-pin-shadow);

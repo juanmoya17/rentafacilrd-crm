@@ -961,7 +961,7 @@ export function PropertyNewPage() {
                           }}
                           aria-label={`${labelOf(facility)} — km`}
                           placeholder="0.0"
-                          className="min-h-8 w-full rounded-md border border-rule-2 bg-surface-raised px-2 py-1 text-right text-sm text-ink placeholder:text-muted disabled:opacity-55"
+                          className="min-h-(--control-h-sm) w-full rounded-md border border-rule-2 bg-surface-raised px-2 py-1 text-right text-sm text-ink placeholder:text-muted disabled:opacity-55"
                         />
                         <span className="text-xs text-muted">km</span>
                       </div>

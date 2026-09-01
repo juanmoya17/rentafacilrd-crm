@@ -104,7 +104,7 @@ export function Button({
       aria-busy={loading || undefined}
       /* whitespace-nowrap is not cosmetic: a button label that wraps to two
          lines is the single most common mobile break, and it is a hard gate. */
-      className={`inline-flex min-h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-(--duration-fast) ease-out active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55 ${BUTTON_VARIANTS[variant]} ${stateRing} ${className}`}
+      className={`inline-flex min-h-(--control-h) items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-(--duration-fast) ease-out active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55 ${BUTTON_VARIANTS[variant]} ${stateRing} ${className}`}
     >
       {loading && <Spinner />}
       {state === 'success' && (
@@ -209,7 +209,7 @@ export function Field({
           aria-invalid={showInvalid || undefined}
           aria-describedby={c.describedBy}
           aria-busy={c.busy || undefined}
-          className={`min-h-9 w-full rounded-md border bg-surface-raised px-3 py-1.5 pr-9 text-sm text-ink transition-colors duration-(--duration-fast) ease-(--ease-out) placeholder:text-muted hover:bg-surface-sunken focus:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-55 ${
+          className={`min-h-(--control-h) w-full rounded-md border bg-surface-raised px-3 py-1.5 pr-9 text-sm text-ink transition-colors duration-(--duration-fast) ease-(--ease-out) placeholder:text-muted hover:bg-surface-sunken focus:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-55 ${
             showInvalid ? 'border-error' : FIELD_BORDERS[c.tone]
           }`}
         />
@@ -259,7 +259,7 @@ export function LinkButton({
   return (
     <Link
       to={to}
-      className={`inline-flex min-h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-(--duration-fast) ease-out active:translate-y-px ${BUTTON_VARIANTS[variant]}`}
+      className={`inline-flex min-h-(--control-h) items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-(--duration-fast) ease-out active:translate-y-px ${BUTTON_VARIANTS[variant]}`}
     >
       {children}
     </Link>
@@ -468,7 +468,7 @@ export function Select({
         disabled={disabled}
         onChange={(event: ChangeEvent<HTMLSelectElement>) => onChange(event.target.value)}
         aria-describedby={helper === undefined ? undefined : `${id}-msg`}
-        className="mt-1 min-h-9 w-full rounded-md border border-rule-2 bg-surface-raised px-3 py-1.5 text-sm text-ink transition-colors duration-(--duration-fast) ease-(--ease-out) hover:bg-surface-sunken focus:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-55"
+        className="mt-1 min-h-(--control-h) w-full rounded-md border border-rule-2 bg-surface-raised px-3 py-1.5 text-sm text-ink transition-colors duration-(--duration-fast) ease-(--ease-out) hover:bg-surface-sunken focus:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-55"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -539,11 +539,15 @@ export function Modal({
         <h2 id={titleId} className="text-sm font-semibold text-ink">
           {title}
         </h2>
+        {/* The glyph is small; the target is not. A × drawn at its own size is
+            about 24px of hittable area, which is the single most missed
+            control on a phone — you close a dialog with a thumb, one-handed,
+            usually while holding something else. */}
         <button
           type="button"
           onClick={() => ref.current?.close()}
           aria-label={closeLabel}
-          className="-mr-1 shrink-0 rounded px-1.5 text-base text-muted transition-colors duration-(--duration-fast) ease-out hover:text-ink"
+          className="-mr-2 -mt-1 grid size-(--control-h) shrink-0 place-items-center rounded text-base text-muted transition-colors duration-(--duration-fast) ease-out hover:text-ink"
         >
           ×
         </button>

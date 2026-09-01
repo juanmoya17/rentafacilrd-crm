@@ -898,7 +898,7 @@ export function PropertiesPage() {
           count tells the agent a filter is active while the panel is shut —
           otherwise a price floor set yesterday silently explains a short
           result list today. */}
-      <summary className="inline-flex min-h-9 cursor-pointer select-none list-none items-center gap-1.5 rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken [&::-webkit-details-marker]:hidden">
+      <summary className="inline-flex min-h-(--control-h) cursor-pointer select-none list-none items-center gap-1.5 rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken [&::-webkit-details-marker]:hidden">
         <SlidersHorizontal className="size-4 text-muted" aria-hidden="true" />
         {t('properties.filtersAdvanced')}
         {advancedFilterCount > 0 && (
@@ -927,7 +927,7 @@ export function PropertiesPage() {
             onBlur={(event) =>
               setParam('price_min', event.target.value === '' ? null : event.target.value)
             }
-            className="min-h-9 w-28 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+            className="min-h-(--control-h) w-28 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -941,7 +941,7 @@ export function PropertiesPage() {
             onBlur={(event) =>
               setParam('price_max', event.target.value === '' ? null : event.target.value)
             }
-            className="min-h-9 w-28 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+            className="min-h-(--control-h) w-28 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -955,7 +955,7 @@ export function PropertiesPage() {
             onBlur={(event) =>
               setParam('area_min', event.target.value === '' ? null : event.target.value)
             }
-            className="min-h-9 w-24 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+            className="min-h-(--control-h) w-24 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -969,7 +969,7 @@ export function PropertiesPage() {
             onBlur={(event) =>
               setParam('area_max', event.target.value === '' ? null : event.target.value)
             }
-            className="min-h-9 w-24 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+            className="min-h-(--control-h) w-24 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
           />
         </div>
         <label className="flex items-center gap-1.5 pb-2 text-sm text-muted">
@@ -1054,7 +1054,7 @@ export function PropertiesPage() {
                   id="property-sort"
                   value={filters.sort ?? 'newest'}
                   onChange={(event) => setParam('sort', event.target.value)}
-                  className="min-h-9 rounded-md border border-rule-2 bg-surface-raised py-1.5 pl-8 pr-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+                  className="min-h-(--control-h) rounded-md border border-rule-2 bg-surface-raised py-1.5 pl-8 pr-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
                 >
                   {PROPERTY_SORTS.map((option) => (
                     <option key={option} value={option}>

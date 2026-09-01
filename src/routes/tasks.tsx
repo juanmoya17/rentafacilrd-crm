@@ -135,7 +135,7 @@ export function TasksPage() {
               type="button"
               onClick={clearStatusFilter}
               aria-label={t('tasks.clearStatusFilter')}
-              className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken active:translate-y-px"
+              className="inline-flex min-h-(--control-h) items-center gap-1.5 whitespace-nowrap rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken active:translate-y-px"
             >
               {t('tasks.filteredByStatus')}
               <X className="size-4 text-muted" aria-hidden="true" />

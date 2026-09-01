@@ -174,7 +174,7 @@ export function LeadDetailPage() {
               id="stage"
               value={lead.stage}
               onChange={(event) => void changeStage(event.target.value as Stage)}
-              className="min-h-9 rounded-md border border-rule-2 bg-surface-raised px-2 py-1 text-sm text-ink transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken"
+              className="min-h-(--control-h) rounded-md border border-rule-2 bg-surface-raised px-2 py-1 text-sm text-ink transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken"
             >
               {STAGES.map((option) => (
                 <option key={option} value={option}>
@@ -213,7 +213,7 @@ export function LeadDetailPage() {
                     id="activity-type"
                     value={type}
                     onChange={(event) => setType(event.target.value as ActivityType)}
-                    className="mt-1 min-h-9 rounded-md border border-rule-2 bg-surface-raised px-2 py-1.5 text-sm text-ink transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken"
+                    className="mt-1 min-h-(--control-h) rounded-md border border-rule-2 bg-surface-raised px-2 py-1.5 text-sm text-ink transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken"
                   >
                     {ACTIVITY_TYPES.map((option) => (
                       <option key={option} value={option}>
