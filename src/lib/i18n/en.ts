@@ -71,6 +71,7 @@ export const en: Record<TranslationKey, string> = {
   'common.back': 'Back',
   'common.save': 'Save',
   'common.cancel': 'Cancel',
+  'common.apply': 'Apply',
   'common.close': 'Close',
   'common.edit': 'Edit',
   'common.delete': 'Delete',

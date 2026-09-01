@@ -75,6 +75,7 @@ export const es = {
   'common.back': 'Volver',
   'common.save': 'Guardar',
   'common.cancel': 'Cancelar',
+  'common.apply': 'Aplicar',
   'common.close': 'Cerrar',
   'common.edit': 'Editar',
   'common.delete': 'Eliminar',

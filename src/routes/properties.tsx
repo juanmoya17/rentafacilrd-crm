@@ -30,6 +30,7 @@ import {
   ErrorState,
   LinkButton,
   LoadingState,
+  Modal,
   PageHeader,
   Select,
 } from '@/components/ui'
@@ -893,22 +894,18 @@ export function PropertiesPage() {
      screen. Closed, the trigger is a chip beside the status chips; open, the
      panel is wider than the remaining track so flex-wrap gives it its own
      line — which is the moment it has earned one. */
-  const advancedFilters = showChrome && (
-    <details open={advancedOpen} onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}>
-      {/* An affordance, not a bare text line: this used to be an unstyled
-          <summary> that read as a paragraph and gave no hint it opened. The
-          count tells the agent a filter is active while the panel is shut —
-          otherwise a price floor set yesterday silently explains a short
-          result list today. */}
-      <summary className="inline-flex min-h-(--control-h) cursor-pointer select-none list-none items-center gap-1.5 rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken [&::-webkit-details-marker]:hidden">
-        <SlidersHorizontal className="size-4 text-muted" aria-hidden="true" />
-        {t('properties.filtersAdvanced')}
-        {advancedFilterCount > 0 && (
-          <span className="rounded-full bg-accent px-1.5 font-mono text-xs font-semibold text-accent-ink">
-            {advancedFilterCount}
-          </span>
-        )}
-      </summary>
+  /**
+   * One definition, two containers: a bottom sheet on a phone and the inline
+   * <details> from lg up.
+   *
+   * The panel is nine controls. Inline on a 390px screen they push the results
+   * off the fold, and the agent filters precisely so they can look at results
+   * — so on mobile it opens over the list and closes when they are done. The
+   * desktop <details> stays exactly as it was; it works, it is native, and it
+   * is not the thing the audit found.
+   */
+  const advancedPanel = (
+    <>
       {/* Keyed on advancedResetKey, NOT the filter set: it only bumps on an
           external reset (this panel's own "Limpiar filtros", or a KPI
           shortcut), never on a field's own onBlur commit — remounting on every
@@ -985,7 +982,66 @@ export function PropertiesPage() {
           {t('properties.clearFilters')}
         </Button>
       </div>
-    </details>
+    </>
+  )
+
+  const advancedTrigger = (
+    <>
+      <SlidersHorizontal className="size-4 text-muted" aria-hidden="true" />
+        {t('properties.filtersAdvanced')}
+        {advancedFilterCount > 0 && (
+          <span className="rounded-full bg-accent px-1.5 font-mono text-xs font-semibold text-accent-ink">
+            {advancedFilterCount}
+          </span>
+        )}
+    </>
+  )
+
+  const advancedFilters = showChrome && (
+    <>
+      <button
+        type="button"
+        onClick={() => setAdvancedOpen(true)}
+        className="inline-flex min-h-(--control-h) select-none items-center gap-1.5 rounded-md border border-rule-2 px-2.5 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken lg:hidden"
+      >
+        {advancedTrigger}
+      </button>
+
+      {advancedOpen && (
+        <div className="lg:hidden">
+          <Modal
+            variant="sheet"
+            title={t('properties.filtersAdvanced')}
+            closeLabel={t('common.close')}
+            onClose={() => setAdvancedOpen(false)}
+            /* Limpiar ya vive dentro del panel, así que aquí solo va
+               Aplicar: dos botones de limpiar en la misma hoja es una
+               pregunta, no una acción. */
+            footer={
+              <Button variant="primary" onClick={() => setAdvancedOpen(false)}>
+                {t('common.apply')}
+              </Button>
+            }
+          >
+            {advancedPanel}
+          </Modal>
+        </div>
+      )}
+
+      <details
+        open={advancedOpen}
+        onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}
+        className="hidden lg:block"
+      >
+        {/* An affordance, not a bare text line: the count tells the agent a
+            filter is active while the panel is shut — otherwise a price floor
+            set yesterday silently explains a short result list today. */}
+        <summary className="inline-flex min-h-(--control-h) cursor-pointer select-none list-none items-center gap-1.5 rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken [&::-webkit-details-marker]:hidden">
+          {advancedTrigger}
+        </summary>
+        {advancedPanel}
+      </details>
+    </>
   )
 
   return (
