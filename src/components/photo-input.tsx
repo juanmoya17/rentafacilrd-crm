@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { X } from 'lucide-react'
 import { resolveControl, type ControlState } from '@/lib/control-state'
 import { useObjectUrls } from '@/lib/use-object-urls'
+import { compressImage } from '@/lib/crm/compress-image'
 
 /**
  * File picker with thumbnails.
@@ -50,14 +51,34 @@ export function PhotoInput({
   const previews = useObjectUrls(useMemo(() => files, [files]))
 
   const key = (file: File) => `${file.name}-${file.size}`
+  const [shrinking, setShrinking] = useState(false)
 
-  const add = (picked: File[]) => {
-    if (multiple !== true) {
-      onChange(picked.slice(0, 1))
-      return
+  /**
+   * Shrunk on the way in, not on the way out.
+   *
+   * The server refuses anything over 3MB and a current phone photo is 4-8MB,
+   * so doing this at publish time would mean an agent finishes eight steps and
+   * is then told the picture they chose is too big. Here they see the
+   * thumbnail and it is already the file that will be sent.
+   *
+   * Deduplication runs AFTER compressing, on the resulting size: the same
+   * photo picked twice compresses to the same bytes, and comparing the
+   * originals would have let a second copy through.
+   */
+  const add = async (picked: File[]) => {
+    setShrinking(true)
+    try {
+      const ready = await Promise.all(picked.map(compressImage))
+
+      if (multiple !== true) {
+        onChange(ready.slice(0, 1))
+        return
+      }
+      const seen = new Set(files.map(key))
+      onChange([...files, ...ready.filter((file) => !seen.has(key(file)))])
+    } finally {
+      setShrinking(false)
     }
-    const seen = new Set(files.map(key))
-    onChange([...files, ...picked.filter((file) => !seen.has(key(file)))])
   }
 
   return (
@@ -72,10 +93,10 @@ export function PhotoInput({
         type="file"
         accept={accept}
         multiple={multiple}
-        disabled={disabled}
+        disabled={disabled || shrinking}
         required={required && files.length === 0}
         onChange={(event) => {
-          add(Array.from(event.target.files ?? []))
+          void add(Array.from(event.target.files ?? []))
           // Clearing the control is what lets the same file be picked again
           // after it was removed — `change` does not fire for an identical value.
           event.target.value = ''
