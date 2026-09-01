@@ -18,6 +18,12 @@ import { LocationPicker } from '@/components/location-picker'
 import { AddressSearch } from '@/components/address-search'
 import { PhotoInput } from '@/components/photo-input'
 import { useObjectUrls } from '@/lib/use-object-urls'
+import {
+  clearDraft,
+  loadDraft,
+  saveDraft,
+  type RestoredDraft,
+} from '@/lib/crm/property-draft'
 import { reverseGeocode, type Place } from '@/lib/google-maps'
 import { useResource } from '@/lib/use-resource'
 import {
@@ -388,7 +394,7 @@ function ParameterInput({
 /* ------------------------------------------------------------------ page */
 
 export function PropertyNewPage() {
-  const { t } = useI18n()
+  const { t, formatDate } = useI18n()
   const navigate = useNavigate()
   const reference = useResource((signal) => loadReference(signal), [])
 
@@ -404,6 +410,50 @@ export function PropertyNewPage() {
   const [writing, setWriting] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
   const [confirmingRegen, setConfirmingRegen] = useState(false)
+  /**
+   * Read once, on mount. Offered rather than applied: silently overwriting a
+   * blank form the agent opened on purpose is worse than asking, and the
+   * question costs one tap.
+   */
+  const [offered, setOffered] = useState<RestoredDraft | null>(() => loadDraft(Date.now()))
+  const [savedAt, setSavedAt] = useState<number | null>(null)
+
+  const touched =
+    form !== EMPTY_PROPERTY_FORM ||
+    Object.keys(parameters).length > 0 ||
+    Object.keys(facilities).length > 0
+
+  // 1.5s after the last change, not on every keystroke: localStorage is
+  // synchronous, and writing the whole wizard on each character is a stutter
+  // you can feel on a mid-range phone.
+  useEffect(() => {
+    if (!touched) return
+
+    const id = setTimeout(() => {
+      const at = Date.now()
+      saveDraft({ form, parameters, facilities, translations, step }, at)
+      setSavedAt(at)
+    }, 1500)
+
+    return () => {
+      clearTimeout(id)
+    }
+  }, [touched, form, parameters, facilities, translations, step])
+
+  // The browser's own "leave site?" prompt. It is the only thing that can stop
+  // a close, and it only appears if the page says there is something to lose.
+  useEffect(() => {
+    if (!touched) return
+
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+    }
+    window.addEventListener('beforeunload', warn)
+
+    return () => {
+      window.removeEventListener('beforeunload', warn)
+    }
+  }, [touched])
 
   /**
    * Put the agent inside the offending control after a step change.
@@ -554,6 +604,9 @@ export function PropertyNewPage() {
     setError(null)
     try {
       await createProperty(propertyPayload(form, media, parameters, facilities, translations))
+      // Only after the server accepted it. Clearing on navigate-away, or
+      // optimistically here, is how a failed publish takes the draft with it.
+      clearDraft()
       // No success toast by design (see toast-context): the listing appearing
       // at the top of the list IS the confirmation.
       void navigate('/properties')
@@ -593,6 +646,43 @@ export function PropertyNewPage() {
       {/* The step list is navigation, not a progress bar: every step stays
           reachable, because an agent who spots a typo in step 2 while on step 6
           should not have to walk back through four screens. */}
+      {offered !== null && (
+        <div className="mb-4 rounded-lg border border-rule-2 bg-surface-raised px-3 py-3">
+          <p className="text-sm text-ink-2">
+            {t('newProperty.draftFound', { date: formatDate(offered.savedAt, { dateStyle: 'medium', timeStyle: 'short' }) })}
+          </p>
+          {/* Said out loud rather than hoped over: photos and file parameters
+              never made it to storage, and promising what was not saved is
+              worse than not saving it. */}
+          {offered.droppedFiles && (
+            <p className="mt-1 text-sm text-muted">{t('newProperty.draftNoFiles')}</p>
+          )}
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button
+              variant="primary"
+              onClick={() => {
+                setForm(offered.form)
+                setParameters(offered.parameters)
+                setFacilities(offered.facilities)
+                setTranslations(offered.translations)
+                setStep(offered.step)
+                setOffered(null)
+              }}
+            >
+              {t('newProperty.draftResume')}
+            </Button>
+            <Button
+              onClick={() => {
+                clearDraft()
+                setOffered(null)
+              }}
+            >
+              {t('newProperty.draftDiscard')}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <nav aria-label={t('newProperty.steps')} className="mb-4 flex flex-wrap gap-1.5">
         {[...STEPS, 'review' as const].map((entry, index) => (
           <button
@@ -610,6 +700,15 @@ export function PropertyNewPage() {
             {t(`newProperty.step.${entry}` as 'newProperty.step.category')}
           </button>
         ))}
+
+        {savedAt !== null && (
+          <p
+            aria-live="polite"
+            className="flex items-center px-1.5 text-xs text-muted"
+          >
+            {t('newProperty.draftSaved')}
+          </p>
+        )}
       </nav>
 
       <Card className="p-4">

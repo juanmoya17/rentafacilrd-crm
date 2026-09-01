@@ -502,6 +502,11 @@ export const en: Record<TranslationKey, string> = {
   'newProperty.photos': 'Photos',
   'newProperty.reviewNote':
     'If your account has auto-approval the listing goes live; otherwise it goes to review.',
+  'newProperty.draftFound': 'You have an unpublished draft from {date}.',
+  'newProperty.draftNoFiles': 'Photos and files are not saved: you will need to attach them again.',
+  'newProperty.draftResume': 'Continue',
+  'newProperty.draftDiscard': 'Discard',
+  'newProperty.draftSaved': 'Draft saved',
   'newProperty.pendingTitle': 'Still needed before you can publish:',
 
   'newProperty.error.category_id': 'Pick a category.',

@@ -514,6 +514,11 @@ export const es = {
   'newProperty.photos': 'Fotos',
   'newProperty.reviewNote':
     'Si tu cuenta tiene aprobación automática el anuncio queda publicado; si no, entra en revisión.',
+  'newProperty.draftFound': 'Tienes un borrador sin publicar del {date}.',
+  'newProperty.draftNoFiles': 'Las fotos y los archivos no se guardan: tendrás que volver a adjuntarlos.',
+  'newProperty.draftResume': 'Continuar',
+  'newProperty.draftDiscard': 'Descartar',
+  'newProperty.draftSaved': 'Borrador guardado',
   'newProperty.pendingTitle': 'Falta esto para poder publicar:',
 
   'newProperty.error.category_id': 'Elige una categoría.',
