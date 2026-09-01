@@ -5,6 +5,9 @@ export const en: Record<TranslationKey, string> = {
   'app.name': 'RentaFácil CRM',
 
   'nav.main': 'Main',
+  'nav.primary': 'Primary navigation',
+  'nav.more': 'More',
+  'notifications.unread': '{count} unread',
   'nav.section.crm': 'CRM',
   'nav.section.inventory': 'Inventory',
   'nav.section.system': 'System',

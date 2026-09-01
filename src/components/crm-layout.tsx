@@ -16,14 +16,13 @@ import {
   Menu,
   Settings,
   Users,
-  X,
 } from 'lucide-react'
 import { useScrollRestoration } from '@/lib/use-scroll-restoration'
 import { useAuth } from '@/lib/auth-context'
 import { useT } from '@/lib/i18n/context'
 import type { TranslationKey } from '@/lib/i18n/es'
 import { LanguageSwitcher } from '@/components/language-switcher'
-import { Button } from '@/components/ui'
+import { Button, Modal } from '@/components/ui'
 import { refreshUnreadCount, useUnreadCount } from '@/lib/crm/unread-store'
 
 interface NavItem {
@@ -92,6 +91,136 @@ const SECTIONS: { title: TranslationKey; items: NavItem[] }[] = [
   },
 ]
 
+/**
+ * The thirteen links, rendered by both the desktop rail and the mobile drawer.
+ *
+ * One list, two surfaces: two copies would have drifted by the third screen
+ * anyone added, and the active state is the part that goes wrong silently.
+ *
+ * `scope` exists only to keep the layoutId unique. The rail stays mounted
+ * (display:none) below lg, so with a shared id Motion would see the drawer's
+ * indicator and the hidden rail's as the same element and try to travel
+ * between them — across a box that has no layout to travel to.
+ */
+function NavLinks({
+  scope,
+  unread,
+  onNavigate,
+}: {
+  scope: 'sidebar' | 'drawer'
+  unread: number
+  onNavigate: () => void
+}) {
+  const t = useT()
+
+  return (
+        <nav aria-label={t('nav.main')} className="space-y-5">
+          {SECTIONS.map((section) => (
+            <div key={section.title}>
+              {/* `muted`, not a lighter step: these labels used to sit at
+                  slate-400, which is 2.6:1 on white. */}
+              <p className="px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted">
+                {t(section.title)}
+              </p>
+              <ul className="space-y-0.5">
+                {section.items.map((item) => (
+                  <li key={item.to}>
+                    {item.external ? (
+                      /* Never carries the active indicator: it opens in
+                         another tab, so this nav is never "on" it. */
+                      <a
+                        href={item.to}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`${t(item.label)} — ${t('nav.newTab')}`}
+                        onClick={onNavigate}
+                        className={`${ITEM_CLASS} ${ITEM_IDLE}`}
+                      >
+                        <span className="relative flex min-w-0 items-center gap-2.5">
+                          <item.icon
+                            className="size-4 shrink-0 text-muted"
+                            strokeWidth={1.75}
+                            aria-hidden="true"
+                          />
+                          <span className="truncate">{t(item.label)}</span>
+                        </span>
+                        {/* The one thing that tells this item apart from the
+                            ten above it before it is clicked. */}
+                        <ArrowUpRight
+                          className="size-3.5 shrink-0 text-muted"
+                          aria-hidden="true"
+                        />
+                      </a>
+                    ) : (
+                    <NavLink
+                      to={item.to}
+                      end={item.to === '/'}
+                      viewTransition
+                      onClick={onNavigate}
+                      className={({ isActive }) =>
+                        `${ITEM_CLASS} ${
+                          isActive ? 'font-medium text-brand-700' : ITEM_IDLE
+                        }`
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          {/* One indicator for the whole nav, so it travels
+                              from the old item to the new one instead of
+                              blinking out here and in over there. */}
+                          {isActive && (
+                            <motion.span
+                              layoutId={`nav-active-${scope}`}
+                              aria-hidden="true"
+                              className="absolute inset-0 rounded-md bg-brand-50"
+                              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                            />
+                          )}
+                          <span className="relative flex min-w-0 items-center gap-2.5">
+                            {/* strokeWidth rises on the active item rather
+                                than the icon swapping to a filled variant:
+                                weight is how this system carries hierarchy
+                                everywhere else, and half the set has no
+                                filled twin to swap to. */}
+                            <item.icon
+                              className={`size-4 shrink-0 ${
+                                isActive ? 'text-brand-700' : 'text-muted'
+                              }`}
+                              strokeWidth={isActive ? 2.25 : 1.75}
+                              aria-hidden="true"
+                            />
+                            <span className="truncate">{t(item.label)}</span>
+                          </span>
+                          {item.badge === 'unread' && unread > 0 && (
+                            <span className="relative rounded-full bg-accent px-1.5 font-mono text-xs font-semibold text-accent-ink">
+                              {unread}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </nav>
+  )
+}
+
+/**
+ * The bottom bar. Five slots is the ceiling before targets get too narrow to
+ * hit, so this is the four screens an agent opens all day plus the way to the
+ * other nine — not a second copy of the menu.
+ */
+const PRIMARY: NavItem[] = [
+  { to: '/', label: 'nav.dashboard', icon: LayoutDashboard },
+  { to: '/leads', label: 'nav.leads', icon: Users },
+  { to: '/properties', label: 'nav.properties', icon: Building2 },
+  { to: '/tasks', label: 'nav.tasks', icon: CalendarCheck },
+]
+
 export function CrmLayout() {
   const { state, logout } = useAuth()
   const t = useT()
@@ -144,27 +273,23 @@ export function CrmLayout() {
        on a 1280px viewport — which pushed the header's sign-out button to
        x=1852, off-screen. `overflow-x: clip` on html/body then hid the
        scrollbar, so the page looked fine while the header was unusable. */
-    <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)] bg-surface">
+    <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] bg-surface">
       {/* vt-* names split the shell into its own view-transition groups, so a
           route change moves only <main> — without them the browser cross-fades
           the sidebar and header too, and identical chrome visibly blinks. */}
       <header className="vt-header z-20 border-b border-rule bg-surface-raised">
         <div className="flex min-w-0 items-center gap-2 px-4 py-2.5 sm:gap-3">
+          {/* No × state any more: the drawer is a modal <dialog>, so it paints
+              on the top layer and covers this button entirely. It carries its
+              own close, and Escape and the backdrop both work. */}
           <button
             type="button"
             aria-label={t('nav.toggle')}
             aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
-            className="-ml-1 rounded-md p-2 text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken active:translate-y-px lg:hidden"
+            onClick={() => setMenuOpen(true)}
+            className="-ml-1 grid size-(--control-h) place-items-center rounded-md text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken active:translate-y-px lg:hidden"
           >
-            {/* The glyph swaps to an × while the menu is open — a hamburger
-                that stays a hamburger over an open panel gives the user no
-                clue that pressing it again is what closes it. */}
-            {menuOpen ? (
-              <X className="size-5" aria-hidden="true" />
-            ) : (
-              <Menu className="size-5" aria-hidden="true" />
-            )}
+            <Menu className="size-5" aria-hidden="true" />
           </button>
 
           {/* The mark is artwork and keeps its own teal (#04AC9C); every UI
@@ -182,21 +307,20 @@ export function CrmLayout() {
             {t('app.name')}
           </span>
 
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            {user && <span className="hidden text-sm text-muted sm:inline">{user.name}</span>}
+          {/* Below sm this row is just the menu, the logo and the brand. The
+              language switch and sign-out moved into the drawer: at 320px the
+              four of them were fighting for one line, and neither is something
+              an agent reaches for mid-task. They are unchanged from sm up. */}
+          <div className="ml-auto hidden shrink-0 items-center gap-2 sm:flex">
+            {user && <span className="text-sm text-muted">{user.name}</span>}
             <LanguageSwitcher />
-            {/* Icon + label above sm, icon-only below — the label is the first
-                thing worth dropping when the header runs out of room, and an
-                icon-only control still carries its name via aria-label. */}
             <Button
               state={signingOut ? 'loading' : 'idle'}
               onClick={() => void handleSignOut()}
               aria-label={t('auth.signOut')}
             >
               {!signingOut && <LogOut className="size-4" aria-hidden="true" />}
-              <span className="hidden sm:inline">
-                {signingOut ? t('auth.signingOut') : t('auth.signOut')}
-              </span>
+              <span>{signingOut ? t('auth.signingOut') : t('auth.signOut')}</span>
             </Button>
           </div>
         </div>
@@ -213,103 +337,14 @@ export function CrmLayout() {
           one again, which is how the sticky table head ends up doing nothing.
           Column on mobile so the open menu sits above the content; row on lg. */}
       <div className="flex min-h-0 min-w-0 flex-col lg:flex-row">
-        <aside
-          className={`${
-            menuOpen ? 'block' : 'hidden'
-          } vt-sidebar min-h-0 shrink-0 overflow-y-auto border-b border-rule bg-surface-raised px-3 py-4 lg:block lg:w-56 lg:border-r lg:border-b-0`}
-        >
-          <nav aria-label={t('nav.main')} className="space-y-5">
-            {SECTIONS.map((section) => (
-              <div key={section.title}>
-                {/* `muted`, not a lighter step: these labels used to sit at
-                    slate-400, which is 2.6:1 on white. */}
-                <p className="px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted">
-                  {t(section.title)}
-                </p>
-                <ul className="space-y-0.5">
-                  {section.items.map((item) => (
-                    <li key={item.to}>
-                      {item.external ? (
-                        /* Never carries the active indicator: it opens in
-                           another tab, so this nav is never "on" it. */
-                        <a
-                          href={item.to}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label={`${t(item.label)} — ${t('nav.newTab')}`}
-                          onClick={() => setMenuOpen(false)}
-                          className={`${ITEM_CLASS} ${ITEM_IDLE}`}
-                        >
-                          <span className="relative flex min-w-0 items-center gap-2.5">
-                            <item.icon
-                              className="size-4 shrink-0 text-muted"
-                              strokeWidth={1.75}
-                              aria-hidden="true"
-                            />
-                            <span className="truncate">{t(item.label)}</span>
-                          </span>
-                          {/* The one thing that tells this item apart from the
-                              ten above it before it is clicked. */}
-                          <ArrowUpRight
-                            className="size-3.5 shrink-0 text-muted"
-                            aria-hidden="true"
-                          />
-                        </a>
-                      ) : (
-                      <NavLink
-                        to={item.to}
-                        end={item.to === '/'}
-                        viewTransition
-                        onClick={() => setMenuOpen(false)}
-                        className={({ isActive }) =>
-                          `${ITEM_CLASS} ${
-                            isActive ? 'font-medium text-brand-700' : ITEM_IDLE
-                          }`
-                        }
-                      >
-                        {({ isActive }) => (
-                          <>
-                            {/* One indicator for the whole nav, so it travels
-                                from the old item to the new one instead of
-                                blinking out here and in over there. */}
-                            {isActive && (
-                              <motion.span
-                                layoutId="nav-active"
-                                aria-hidden="true"
-                                className="absolute inset-0 rounded-md bg-brand-50"
-                                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                              />
-                            )}
-                            <span className="relative flex min-w-0 items-center gap-2.5">
-                              {/* strokeWidth rises on the active item rather
-                                  than the icon swapping to a filled variant:
-                                  weight is how this system carries hierarchy
-                                  everywhere else, and half the set has no
-                                  filled twin to swap to. */}
-                              <item.icon
-                                className={`size-4 shrink-0 ${
-                                  isActive ? 'text-brand-700' : 'text-muted'
-                                }`}
-                                strokeWidth={isActive ? 2.25 : 1.75}
-                                aria-hidden="true"
-                              />
-                              <span className="truncate">{t(item.label)}</span>
-                            </span>
-                            {item.badge === 'unread' && unread > 0 && (
-                              <span className="relative rounded-full bg-accent px-1.5 font-mono text-xs font-semibold text-accent-ink">
-                                {unread}
-                              </span>
-                            )}
-                          </>
-                        )}
-                      </NavLink>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </nav>
+        {/* Desktop rail. `hidden lg:block` and nothing else: the mobile menu
+            is the drawer below, which overlays instead of pushing — this used
+            to toggle block/hidden inside the flex column, so opening it shoved
+            the whole screen down. It keeps `vt-sidebar`; the drawer must NOT
+            take that name, because a duplicate view-transition-name aborts
+            every transition in the document, silently. */}
+        <aside className="vt-sidebar hidden min-h-0 shrink-0 overflow-y-auto border-rule bg-surface-raised px-3 py-4 lg:block lg:w-56 lg:border-r">
+          <NavLinks scope="sidebar" unread={unread} onNavigate={() => setMenuOpen(false)} />
         </aside>
 
         {/* main is now its own scroll container, which is what lets a Register's
@@ -333,6 +368,85 @@ export function CrmLayout() {
           </div>
         </main>
       </div>
+
+      {/* The drawer is a <dialog>: showModal() gives the backdrop, Escape, the
+          focus trap and `inert` on everything behind it, none of which is code
+          we maintain. Closing on a backdrop click is the one it does NOT give
+          — Modal adds it for this variant only. Mounted while open, like every
+          other Modal here. */}
+      {menuOpen && (
+        <Modal
+          variant="drawer"
+          title={t('nav.main')}
+          closeLabel={t('common.close')}
+          onClose={() => setMenuOpen(false)}
+        >
+          <NavLinks scope="drawer" unread={unread} onNavigate={() => setMenuOpen(false)} />
+
+          {/* Language and sign-out live here below lg. In the header they were
+              competing with the brand for a 320px row; here they are two more
+              rows in a list that already scrolls. */}
+          <div className="mt-5 flex items-center justify-between gap-2 border-t border-rule pt-4 sm:hidden">
+            <LanguageSwitcher />
+            <Button
+              state={signingOut ? 'loading' : 'idle'}
+              onClick={() => void handleSignOut()}
+            >
+              {!signingOut && <LogOut className="size-4" aria-hidden="true" />}
+              {signingOut ? t('auth.signingOut') : t('auth.signOut')}
+            </Button>
+          </div>
+        </Modal>
+      )}
+
+      {/* The five things an agent opens all day, one thumb-reach away. A grid
+          row of `auto`, not `sticky`: <main> is the scroll container here, so a
+          sticky element outside it has nothing to stick to — as a row it is
+          fixed by construction, and nothing needs bottom padding to clear it.
+          The safe-area inset is what keeps the iPhone's gesture bar off the
+          buttons. */}
+      <nav
+        aria-label={t('nav.primary')}
+        className="grid grid-cols-5 border-t border-rule bg-surface-raised pb-[env(safe-area-inset-bottom)] lg:hidden"
+      >
+        {PRIMARY.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === '/'}
+            viewTransition
+            className={({ isActive }) =>
+              `flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs transition-colors duration-(--duration-fast) ease-out ${
+                isActive ? 'font-medium text-brand-700' : 'text-muted'
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <item.icon
+                  className="size-5"
+                  strokeWidth={isActive ? 2.25 : 1.75}
+                  aria-hidden="true"
+                />
+                <span className="truncate px-1">{t(item.label)}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
+
+        <button
+          type="button"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(true)}
+          className="flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs text-muted transition-colors duration-(--duration-fast) ease-out"
+        >
+          <Menu className="size-5" strokeWidth={1.75} aria-hidden="true" />
+          <span className="truncate px-1">{t('nav.more')}</span>
+          {unread > 0 && (
+            <span className="sr-only">{t('notifications.unread', { count: unread })}</span>
+          )}
+        </button>
+      </nav>
     </div>
   )
 }

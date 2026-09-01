@@ -6,6 +6,9 @@ export const es = {
   'app.name': 'RentaFácil CRM',
 
   'nav.main': 'Principal',
+  'nav.primary': 'Navegación principal',
+  'nav.more': 'Más',
+  'notifications.unread': '{count} sin leer',
   'nav.section.crm': 'CRM',
   'nav.section.inventory': 'Inventario',
   'nav.section.system': 'Sistema',

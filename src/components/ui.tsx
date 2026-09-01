@@ -550,6 +550,24 @@ export function Modal({
     <dialog
       ref={ref}
       onClose={onClose}
+      /**
+       * A native <dialog> does NOT close on a backdrop click; Escape is the
+       * only dismissal it gives for free. With p-0 the element's own box is
+       * entirely covered by its children, so a click reported against the
+       * dialog itself came from the backdrop — that is the whole trick.
+       *
+       * Drawer only, deliberately. A navigation menu has nothing to lose to a
+       * stray tap; the dialogs that carry a half-filled form — checkout, unit,
+       * reassign — would lose the typing, so they keep requiring an explicit
+       * Cancel. Widening this is a decision, not a tidy-up.
+       */
+      onClick={
+        variant === 'drawer'
+          ? (event) => {
+              if (event.target === ref.current) ref.current.close()
+            }
+          : undefined
+      }
       aria-labelledby={titleId}
       /* The margin is set per variant because preflight zeroes the UA margin
          that centres a modal dialog — `m-auto` is what puts it back. max-h +
