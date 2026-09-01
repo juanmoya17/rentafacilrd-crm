@@ -186,6 +186,9 @@ export const es = {
   'pipeline.subtitle': 'Arrastra un lead entre etapas para moverlo. También puedes cambiarla desde la ficha.',
   'pipeline.emptyColumn': 'Sin leads',
   'pipeline.listView': 'Ver como lista',
+  'pipeline.move': 'Mover',
+  'pipeline.moved': 'Lead movido a {stage}',
+  'common.undo': 'Deshacer',
   'pipeline.moveFailed': 'No pudimos mover el lead. Lo devolvimos a su etapa anterior.',
 
   'leads.title': 'Leads',

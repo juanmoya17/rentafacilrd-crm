@@ -179,6 +179,9 @@ export const en: Record<TranslationKey, string> = {
   'pipeline.subtitle': 'Drag a lead between stages to move it. You can also change it from the lead page.',
   'pipeline.emptyColumn': 'No leads',
   'pipeline.listView': 'View as list',
+  'pipeline.move': 'Move',
+  'pipeline.moved': 'Lead moved to {stage}',
+  'common.undo': 'Undo',
   'pipeline.moveFailed': 'We could not move the lead. It went back to its previous stage.',
 
   'leads.title': 'Leads',

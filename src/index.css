@@ -107,6 +107,16 @@ body {
   inset: 0;
 }
 
+/* The stretched link is a desktop affordance. Below lg a pipeline card has two
+ * actions — open the lead, move it to another stage — and an invisible layer
+ * covering the whole card takes both: the move control would never receive a
+ * tap, and putting it on top would take the navigation instead. */
+@media (max-width: 1023px) {
+  .rf-cardlink > a::after {
+    content: none;
+  }
+}
+
 /* ------------------------------------------------------------- map pins
  *
  * Leaflet builds its markers as bare DOM, outside anything Tailwind scans, so

@@ -498,10 +498,30 @@ export function Select({
  * no open/closed prop to keep in sync with the element's own state: opening
  * is mount, closing is the native `close` event calling back.
  */
+/**
+ * Where the dialog sits. Same box, same `showModal()`, three anchorings.
+ *
+ * `center` reproduces exactly what every existing caller already renders — a
+ * new value here must never change what the eleven of them look like.
+ *
+ * `sheet` is the phone pattern: a panel rising from the bottom edge, within a
+ * thumb's reach, recentring on `sm` so it does not become an oversized card on
+ * a monitor. `drawer` is the navigation menu.
+ */
+const MODAL_SHELL = {
+  center: 'm-auto max-h-[85dvh] w-[min(100%-2rem,32rem)] rounded-lg',
+  sheet:
+    'mt-auto mb-0 max-h-[85dvh] w-full rounded-t-2xl sm:m-auto sm:w-[min(100%-2rem,32rem)] sm:rounded-lg',
+  drawer: 'mr-auto ml-0 mt-0 mb-0 h-dvh max-h-none w-72 rounded-none',
+} as const
+
+export type ModalVariant = keyof typeof MODAL_SHELL
+
 export function Modal({
   title,
   closeLabel,
   onClose,
+  variant = 'center',
   children,
   footer,
 }: {
@@ -509,6 +529,7 @@ export function Modal({
   /** Accessible name for the × — the glyph has none of its own. */
   closeLabel: string
   onClose: () => void
+  variant?: ModalVariant
   children: ReactNode
   footer?: ReactNode
 }) {
@@ -530,10 +551,11 @@ export function Modal({
       ref={ref}
       onClose={onClose}
       aria-labelledby={titleId}
-      /* m-auto because preflight zeroes the UA margin that centres a modal
-         dialog. max-h + overflow so a long unit list scrolls inside the
-         dialog rather than off the viewport. */
-      className="m-auto max-h-[85dvh] w-[min(100%-2rem,32rem)] overflow-y-auto rounded-lg border border-rule bg-surface-raised p-0 text-ink backdrop:bg-ink/40"
+      /* The margin is set per variant because preflight zeroes the UA margin
+         that centres a modal dialog — `m-auto` is what puts it back. max-h +
+         overflow so long content scrolls inside the dialog rather than off
+         the viewport. */
+      className={`${MODAL_SHELL[variant]} overflow-y-auto border border-rule bg-surface-raised p-0 text-ink backdrop:bg-ink/40`}
     >
       <div className="flex items-start justify-between gap-3 border-b border-rule px-4 py-3">
         <h2 id={titleId} className="text-sm font-semibold text-ink">
