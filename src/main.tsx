@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { StrictMode, lazy } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, Navigate } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
@@ -9,23 +9,72 @@ import { RequireAuth } from '@/components/require-auth'
 import { ToastProvider } from '@/components/toast'
 import { CrmLayout } from '@/components/crm-layout'
 import { LoginPage } from '@/routes/login'
-import { DashboardPage } from '@/routes/dashboard'
-import { PipelinePage } from '@/routes/pipeline'
-import { LeadsPage } from '@/routes/leads'
-import { LeadDetailPage } from '@/routes/lead-detail'
-import { PropertiesPage } from '@/routes/properties'
-import { PropertyNewPage } from '@/routes/property-new'
-import { PropertyDetailPage } from '@/routes/property-detail'
-import { ProjectsPage } from '@/routes/projects'
-import { ProjectNewPage } from '@/routes/project-new'
-import { ProjectEditPage } from '@/routes/project-edit'
-import { ProjectDetailPage } from '@/routes/project-detail'
-import { InventoryPage } from '@/routes/inventory'
-import { TasksPage } from '@/routes/tasks'
-import { NotificationsPage } from '@/routes/notifications'
-import { AgencyPage } from '@/routes/agency'
-import { PlanPage } from '@/routes/plan'
-import { SettingsPage } from '@/routes/settings'
+
+/**
+ * Every private screen is its own chunk.
+ *
+ * LoginPage stays static on purpose: it is the first paint, and deferring it
+ * would add a round trip exactly where LCP is measured. Everything behind
+ * RequireAuth is downloaded when the agent goes there — the whole CRM used to
+ * ride in one 983KB bundle, most of it screens a given session never opens.
+ *
+ * The <Suspense> that catches these lives inside CrmLayout, around <Outlet/>,
+ * so a navigation swaps the content pane and leaves the header and sidebar
+ * mounted. Put it above the router and the chrome unmounts on every route
+ * change, which both flickers and leaves the view transitions animating
+ * against nothing.
+ */
+const DashboardPage = lazy(() =>
+  import('@/routes/dashboard').then((m) => ({ default: m.DashboardPage })),
+)
+const PipelinePage = lazy(() =>
+  import('@/routes/pipeline').then((m) => ({ default: m.PipelinePage })),
+)
+const LeadsPage = lazy(() =>
+  import('@/routes/leads').then((m) => ({ default: m.LeadsPage })),
+)
+const LeadDetailPage = lazy(() =>
+  import('@/routes/lead-detail').then((m) => ({ default: m.LeadDetailPage })),
+)
+const PropertiesPage = lazy(() =>
+  import('@/routes/properties').then((m) => ({ default: m.PropertiesPage })),
+)
+const PropertyNewPage = lazy(() =>
+  import('@/routes/property-new').then((m) => ({ default: m.PropertyNewPage })),
+)
+const PropertyDetailPage = lazy(() =>
+  import('@/routes/property-detail').then((m) => ({ default: m.PropertyDetailPage })),
+)
+const ProjectsPage = lazy(() =>
+  import('@/routes/projects').then((m) => ({ default: m.ProjectsPage })),
+)
+const ProjectNewPage = lazy(() =>
+  import('@/routes/project-new').then((m) => ({ default: m.ProjectNewPage })),
+)
+const ProjectEditPage = lazy(() =>
+  import('@/routes/project-edit').then((m) => ({ default: m.ProjectEditPage })),
+)
+const ProjectDetailPage = lazy(() =>
+  import('@/routes/project-detail').then((m) => ({ default: m.ProjectDetailPage })),
+)
+const InventoryPage = lazy(() =>
+  import('@/routes/inventory').then((m) => ({ default: m.InventoryPage })),
+)
+const TasksPage = lazy(() =>
+  import('@/routes/tasks').then((m) => ({ default: m.TasksPage })),
+)
+const NotificationsPage = lazy(() =>
+  import('@/routes/notifications').then((m) => ({ default: m.NotificationsPage })),
+)
+const AgencyPage = lazy(() =>
+  import('@/routes/agency').then((m) => ({ default: m.AgencyPage })),
+)
+const PlanPage = lazy(() =>
+  import('@/routes/plan').then((m) => ({ default: m.PlanPage })),
+)
+const SettingsPage = lazy(() =>
+  import('@/routes/settings').then((m) => ({ default: m.SettingsPage })),
+)
 import './index.css'
 
 // /login is the ONLY public route. Everything else is a child of RequireAuth,

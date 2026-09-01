@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentType } from 'react'
+import { Suspense, useEffect, useRef, useState, type ComponentType } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { motion } from 'motion/react'
 import {
@@ -22,7 +22,7 @@ import { useAuth } from '@/lib/auth-context'
 import { useT } from '@/lib/i18n/context'
 import type { TranslationKey } from '@/lib/i18n/es'
 import { LanguageSwitcher } from '@/components/language-switcher'
-import { Button, Modal } from '@/components/ui'
+import { Button, LoadingState, Modal } from '@/components/ui'
 import { refreshUnreadCount, useUnreadCount } from '@/lib/crm/unread-store'
 
 interface NavItem {
@@ -364,7 +364,12 @@ export function CrmLayout() {
           {/* min-w-0 again here: without it the Kanban's min-w-max stretches
               this wrapper, and every screen's toolbar goes with it. */}
           <div key={location.pathname} className="min-w-0 px-4 py-5 lg:px-6">
-            <Outlet />
+            {/* Catches the lazily-loaded route chunks (see main.tsx). Inside
+                the pane, not around the router: up there the header and rail
+                would unmount on every navigation. */}
+            <Suspense fallback={<LoadingState label={t('common.loading')} />}>
+              <Outlet />
+            </Suspense>
           </div>
         </main>
       </div>

@@ -1,4 +1,17 @@
-import { loadStripe, type Stripe } from '@stripe/stripe-js'
+/**
+ * `/pure`, not the plain entry point.
+ *
+ * Importing `@stripe/stripe-js` injects js.stripe.com as a side effect of the
+ * MODULE, so Stripe was being downloaded on /login — 245KB, about 40% of the
+ * first visit, for an agent who is typing a password. `/pure` is the same API
+ * with that side effect removed: the script is fetched by the first
+ * loadStripe() call and not before.
+ *
+ * The TYPE still comes from the main entry point — `import type` is erased at
+ * build time, so it carries no side effect with it.
+ */
+import type { Stripe } from '@stripe/stripe-js'
+import { loadStripe } from '@stripe/stripe-js/pure'
 
 /**
  * Injectable seam so stripeFor()'s retry-after-rejection behaviour is
