@@ -225,6 +225,21 @@ export function LoginPage() {
           {submitting ? t('auth.signingIn') : t('auth.signIn')}
         </Button>
 
+        {/* A failed probe is not the same as "Google is switched off", and it
+            used to look identical: the button just never appeared. */}
+        {socialLogin.status === 'error' && (
+          <p className="mt-4 flex flex-wrap items-center gap-2 text-sm text-muted">
+            {t('auth.google.probeFailed')}
+            <button
+              type="button"
+              onClick={socialLogin.reload}
+              className="min-h-(--control-h) rounded px-1 font-medium text-brand-700 underline underline-offset-2"
+            >
+              {t('common.retry')}
+            </button>
+          </p>
+        )}
+
         {socialLogin.status === 'ready' && socialLogin.data && isFirebaseConfigured() && (
           <div className="mt-4 border-t border-rule pt-4">
             {/* Its own alert, separate from the form-level one above: a

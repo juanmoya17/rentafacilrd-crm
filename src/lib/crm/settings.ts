@@ -7,18 +7,21 @@ interface Envelope<T> {
 
 /**
  * `social_login` is the admin's kill switch, the same one the website reads
- * for its Google button. It rides on `web-settings`, which is PUBLIC
- * (routes/api.php:357, outside the auth:sanctum group) — which is what lets
- * the login screen read it while signed out.
+ * for its Google button.
  *
- * Fails closed: if the call fails we hide the button rather than offer a
- * sign-in method the admin may have switched off.
+ * Reads `auth/providers`, not `web-settings`. The latter answers with 57
+ * fields and ~58KB uncompressed to report one boolean, on the one screen where
+ * there is no session yet and every kilobyte is in front of the agent. It is
+ * public for the same reason this is: the login screen has to ask before
+ * signing in.
+ *
+ * THROWS rather than failing closed. Swallowing the error here made a failed
+ * request indistinguishable from "the admin switched Google off": the button
+ * simply did not appear and there was nothing to retry. The caller decides
+ * what to show — see the retry on the login screen.
  */
 export async function isSocialLoginEnabled(signal?: AbortSignal): Promise<boolean> {
-  try {
-    const response = await api<Envelope<Record<string, unknown> | null>>('web-settings', { signal })
-    return String(response.data?.social_login ?? '') === '1'
-  } catch {
-    return false
-  }
+  const response = await api<Envelope<{ google?: boolean } | null>>('auth/providers', { signal })
+
+  return response.data?.google === true
 }
