@@ -1797,3 +1797,123 @@ git commit -m "feat(pwa): manifest e iconos, sin service worker"
 - **Borrador en backend** — Task 8 lo deja en local, con el motivo escrito allí.
 - **TanStack Query** — Task 17, ídem.
 - **Service worker** — Task 18, paso 3.
+
+---
+
+# Estado de ejecución — 2026-09-02
+
+17 de 18 tareas aplicadas. Ramas: `fix/auditoria-movil-maps` (CRM, 15 commits)
+y `fix/agency-solo-provision` (panel, 2 commits). Sin mergear, sin desplegar.
+
+| # | Tarea | Estado |
+|---|---|---|
+| 1 | Mapa: callback del bootstrap + estado de error | ✅ |
+| 2 | Publicar bloqueado + pendientes + foco | ✅ |
+| 3 | Tokens táctiles y tipografía móvil | ✅ |
+| 4 | Login Google por redirect | ✅ |
+| 5 | Pipeline por toque + Deshacer | ✅ |
+| 6 | Drawer + barra inferior + cabecera | ✅ |
+| 7 | Agencia individual (panel) | ✅ |
+| 8 | Borrador del alta | ✅ |
+| 9 | CheckField de 44px | ✅ |
+| 10 | Agencia en fichas | ✅ |
+| 11 | Fotos | ⚠️ compresión sí, subida al elegir **bloqueada** |
+| 12 | Mapa a pantalla completa | ✅ (sin hoja inferior de resultados) |
+| 13 | Filtros en hoja inferior | ✅ |
+| 14 | Code splitting | ✅ 291 → **157 KB** comprimidos |
+| 15 | Cache-Control de activos | ⏭️ **no aplicada**, ver abajo |
+| 16 | `/api/auth/providers` | ✅ |
+| 17 | Caché entre rutas | ✅ (claves en /leads y /properties) |
+| 18 | PWA | ✅ |
+
+## Task 15 — el `Caddyfile`, sin commitear
+
+No se aplicó por decisión explícita: es la única tarea que **no se puede
+verificar sin desplegar**, y su modo de fallo es que un F5 en `/leads/123`
+devuelva 404 en producción.
+
+Hoy no hay ningún archivo de despliegue en el repo y el sitio funciona — Railway
+resuelve el fallback SPA por su cuenta (README § Deploy, verificado el
+2026-08-06). Añadir un `Caddyfile` **cambia el provider**: a partir de ese
+commit, el `try_files` es responsabilidad de este archivo.
+
+Beneficio: ahorra revalidaciones en visitas repetidas. No mueve el arranque en
+frío, que es lo que mide la auditoría. Es la de menor beneficio y mayor riesgo
+de las 18.
+
+```
+:{$PORT}
+
+root * dist
+encode gzip zstd
+
+# Activos con hash: un cambio de contenido cambia la URL, así que el navegador
+# nunca necesita revalidar.
+@hashed path /assets/*
+header @hashed Cache-Control "public, max-age=31536000, immutable"
+
+# index.html NO: es el único archivo cuya URL no cambia, y cachearlo sirve la
+# app vieja apuntando a chunks que ya no existen.
+@html path / /index.html
+header @html Cache-Control "no-cache"
+
+try_files {path} /index.html
+file_server
+```
+
+Antes de acercarlo a `main`, desplegar a un servicio de prueba de Railway y
+pasar los tres:
+
+```sh
+curl -sI https://<prueba>/assets/<fichero-con-hash>.js | grep -i cache-control
+#   esperado: public, max-age=31536000, immutable
+curl -sI https://<prueba>/ | grep -i cache-control
+#   esperado: no-cache
+curl -sI https://<prueba>/leads/123 | head -1
+#   esperado: HTTP/2 200   ← el que decide
+```
+
+Si Railway ignora el `Caddyfile` (depende del provider configurado en el panel),
+la alternativa es Nixpacks con `caddy` explícito. Rollback: borrar el archivo y
+redesplegar devuelve el comportamiento de hoy.
+
+## Task 11 — la mitad bloqueada
+
+La compresión está hecha y es la que resuelve el problema real: `post_property`
+rechaza cualquier imagen de más de 3 MB y una foto de móvil actual pesa 4-8, o
+sea que hoy la foto elegida **se rechaza**, no es que vaya lenta.
+
+Falta subir al elegir con progreso reanudable. Necesita un endpoint de media
+temporal que **no existe** — `grep -n "property-media\|temp-upload" routes/api.php`
+no devuelve nada. Es una tarea de backend antes que de cliente.
+
+## Correcciones al plan descubiertas al ejecutarlo
+
+- **Task 3**: eran **26** sitios con `min-h-9`/`min-h-8` en 13 archivos, no 4 en
+  `ui.tsx`. Y hacían falta dos tokens, no uno.
+- **Task 2**: `validateProperty` exige mucho más que los cinco obligatorios
+  obvios (descripción, categoría, parámetros `is_required` dinámicos, MIME y
+  tamaño de la foto…). Y cinco controles no se llaman como su campo, más
+  `latitude` que no tiene control ninguno y `ParameterInput` que genera
+  `param-7`, no `param:7`.
+- **Task 5**: `ToastApi` solo tenía `fail`. `t()` sí soporta interpolación
+  (verificado en `translate.ts`).
+- **Task 11**: el validador **no acepta WebP** (`jpeg/png/jpg`). El plan decía
+  comprimir a WebP; habría cambiado un rechazo por otro.
+- **Task 16**: `ApiResponseService::successResponse()` hace `send()` + `exit()`
+  fuera de los tests, así que una cabecera encadenada detrás **funciona en la
+  suite y desaparece en producción**.
+- **Task 6**: un `<dialog>` nativo **no** cierra al tocar fuera. Se implementó, y
+  solo para el drawer: los diálogos con formulario a medio llenar perderían lo
+  tecleado.
+- **Task 7**: el comando de backfill no hacía falta — `BackfillAgencies` ya
+  incluye a todo agente verificado aunque no haya publicado, y es idempotente.
+
+## Lo que sigue pendiente de un dispositivo real
+
+Nada de lo anterior se ha probado en un teléfono. Todo lo verificado es
+`npm test` (249), `npm run lint`, `npm run build`, `php artisan test` (354 de
+agencia + 5 nuevos) y lecturas del CSS y del bundle emitidos.
+
+La regresión de §10 sigue entera: Galaxy S24 Ultra/Chrome, iPhone/Safari, 320px
+y texto al 200%, con datos cargados.
