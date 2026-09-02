@@ -1,3 +1,5 @@
+import { resourceCache } from '@/lib/resource-cache'
+
 /**
  * Laravel Sanctum SPA client.
  *
@@ -160,6 +162,21 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   if (failed) {
     throw new ApiError(messageOf(payload) ?? `Error ${response.status}`, response.status, payload)
   }
+
+  /**
+   * Any successful write empties the cache.
+   *
+   * Here and not at each call site because every mutation in the app routes
+   * through this function, and the alternative — remembering to invalidate
+   * next to each of them — fails exactly once and then the agent publishes a
+   * listing and does not see it. That failure is what makes a cache worse than
+   * no cache, so the guard goes where nobody can forget it.
+   *
+   * Coarse on purpose: a write to leads clears properties too. The cost is one
+   * refetch, which is what happened on every navigation before any of this
+   * existed; the cost of being clever here is stale data nobody can explain.
+   */
+  if (mutates) resourceCache.clear()
 
   return payload as T
 }

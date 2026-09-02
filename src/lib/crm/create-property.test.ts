@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   EMPTY_PROPERTY_FORM,
   EMPTY_PROPERTY_MEDIA,
+  propertyOffenders,
   propertyPayload,
   stepOf,
   validateProperty,
@@ -118,6 +119,76 @@ describe('validateProperty', () => {
     expect(stepOf('title_image')).toBe('media')
     expect(stepOf('param:7')).toBe('parameters')
     expect(stepOf('rentduration')).toBe('category')
+  })
+})
+
+/**
+ * The Review screen needs the WHOLE list of what is missing; the jump-to-field
+ * needs only the first. Two validators kept in parallel is how Publish ends up
+ * enabled over a form the server rejects, so there is one — and validateProperty
+ * is defined as its head.
+ */
+describe('propertyOffenders', () => {
+  const required = [{ id: 7, is_required: 1 }]
+
+  it('collects everything that blocks publishing, in validation order', () => {
+    expect(
+      propertyOffenders(EMPTY_PROPERTY_FORM, EMPTY_PROPERTY_MEDIA, {}, required, null, true),
+    ).toEqual([
+      'category_id',
+      'title',
+      'description',
+      'price',
+      'param:7',
+      'address',
+      'latitude',
+      'title_image',
+    ])
+  })
+
+  it('is the source validateProperty reads its answer from', () => {
+    const cases: [PropertyForm, PropertyMedia][] = [
+      [EMPTY_PROPERTY_FORM, EMPTY_PROPERTY_MEDIA],
+      [{ ...valid, description: '' }, media],
+      [{ ...valid, price: '0' }, media],
+      [valid, { ...EMPTY_PROPERTY_MEDIA, title_image: null }],
+      [valid, media],
+    ]
+
+    for (const [form, files] of cases) {
+      expect(validateProperty(form, files, {}, required, null, true)).toBe(
+        propertyOffenders(form, files, {}, required, null, true)[0] ?? null,
+      )
+    }
+  })
+
+  it('reports a bad gallery once, not once per file', () => {
+    const files = {
+      ...media,
+      gallery_images: [jpeg('a.jpg', 20_000_000), jpeg('b.jpg', 20_000_000)],
+    }
+
+    const offenders = propertyOffenders(valid, files, {}, [], null, true)
+
+    expect(offenders.filter((field) => field === 'gallery_images')).toEqual(['gallery_images'])
+  })
+
+  it('reports bad documents once, not once per file', () => {
+    const files = {
+      ...media,
+      documents: [
+        new File([''], 'notas.exe', { type: 'application/octet-stream' }),
+        new File([''], 'plano.exe', { type: 'application/octet-stream' }),
+      ],
+    }
+
+    const offenders = propertyOffenders(valid, files, {}, [], null, true)
+
+    expect(offenders.filter((field) => field === 'documents')).toEqual(['documents'])
+  })
+
+  it('is empty for a listing that is ready', () => {
+    expect(propertyOffenders(valid, media, {}, [], null, true)).toEqual([])
   })
 })
 

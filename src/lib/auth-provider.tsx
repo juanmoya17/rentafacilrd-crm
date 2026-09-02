@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ApiError, api, setUnauthorizedHandler } from '@/lib/api'
-import { signInWithGoogle } from '@/lib/crm/google-login'
+import { exchangeGoogleCredential, signInWithGoogle } from '@/lib/crm/google-login'
+import { finishGoogleRedirect } from '@/lib/firebase'
 import { AuthContext, type AuthState, type CrmUser } from '@/lib/auth-context'
+import { resourceCache } from '@/lib/resource-cache'
 
 interface Envelope<T> {
   error: boolean
@@ -78,6 +80,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ status: 'authenticated', user })
   }, [])
 
+  /**
+   * La otra mitad del flujo por redirect, que en móvil sustituye al popup.
+   *
+   * Misma forma que loginWithGoogle() —lanza, y quien llama lo convierte en
+   * copy— con un caso más: `false` cuando esta carga no viene de Google, que
+   * es lo que devuelve en cualquier visita normal a /login.
+   */
+  const completeGoogleRedirect = useCallback(async () => {
+    const credential = await finishGoogleRedirect()
+    if (credential === null) return false
+
+    setState({ status: 'authenticated', user: await exchangeGoogleCredential(credential) })
+
+    return true
+  }, [])
+
   const logout = useCallback(async () => {
     try {
       await api('web-logout', { method: 'POST' })
@@ -85,6 +103,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Drop the local session even if the call failed, otherwise a network
       // blip leaves the UI logged in against a dead session. The error still
       // propagates so the caller can surface it.
+      //
+      // The cache goes with it: it holds leads, and leads are names and phone
+      // numbers. On a phone that gets handed between agents, the next person
+      // signing in must not paint the previous one's pipeline for a frame.
+      resourceCache.clear()
       setState({ status: 'anonymous' })
     }
   }, [])
@@ -113,8 +136,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ state, login, loginWithGoogle, logout, retry, refreshUser }),
-    [state, login, loginWithGoogle, logout, retry, refreshUser],
+    () => ({ state, login, loginWithGoogle, completeGoogleRedirect, logout, retry, refreshUser }),
+    [state, login, loginWithGoogle, completeGoogleRedirect, logout, retry, refreshUser],
   )
 
   return <AuthContext value={value}>{children}</AuthContext>

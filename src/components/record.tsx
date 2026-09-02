@@ -43,7 +43,7 @@ export function RecordHeader({
       <Link
         to={backTo}
         viewTransition
-        className="mb-3 inline-flex min-h-8 items-center gap-1 text-sm text-brand-700 transition-colors duration-(--duration-fast) ease-out hover:text-brand-800"
+        className="mb-3 inline-flex min-h-(--control-h-sm) items-center gap-1 text-sm text-brand-700 transition-colors duration-(--duration-fast) ease-out hover:text-brand-800"
       >
         <span aria-hidden="true">←</span>
         {t('common.back')}

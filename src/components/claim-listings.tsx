@@ -2,7 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '@/lib/i18n/context'
 import { useToast } from '@/lib/toast-context'
 import { useResource } from '@/lib/use-resource'
-import { Badge, Button, Card, ErrorState, LoadingState } from '@/components/ui'
+import {
+  Badge,
+  Button,
+  Card,
+  CheckField,
+  ErrorState,
+  LoadingState,
+} from '@/components/ui'
 import {
   MAX_CLAIM,
   claimKey,
@@ -113,18 +120,43 @@ export function ClaimListings({ onClaimed }: { onClaimed: () => void }) {
       <h2 className="text-sm font-semibold text-ink">{t('claim.title')}</h2>
       <p className="mt-0.5 text-sm text-muted">{t('claim.hint')}</p>
 
-      <div className="mt-3 overflow-x-auto">
+      {/* Fichas por debajo de lg. Elegir qué anuncios incorporar arrastrando
+          una tabla de lado es la operación más torpe de esta pantalla, y es la
+          única vez que un asesor la usa. */}
+      <ul className="mt-3 grid gap-2 lg:hidden">
+        {items.map((item: ClaimableListing) => {
+          const key = claimKey(item)
+
+          return (
+            <li key={key}>
+              <label className="flex min-h-(--control-h) cursor-pointer items-start gap-3 rounded-lg border border-rule p-3">
+                <input
+                  type="checkbox"
+                  checked={selected.has(key)}
+                  onChange={() => toggle(key)}
+                  className="mt-0.5 size-[18px] shrink-0 accent-[var(--color-accent)]"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <Badge tone="neutral">{t(`claim.type.${item.listing_type}`)}</Badge>
+                    <span className="min-w-0 truncate text-sm text-ink">{item.title ?? '—'}</span>
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    {[item.city, item.owner].filter(Boolean).join(' · ') || '—'}
+                  </span>
+                </span>
+              </label>
+            </li>
+          )
+        })}
+      </ul>
+
+      <div className="mt-3 hidden overflow-x-auto lg:block">
         <table className="w-full text-sm">
           <thead className="border-b border-rule text-left text-xs uppercase text-muted">
             <tr>
               <th className="px-3 py-2">
-                <input
-                  type="checkbox"
-                  className="size-4"
-                  checked={allShown}
-                  onChange={toggleAll}
-                  aria-label={t('claim.title')}
-                />
+                <CheckField checked={allShown} onChange={toggleAll} ariaLabel={t('claim.title')} />
               </th>
               <th className="px-3 py-2">{t('agency.col.member')}</th>
               <th className="px-3 py-2">{t('claim.owner')}</th>
@@ -137,12 +169,10 @@ export function ClaimListings({ onClaimed }: { onClaimed: () => void }) {
               return (
                 <tr key={key} className="border-b border-rule/60 last:border-0">
                   <td className="px-3 py-2">
-                    <input
-                      type="checkbox"
-                      className="size-4"
+                    <CheckField
                       checked={selected.has(key)}
                       onChange={() => toggle(key)}
-                      aria-label={item.title ?? key}
+                      ariaLabel={item.title ?? key}
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -161,7 +191,10 @@ export function ClaimListings({ onClaimed }: { onClaimed: () => void }) {
       </div>
 
       {selected.size > 0 && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-rule pt-3">
+        /* Pegajosa en móvil: con veinte anuncios seleccionados, el botón de
+           Incorporar quedaba al final de la lista y había que volver a
+           subir. z-10 la mantiene sobre las fichas, no sobre el drawer. */
+        <div className="sticky bottom-0 z-10 -mx-3 -mb-3 mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-rule bg-surface-raised p-3 lg:static lg:mx-0 lg:mb-0 lg:pt-3">
           <span className="text-sm text-muted">{t('claim.selected', { count: selected.size })}</span>
 
           <div className="flex items-center gap-2">

@@ -178,6 +178,29 @@ repo no prueba nada — esa configuración vive en el panel de Railway, no en el
 árbol de archivos. Darlo por roto mirando un `ls` fue un error de método que se
 cometió dos sesiones seguidas.
 
+## PWA (instalable, sin service worker)
+
+`public/manifest.webmanifest` + `theme-color` en `index.html`. Con eso Chrome
+Android e iOS ofrecen "Instalar" y la app abre sin barra de URL.
+
+**No hay service worker, y es deliberado.** La auditoría (§8) lo dice explícito:
+no cachear leads, teléfonos ni datos de clientes sin una política de caducidad y
+de borrado al cerrar sesión. Un SW que cachea `/api` filtra la cartera de un
+asesor al siguiente que use el teléfono; uno que no la cachea no aporta nada que
+las cabeceras de caché no den ya. Si algún día hace falta funcionar sin
+conexión, esa política se escribe primero.
+
+Los iconos salen de `public/logo.svg`:
+
+```sh
+magick -background none public/logo.svg -resize 192x192 -gravity center -extent 192x192 public/icon-192.png
+magick -background none public/logo.svg -resize 512x512 -gravity center -extent 512x512 public/icon-512.png
+magick -background '#f5f5f4' public/logo.svg -resize 410x410 -gravity center -extent 512x512 public/icon-maskable-512.png
+```
+
+El maskable lleva fondo y un 80% de escala: Android recorta el icono a la forma
+del sistema y uno transparente a sangre pierde los bordes.
+
 ## Scripts
 
 ```sh

@@ -6,6 +6,9 @@ export const es = {
   'app.name': 'RentaFácil CRM',
 
   'nav.main': 'Principal',
+  'nav.primary': 'Navegación principal',
+  'nav.more': 'Más',
+  'notifications.unread': '{count} sin leer',
   'nav.section.crm': 'CRM',
   'nav.section.inventory': 'Inventario',
   'nav.section.system': 'Sistema',
@@ -43,6 +46,9 @@ export const es = {
   'auth.google.rejected': 'No pudimos verificar tu cuenta de Google.',
   'auth.google.conflict': 'Ese correo ya tiene cuenta. Entra con tu contraseña.',
   'auth.google.emailUnverified': 'Verifica tu correo en Google antes de continuar.',
+  'auth.google.probeFailed': 'No se pudo comprobar si el acceso con Google está disponible.',
+  'auth.google.redirectStorage':
+    'Tu navegador bloqueó el inicio con Google. Permite los datos de sitio para crm.rentafacilrd.com, o entra con tu correo y contraseña.',
   'auth.google.noPassword': 'Ese correo ya tiene cuenta. Contacta a soporte para recuperarla.',
   'auth.google.generic': 'No pudimos completar el inicio de sesión con Google.',
 
@@ -70,6 +76,7 @@ export const es = {
   'common.back': 'Volver',
   'common.save': 'Guardar',
   'common.cancel': 'Cancelar',
+  'common.apply': 'Aplicar',
   'common.close': 'Cerrar',
   'common.edit': 'Editar',
   'common.delete': 'Eliminar',
@@ -184,6 +191,9 @@ export const es = {
   'pipeline.subtitle': 'Arrastra un lead entre etapas para moverlo. También puedes cambiarla desde la ficha.',
   'pipeline.emptyColumn': 'Sin leads',
   'pipeline.listView': 'Ver como lista',
+  'pipeline.move': 'Mover',
+  'pipeline.moved': 'Lead movido a {stage}',
+  'common.undo': 'Deshacer',
   'pipeline.moveFailed': 'No pudimos mover el lead. Lo devolvimos a su etapa anterior.',
 
   'leads.title': 'Leads',
@@ -217,7 +227,7 @@ export const es = {
   'properties.densityCompact': 'Compacto',
   'properties.densityComfortable': 'Cómodo',
   'properties.view': 'Vista',
-  'properties.viewTable': 'Tabla',
+  'properties.viewTable': 'Lista compacta',
   'properties.viewCards': 'Fichas',
   'properties.viewMap': 'Mapa',
   'properties.noPhotos': 'Sin fotos',
@@ -485,6 +495,8 @@ export const es = {
   'newProperty.clientAddress': 'Dirección para el cliente',
   'newProperty.clientAddressHint': 'Opcional. Lo que ve quien contacta, si prefieres no dar la exacta.',
   'newProperty.pin': 'Ubicación en el mapa',
+  'newProperty.mapUnavailable':
+    'No se pudo cargar el mapa. Escribe la dirección y elige una sugerencia: eso fija la ubicación igual que el pin.',
   'newProperty.pinHint': 'Toca el mapa para colocar el pin. Es obligatorio.',
   'newProperty.titleImage': 'Foto principal',
   'newProperty.imageRule': 'JPG o PNG, hasta 3 MB.',
@@ -504,6 +516,13 @@ export const es = {
   'newProperty.photos': 'Fotos',
   'newProperty.reviewNote':
     'Si tu cuenta tiene aprobación automática el anuncio queda publicado; si no, entra en revisión.',
+  'newProperty.draftFound': 'Tienes un borrador sin publicar del {date}.',
+  'newProperty.draftNoFiles': 'Las fotos y los archivos no se guardan: tendrás que volver a adjuntarlos.',
+  'newProperty.draftResume': 'Continuar',
+  'newProperty.draftDiscard': 'Descartar',
+  'newProperty.draftSaved': 'Borrador guardado',
+  'newProperty.pendingTitle': 'Falta esto para poder publicar:',
+
   'newProperty.error.category_id': 'Elige una categoría.',
   'newProperty.error.property_type': 'Elige venta o alquiler.',
   'newProperty.error.rentduration': 'Elige el periodo de alquiler.',

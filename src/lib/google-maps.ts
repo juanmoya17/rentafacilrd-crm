@@ -59,11 +59,38 @@ export function mapsConfigured(): boolean {
 }
 
 /**
+ * The bootstrap URL. Exported for its test, because the `callback` parameter
+ * IS the behaviour: see loadMaps() below for what its absence cost.
+ */
+export function mapsBootstrapUrl(key: string, callbackName: string): string {
+  const params = new URLSearchParams({
+    key,
+    v: 'weekly',
+    loading: 'async',
+    callback: callbackName,
+  })
+
+  return `https://maps.googleapis.com/maps/api/js?${params.toString()}`
+}
+
+/** Global the bootstrap calls once the loader is installed. */
+const CALLBACK = '__rfMapsReady'
+
+/**
  * The documented inline bootstrap loader, as a module.
  *
  * Single-flight and memoised: `importLibrary` may only be installed once, and
  * every caller after the first shares the same promise. Rejecting on error
  * rather than hanging is what lets the caller fall back to a plain input.
+ *
+ * Resolves on Google's `callback`, NOT on `script.onload`. With
+ * `loading=async` the script that loads is a small bootstrap that goes on to
+ * fetch the API itself, so `onload` fires while `google.maps.importLibrary` is
+ * still undefined. Everything that awaits loadMaps() and then calls
+ * importLibrary immediately — the location picker — threw
+ * `google.maps.importLibrary is not a function` and rendered an empty box;
+ * searchPlaces() escaped it only because a human takes seconds to type three
+ * characters, which is why the address field worked while the map did not.
  */
 let loader: Promise<void> | null = null
 
@@ -81,12 +108,24 @@ export function loadMaps(): Promise<void> {
       return
     }
 
-    const params = new URLSearchParams({ key: KEY, v: 'weekly', loading: 'async' })
+    // The bootstrap looks this up on `window` by name, so it has to be a real
+    // global rather than a closure. Removed once it fires: it is single-use,
+    // and a stale global outliving the load is a footgun for the next reader.
+    Reflect.set(window, CALLBACK, () => {
+      Reflect.deleteProperty(window, CALLBACK)
+      resolve()
+    })
+
     const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?${params.toString()}`
+    script.src = mapsBootstrapUrl(KEY, CALLBACK)
     script.async = true
-    script.onload = () => resolve()
-    script.onerror = () => reject(new Error('Google Maps could not load.'))
+    // Still needed with the callback in place: a blocked, offline or
+    // referrer-rejected script never calls back at all, and without this the
+    // promise would hang forever instead of letting the caller degrade.
+    script.onerror = () => {
+      Reflect.deleteProperty(window, CALLBACK)
+      reject(new Error('Google Maps could not load.'))
+    }
     document.head.append(script)
   })
 

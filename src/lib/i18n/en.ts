@@ -5,6 +5,9 @@ export const en: Record<TranslationKey, string> = {
   'app.name': 'RentaFácil CRM',
 
   'nav.main': 'Main',
+  'nav.primary': 'Primary navigation',
+  'nav.more': 'More',
+  'notifications.unread': '{count} unread',
   'nav.section.crm': 'CRM',
   'nav.section.inventory': 'Inventory',
   'nav.section.system': 'System',
@@ -39,6 +42,9 @@ export const en: Record<TranslationKey, string> = {
   'auth.google.rejected': 'We could not verify your Google account.',
   'auth.google.conflict': 'That email already has an account. Sign in with your password.',
   'auth.google.emailUnverified': 'Verify your email with Google before continuing.',
+  'auth.google.probeFailed': "Could not check whether Google sign-in is available.",
+  'auth.google.redirectStorage':
+    'Your browser blocked the Google sign-in. Allow site data for crm.rentafacilrd.com, or sign in with your email and password.',
   'auth.google.noPassword': 'That email already has an account. Contact support to recover it.',
   'auth.google.generic': 'We could not finish signing in with Google.',
 
@@ -66,6 +72,7 @@ export const en: Record<TranslationKey, string> = {
   'common.back': 'Back',
   'common.save': 'Save',
   'common.cancel': 'Cancel',
+  'common.apply': 'Apply',
   'common.close': 'Close',
   'common.edit': 'Edit',
   'common.delete': 'Delete',
@@ -177,6 +184,9 @@ export const en: Record<TranslationKey, string> = {
   'pipeline.subtitle': 'Drag a lead between stages to move it. You can also change it from the lead page.',
   'pipeline.emptyColumn': 'No leads',
   'pipeline.listView': 'View as list',
+  'pipeline.move': 'Move',
+  'pipeline.moved': 'Lead moved to {stage}',
+  'common.undo': 'Undo',
   'pipeline.moveFailed': 'We could not move the lead. It went back to its previous stage.',
 
   'leads.title': 'Leads',
@@ -210,7 +220,7 @@ export const en: Record<TranslationKey, string> = {
   'properties.densityCompact': 'Compact',
   'properties.densityComfortable': 'Comfortable',
   'properties.view': 'View',
-  'properties.viewTable': 'Table',
+  'properties.viewTable': 'Compact list',
   'properties.viewCards': 'Cards',
   'properties.viewMap': 'Map',
   'properties.noPhotos': 'No photos',
@@ -473,6 +483,8 @@ export const en: Record<TranslationKey, string> = {
   'newProperty.clientAddress': 'Address shown to clients',
   'newProperty.clientAddressHint': 'Optional. What enquirers see if you would rather not give the exact one.',
   'newProperty.pin': 'Map location',
+  'newProperty.mapUnavailable':
+    'The map could not load. Type the address and pick a suggestion: that sets the location just like the pin.',
   'newProperty.pinHint': 'Tap the map to drop the pin. Required.',
   'newProperty.titleImage': 'Cover photo',
   'newProperty.imageRule': 'JPG or PNG, up to 3 MB.',
@@ -492,6 +504,13 @@ export const en: Record<TranslationKey, string> = {
   'newProperty.photos': 'Photos',
   'newProperty.reviewNote':
     'If your account has auto-approval the listing goes live; otherwise it goes to review.',
+  'newProperty.draftFound': 'You have an unpublished draft from {date}.',
+  'newProperty.draftNoFiles': 'Photos and files are not saved: you will need to attach them again.',
+  'newProperty.draftResume': 'Continue',
+  'newProperty.draftDiscard': 'Discard',
+  'newProperty.draftSaved': 'Draft saved',
+  'newProperty.pendingTitle': 'Still needed before you can publish:',
+
   'newProperty.error.category_id': 'Pick a category.',
   'newProperty.error.property_type': 'Pick sale or rent.',
   'newProperty.error.rentduration': 'Pick the rent period.',

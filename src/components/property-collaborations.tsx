@@ -99,7 +99,7 @@ export function PropertyCollaborations({
                       href={contractUrl(share.id)}
                       target="_blank"
                       rel="noreferrer"
-                      className="min-h-9 rounded-md border border-rule-2 px-3 py-1.5 text-sm text-ink-2 hover:bg-surface-sunken"
+                      className="min-h-(--control-h) rounded-md border border-rule-2 px-3 py-1.5 text-sm text-ink-2 hover:bg-surface-sunken"
                     >
                       {t('share.contract')}
                     </a>

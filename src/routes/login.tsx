@@ -1,10 +1,12 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router'
 import { useAuth } from '@/lib/auth-context'
 import { useT } from '@/lib/i18n/context'
 import { useResource } from '@/lib/use-resource'
 import { isSocialLoginEnabled } from '@/lib/crm/settings'
 import { googleErrorKey, type GoogleErrorKey } from '@/lib/crm/google-login'
+import { prefersRedirect } from '@/lib/crm/google-flow'
+import { startGoogleRedirect } from '@/lib/firebase'
 import { isFirebaseConfigured } from '@/lib/firebase'
 import type { TranslationKey } from '@/lib/i18n/es'
 import { LanguageSwitcher } from '@/components/language-switcher'
@@ -27,11 +29,43 @@ const GOOGLE_ERROR_COPY: Record<GoogleErrorKey, TranslationKey> = {
   conflict: 'auth.google.conflict',
   emailUnverified: 'auth.google.emailUnverified',
   noPassword: 'auth.google.noPassword',
+  redirectStorage: 'auth.google.redirectStorage',
   generic: 'auth.google.generic',
 }
 
+/**
+ * Set right before leaving for Google, read on the way back.
+ *
+ * sessionStorage, not localStorage: it dies with the tab, which is exactly how
+ * long this fact is true for.
+ */
+const RETURNING = 'rf.google-redirect'
+
+function leftForGoogle(): boolean {
+  try {
+    return window.sessionStorage.getItem(RETURNING) === '1'
+  } catch {
+    // Private mode and "block all site data" both throw on access rather than
+    // returning null. Not knowing means the ordinary path, not a hang.
+    return false
+  }
+}
+
+/**
+ * `generic` covers every server refusal the key mapper has no dedicated case
+ * for (throttling, a deactivated account, …) — the server already localised
+ * that message, so show it instead of the generic copy when there is one.
+ */
+function googleMessage(caught: unknown, t: (key: TranslationKey) => string): string {
+  const key = googleErrorKey(caught)
+
+  return key === 'generic' && caught instanceof Error && caught.message !== ''
+    ? caught.message
+    : t(GOOGLE_ERROR_COPY[key])
+}
+
 export function LoginPage() {
-  const { state, login, loginWithGoogle } = useAuth()
+  const { state, login, loginWithGoogle, completeGoogleRedirect } = useAuth()
   const location = useLocation()
   const t = useT()
   const [email, setEmail] = useState('')
@@ -44,8 +78,41 @@ export function LoginPage() {
   // password submit that never happened, and the Google button gets its own
   // progress feedback.
   const [googleError, setGoogleError] = useState<string | null>(null)
-  const [googleSubmitting, setGoogleSubmitting] = useState(false)
+  /**
+   * Starts busy when this load is the return leg of a redirect.
+   *
+   * Computed in the initialiser, not in an effect: the session probe answers
+   * `anonymous` (the Laravel cookie does not exist until the exchange below
+   * runs), so without this the agent watches the login form reappear for a
+   * moment after signing in — which reads as the sign-in having failed.
+   */
+  const [googleSubmitting, setGoogleSubmitting] = useState(leftForGoogle)
   const socialLogin = useResource((signal) => isSocialLoginEnabled(signal), [])
+
+  useEffect(() => {
+    // isFirebaseConfigured() as well as the mark: a deploy that lost the env
+    // vars would otherwise initialise Firebase with an empty config just to
+    // ask a question whose answer cannot arrive. The mark alone is enough in
+    // practice — it is only ever set by the button, which needs the config to
+    // render — but "in practice" is not what a boot path should rely on.
+    if (!isFirebaseConfigured() || !leftForGoogle()) return
+
+    void completeGoogleRedirect()
+      .catch((caught: unknown) => {
+        setGoogleError(googleMessage(caught, t))
+      })
+      .finally(() => {
+        // Cleared on failure too. A redirect the agent abandoned would
+        // otherwise leave every later visit to this page stuck on "signing
+        // in…" with no way out but clearing site data.
+        try {
+          window.sessionStorage.removeItem(RETURNING)
+        } catch {
+          // Nothing to clean up if storage was never readable.
+        }
+        setGoogleSubmitting(false)
+      })
+  }, [completeGoogleRedirect, t])
 
   // Don't decide anything until the boot probe answers, or a refresh on /login
   // would flash the form at an already-authenticated agent.
@@ -81,18 +148,20 @@ export function LoginPage() {
     setGoogleSubmitting(true)
     setGoogleError(null)
     try {
+      if (prefersRedirect(window.innerWidth)) {
+        // Marked BEFORE leaving: nothing after this line runs in this tab.
+        try {
+          window.sessionStorage.setItem(RETURNING, '1')
+        } catch {
+          // Storage refused. The redirect still works; the return leg just
+          // shows the form for a moment instead of a spinner.
+        }
+        await startGoogleRedirect()
+        return
+      }
       await loginWithGoogle()
     } catch (caught: unknown) {
-      const key = googleErrorKey(caught)
-      // `generic` covers every server refusal the key mapper doesn't have a
-      // dedicated case for (throttling, a deactivated account, ...) — the
-      // server already localised that message, so show it instead of the
-      // generic copy when there is one to show.
-      const message =
-        key === 'generic' && caught instanceof Error && caught.message !== ''
-          ? caught.message
-          : t(GOOGLE_ERROR_COPY[key])
-      setGoogleError(message)
+      setGoogleError(googleMessage(caught, t))
     } finally {
       setGoogleSubmitting(false)
     }
@@ -155,6 +224,21 @@ export function LoginPage() {
         >
           {submitting ? t('auth.signingIn') : t('auth.signIn')}
         </Button>
+
+        {/* A failed probe is not the same as "Google is switched off", and it
+            used to look identical: the button just never appeared. */}
+        {socialLogin.status === 'error' && (
+          <p className="mt-4 flex flex-wrap items-center gap-2 text-sm text-muted">
+            {t('auth.google.probeFailed')}
+            <button
+              type="button"
+              onClick={socialLogin.reload}
+              className="min-h-(--control-h) rounded px-1 font-medium text-brand-700 underline underline-offset-2"
+            >
+              {t('common.retry')}
+            </button>
+          </p>
+        )}
 
         {socialLogin.status === 'ready' && socialLogin.data && isFirebaseConfigured() && (
           <div className="mt-4 border-t border-rule pt-4">

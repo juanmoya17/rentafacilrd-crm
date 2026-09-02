@@ -14,7 +14,16 @@ import {
   type Package,
 } from '@/lib/crm/packages'
 import { apiOrigin, isTrustedPaymentMessage, openCentered } from '@/lib/crm/payment-popup'
-import { StripePayment } from '@/components/stripe-payment'
+import { Suspense, lazy } from 'react'
+
+/**
+ * @stripe/react-stripe-js and its Elements tree are only reachable from this
+ * dialog, and only after the agent picks card payment. Static, they rode in
+ * the common chunk on every screen.
+ */
+const StripePayment = lazy(() =>
+  import('@/components/stripe-payment').then((module) => ({ default: module.StripePayment })),
+)
 
 type Screen =
   | { kind: 'methods' }
@@ -205,14 +214,16 @@ export function CheckoutDialog({
 
     if (screen.kind === 'stripe') {
       return (
-        <StripePayment
-          publishableKey={screen.publishableKey}
-          clientSecret={screen.clientSecret}
-          onPaid={() => {
-            pending.current.delete(screen.transactionId)
-            onPurchased()
-          }}
-        />
+        <Suspense fallback={<LoadingState label={t('common.loading')} />}>
+          <StripePayment
+            publishableKey={screen.publishableKey}
+            clientSecret={screen.clientSecret}
+            onPaid={() => {
+              pending.current.delete(screen.transactionId)
+              onPurchased()
+            }}
+          />
+        </Suspense>
       )
     }
 

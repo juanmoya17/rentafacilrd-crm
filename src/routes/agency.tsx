@@ -158,7 +158,7 @@ export function AgencyPage() {
               aria-selected={selected}
               aria-controls={`panel-${option}`}
               onClick={() => setTab(option)}
-              className={`relative min-h-9 whitespace-nowrap px-3 py-2 text-sm transition-colors duration-(--duration-fast) ease-out ${
+              className={`relative min-h-(--control-h) whitespace-nowrap px-3 py-2 text-sm transition-colors duration-(--duration-fast) ease-out ${
                 selected ? 'font-medium text-brand-700' : 'text-muted hover:text-ink'
               }`}
             >
@@ -198,7 +198,52 @@ export function AgencyPage() {
             )}
 
             {rosterData !== null && (
-              <Card className="mt-4 overflow-x-auto">
+              <>
+                {/* Cards below lg, table from lg up. Same data, same actions —
+                    the horizontal scroll was the only way to reach Rol, Estado
+                    and the three-dot menu on a phone, and a table that has to
+                    be dragged sideways is a table nobody reads. */}
+                <ul className="mt-4 grid gap-2 lg:hidden">
+                  {rosterData.members.map((member) => (
+                    <li key={member.id}>
+                      <Card className="flex items-start justify-between gap-3 p-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-ink">
+                            {member.name ?? '—'}
+                          </p>
+                          <p className="truncate text-xs text-muted">
+                            {member.email ?? member.mobile ?? ''}
+                          </p>
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <Badge tone={ROLE_TONE[member.role]}>
+                              {t(`agency.role.${member.role}`)}
+                            </Badge>
+                            <Badge tone={STATUS_TONE[member.status]}>
+                              {t(`agency.status.${member.status}`)}
+                            </Badge>
+                            <span className="text-xs text-muted">
+                              {member.joined_at === null ? '—' : formatDate(member.joined_at)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {isAdmin && (
+                          <MemberActions
+                            member={member}
+                            onRole={(role) => void run(() => changeMemberRole(member.id, role))}
+                            onStatus={(status) =>
+                              void run(() => changeMemberStatus(member.id, status))
+                            }
+                            onTransfer={() => setTransferring(member)}
+                            onExit={() => setExiting(member)}
+                          />
+                        )}
+                      </Card>
+                    </li>
+                  ))}
+                </ul>
+
+                <Card className="mt-4 hidden overflow-x-auto lg:block">
                 <table className="w-full text-sm">
                   <thead className="border-b border-rule text-left text-xs uppercase text-muted">
                     <tr>
@@ -244,7 +289,8 @@ export function AgencyPage() {
                     ))}
                   </tbody>
                 </table>
-              </Card>
+                </Card>
+              </>
             )}
 
             {invites.status === 'ready' && invites.data !== null && invites.data.invitations.length > 0 && (
@@ -252,8 +298,11 @@ export function AgencyPage() {
                 <h2 className="mb-2 text-sm font-semibold text-ink">{t('agency.pendingInvites')}</h2>
                 <ul className="space-y-1 text-sm">
                   {invites.data.invitations.map((invitation) => (
-                    <li key={invitation.id} className="flex items-center justify-between gap-2">
-                      <span className="text-ink-2">
+                    <li
+                      key={invitation.id}
+                      className="flex flex-wrap items-center justify-between gap-2"
+                    >
+                      <span className="min-w-0 text-ink-2">
                         {invitation.email ?? invitation.phone} · {t(`agency.role.${invitation.role}`)}
                         {!invitation.is_open && <> · {t('agency.inviteExpired')}</>}
                       </span>

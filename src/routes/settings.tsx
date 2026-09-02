@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import { useAuth } from '@/lib/auth-context'
 import { useI18n } from '@/lib/i18n/context'
-import { Button, Card, ErrorState, LoadingState, PageHeader } from '@/components/ui'
+import {
+  Button,
+  Card,
+  CheckField,
+  ErrorState,
+  LoadingState,
+  PageHeader,
+} from '@/components/ui'
 import { RecordSectionHead } from '@/components/record'
 import { ProfileForm } from '@/components/profile-form'
 import { Register, type Column } from '@/components/register'
@@ -168,15 +175,13 @@ function NotificationPreferencesSection() {
     render: (eventType) => {
       const enabled = resolvePreference(defaults, preferences, eventType, channel)
       return (
-        <input
-          type="checkbox"
+        <CheckField
           checked={enabled}
           disabled={pending.has(`${eventType}:${channel}`)}
           onChange={() => void toggle(eventType, channel, enabled)}
-          aria-label={`${t(`notifications.eventType.${eventType}`)} — ${t(
+          ariaLabel={`${t(`notifications.eventType.${eventType}`)} — ${t(
             channel === 'push' ? 'notifications.channelPush' : 'notifications.channelEmail',
           )}`}
-          className="size-4 accent-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-55"
         />
       )
     },

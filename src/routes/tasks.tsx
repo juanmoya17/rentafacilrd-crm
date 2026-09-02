@@ -86,31 +86,36 @@ export function TasksPage() {
       transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
     >
       <Card className="flex flex-wrap items-center gap-3 p-3 transition-colors duration-(--duration-base) ease-out hover:border-rule-2">
-        <input
-          type="checkbox"
-          checked={task.is_done}
-          onChange={() => void toggle(task)}
-          aria-label={task.title}
-          className="size-4 shrink-0 accent-[var(--color-accent)]"
-        />
-        <div className="min-w-0 flex-1">
-          <p
-            className={`text-sm transition-colors duration-(--duration-base) ease-out ${
+        {/* The label wraps the checkbox AND the title, so the whole line
+            marks the task — 16px in the corner was the only target before.
+            It stops at the title on purpose: the lead link lives outside it,
+            because an <a> inside a <label> loses its click to the checkbox and
+            tapping "Leads #12" would tick the task instead of opening it. */}
+        <label className="flex min-h-(--control-h) min-w-0 flex-1 cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={task.is_done}
+            onChange={() => void toggle(task)}
+            className="mt-0.5 size-[18px] shrink-0 accent-[var(--color-accent)]"
+          />
+          <span
+            className={`min-w-0 flex-1 text-sm transition-colors duration-(--duration-base) ease-out ${
               task.is_done ? 'text-muted line-through' : 'text-ink-2'
             }`}
           >
             {task.title}
-          </p>
-          {task.lead_id !== null && (
-            <Link
-              to={`/leads/${task.lead_id}`}
-              viewTransition
-              className="font-mono text-xs text-brand-700 hover:underline"
-            >
-              {t('nav.leads')} #{task.lead_id}
-            </Link>
-          )}
-        </div>
+          </span>
+        </label>
+
+        {task.lead_id !== null && (
+          <Link
+            to={`/leads/${task.lead_id}`}
+            viewTransition
+            className="inline-flex min-h-(--control-h) shrink-0 items-center font-mono text-xs text-brand-700 hover:underline"
+          >
+            {t('nav.leads')} #{task.lead_id}
+          </Link>
+        )}
         {!task.is_done && task.is_overdue && <Badge tone="danger">{t('common.overdue')}</Badge>}
         {task.due_at !== null && (
           <time dateTime={task.due_at} className="font-mono text-xs text-muted">
@@ -135,7 +140,7 @@ export function TasksPage() {
               type="button"
               onClick={clearStatusFilter}
               aria-label={t('tasks.clearStatusFilter')}
-              className="inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken active:translate-y-px"
+              className="inline-flex min-h-(--control-h) items-center gap-1.5 whitespace-nowrap rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken active:translate-y-px"
             >
               {t('tasks.filteredByStatus')}
               <X className="size-4 text-muted" aria-hidden="true" />

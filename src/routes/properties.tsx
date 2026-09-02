@@ -25,10 +25,12 @@ import type { Translate } from '@/lib/i18n/context'
 import {
   Badge,
   Button,
+  CheckField,
   EmptyState,
   ErrorState,
   LinkButton,
   LoadingState,
+  Modal,
   PageHeader,
   Select,
 } from '@/components/ui'
@@ -332,14 +334,15 @@ function PropertyCardGrid({
                 className="aspect-[16/9] w-full"
               />
               <PhotoDots count={property.images.length} />
-              <input
-                type="checkbox"
+              {/* The plate stays small — a bare checkbox is invisible against a
+                  light sky and lost against a dark roof — while the label
+                  around it carries the 44px target. Selecting a card on a
+                  phone used to mean hitting 16px in the corner of a photo. */}
+              <CheckField
                 checked={selected.has(property.id)}
                 onChange={() => onToggle(property.id)}
-                aria-label={property.title}
-                /* size-4 + the tinted plate: a bare checkbox on photography is
-                   invisible against a light sky and lost against a dark roof. */
-                className="absolute left-1.5 top-1.5 size-4 rounded-sm bg-surface-raised accent-[var(--color-accent)] shadow-[0_0_0_3px_var(--color-surface-raised)]"
+                ariaLabel={property.title}
+                className="absolute left-0 top-0 p-2 [&_input]:rounded-sm [&_input]:bg-surface-raised [&_input]:shadow-[0_0_0_3px_var(--color-surface-raised)]"
               />
             </figure>
 
@@ -696,7 +699,9 @@ export function PropertiesPage() {
     setAdvancedResetKey((n) => n + 1)
   }
 
-  const resource = useResource((signal) => listProperties(filters, signal), [serializedFilters])
+  const resource = useResource((signal) => listProperties(filters, signal), [serializedFilters], {
+    key: `properties:${serializedFilters}`,
+  })
 
   // useResource keeps the previous ready `data` in place while a deps-change
   // refetch is in flight — good for not blanking the table, but it means
@@ -891,22 +896,18 @@ export function PropertiesPage() {
      screen. Closed, the trigger is a chip beside the status chips; open, the
      panel is wider than the remaining track so flex-wrap gives it its own
      line — which is the moment it has earned one. */
-  const advancedFilters = showChrome && (
-    <details open={advancedOpen} onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}>
-      {/* An affordance, not a bare text line: this used to be an unstyled
-          <summary> that read as a paragraph and gave no hint it opened. The
-          count tells the agent a filter is active while the panel is shut —
-          otherwise a price floor set yesterday silently explains a short
-          result list today. */}
-      <summary className="inline-flex min-h-9 cursor-pointer select-none list-none items-center gap-1.5 rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken [&::-webkit-details-marker]:hidden">
-        <SlidersHorizontal className="size-4 text-muted" aria-hidden="true" />
-        {t('properties.filtersAdvanced')}
-        {advancedFilterCount > 0 && (
-          <span className="rounded-full bg-accent px-1.5 font-mono text-xs font-semibold text-accent-ink">
-            {advancedFilterCount}
-          </span>
-        )}
-      </summary>
+  /**
+   * One definition, two containers: a bottom sheet on a phone and the inline
+   * <details> from lg up.
+   *
+   * The panel is nine controls. Inline on a 390px screen they push the results
+   * off the fold, and the agent filters precisely so they can look at results
+   * — so on mobile it opens over the list and closes when they are done. The
+   * desktop <details> stays exactly as it was; it works, it is native, and it
+   * is not the thing the audit found.
+   */
+  const advancedPanel = (
+    <>
       {/* Keyed on advancedResetKey, NOT the filter set: it only bumps on an
           external reset (this panel's own "Limpiar filtros", or a KPI
           shortcut), never on a field's own onBlur commit — remounting on every
@@ -927,7 +928,7 @@ export function PropertiesPage() {
             onBlur={(event) =>
               setParam('price_min', event.target.value === '' ? null : event.target.value)
             }
-            className="min-h-9 w-28 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+            className="min-h-(--control-h) w-28 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -941,7 +942,7 @@ export function PropertiesPage() {
             onBlur={(event) =>
               setParam('price_max', event.target.value === '' ? null : event.target.value)
             }
-            className="min-h-9 w-28 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+            className="min-h-(--control-h) w-28 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -955,7 +956,7 @@ export function PropertiesPage() {
             onBlur={(event) =>
               setParam('area_min', event.target.value === '' ? null : event.target.value)
             }
-            className="min-h-9 w-24 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+            className="min-h-(--control-h) w-24 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -969,24 +970,80 @@ export function PropertiesPage() {
             onBlur={(event) =>
               setParam('area_max', event.target.value === '' ? null : event.target.value)
             }
-            className="min-h-9 w-24 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+            className="min-h-(--control-h) w-24 rounded-md border border-rule-2 bg-surface-raised px-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
           />
         </div>
-        <label className="flex items-center gap-1.5 pb-2 text-sm text-muted">
-          <input
-            type="checkbox"
-            checked={filters.is_featured === true}
-            onChange={(event) => setParam('is_featured', event.target.checked ? 'true' : null)}
-            className="accent-[var(--color-accent)]"
-          />
-          {t('properties.featuredOnly')}
-        </label>
+        <CheckField
+          className="pb-2 text-muted"
+          checked={filters.is_featured === true}
+          onChange={(next) => setParam('is_featured', next ? 'true' : null)}
+          label={t('properties.featuredOnly')}
+        />
         <Button onClick={clearAdvancedFilters}>
           <FilterX className="size-4" aria-hidden="true" />
           {t('properties.clearFilters')}
         </Button>
       </div>
-    </details>
+    </>
+  )
+
+  const advancedTrigger = (
+    <>
+      <SlidersHorizontal className="size-4 text-muted" aria-hidden="true" />
+        {t('properties.filtersAdvanced')}
+        {advancedFilterCount > 0 && (
+          <span className="rounded-full bg-accent px-1.5 font-mono text-xs font-semibold text-accent-ink">
+            {advancedFilterCount}
+          </span>
+        )}
+    </>
+  )
+
+  const advancedFilters = showChrome && (
+    <>
+      <button
+        type="button"
+        onClick={() => setAdvancedOpen(true)}
+        className="inline-flex min-h-(--control-h) select-none items-center gap-1.5 rounded-md border border-rule-2 px-2.5 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken lg:hidden"
+      >
+        {advancedTrigger}
+      </button>
+
+      {advancedOpen && (
+        <div className="lg:hidden">
+          <Modal
+            variant="sheet"
+            title={t('properties.filtersAdvanced')}
+            closeLabel={t('common.close')}
+            onClose={() => setAdvancedOpen(false)}
+            /* Limpiar ya vive dentro del panel, así que aquí solo va
+               Aplicar: dos botones de limpiar en la misma hoja es una
+               pregunta, no una acción. */
+            footer={
+              <Button variant="primary" onClick={() => setAdvancedOpen(false)}>
+                {t('common.apply')}
+              </Button>
+            }
+          >
+            {advancedPanel}
+          </Modal>
+        </div>
+      )}
+
+      <details
+        open={advancedOpen}
+        onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}
+        className="hidden lg:block"
+      >
+        {/* An affordance, not a bare text line: the count tells the agent a
+            filter is active while the panel is shut — otherwise a price floor
+            set yesterday silently explains a short result list today. */}
+        <summary className="inline-flex min-h-(--control-h) cursor-pointer select-none list-none items-center gap-1.5 rounded-md border border-rule-2 px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors duration-(--duration-fast) ease-out hover:bg-surface-sunken [&::-webkit-details-marker]:hidden">
+          {advancedTrigger}
+        </summary>
+        {advancedPanel}
+      </details>
+    </>
   )
 
   return (
@@ -1054,7 +1111,7 @@ export function PropertiesPage() {
                   id="property-sort"
                   value={filters.sort ?? 'newest'}
                   onChange={(event) => setParam('sort', event.target.value)}
-                  className="min-h-9 rounded-md border border-rule-2 bg-surface-raised py-1.5 pl-8 pr-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
+                  className="min-h-(--control-h) rounded-md border border-rule-2 bg-surface-raised py-1.5 pl-8 pr-2 text-sm text-ink transition-colors duration-(--duration-base) ease-out hover:bg-surface-sunken"
                 >
                   {PROPERTY_SORTS.map((option) => (
                     <option key={option} value={option}>
@@ -1086,9 +1143,11 @@ export function PropertiesPage() {
 
             {/* Density is a row-height control on the table only — in the card
                 grid it has nothing to act on, so it goes rather than sitting
-                there inert. */}
+                there inert. Hidden below lg for the same reason: that is where
+                the table renders as cards, so row height means nothing. */}
             {showChrome && view === 'table' && (
               <Segmented
+                className="hidden lg:flex"
                 group="property-density"
                 label={t('properties.density')}
                 value={compact ? 'compact' : 'comfortable'}
@@ -1109,19 +1168,14 @@ export function PropertiesPage() {
                 no checkboxes to select — but the card grid does, at every width,
                 so there it stays. The map view has no selection at all, so
                 nothing to select-all. */}
-            <label
-              className={`items-center gap-1.5 text-sm text-muted ${
-                view === 'map' ? 'hidden' : view === 'cards' ? 'flex' : 'hidden lg:flex'
+            <CheckField
+              className={`text-muted ${
+                view === 'map' ? 'hidden' : view === 'cards' ? 'inline-flex' : 'hidden lg:inline-flex'
               }`}
-            >
-              <input
-                type="checkbox"
-                checked={allShown}
-                onChange={() => (allShown ? setSelected(new Set()) : selectAllShown())}
-                className="accent-[var(--color-accent)]"
-              />
-              {t('common.all')}
-            </label>
+              checked={allShown}
+              onChange={() => (allShown ? setSelected(new Set()) : selectAllShown())}
+              label={t('common.all')}
+            />
           </>
         }
         filters={
@@ -1260,6 +1314,10 @@ export function PropertiesPage() {
                 members={members}
                 onReassign={setReassigning}
               />
+              {/* The pager sits under a 448px map on a 640px screen, so on a
+                  phone it was below the fold with nothing to say it was there.
+                  The map fills the viewport instead (see property-map.tsx) and
+                  this scrolls into view after it. */}
               <div className="mt-3">{pager}</div>
             </>
           ) : view === 'cards' ? (

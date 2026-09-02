@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Pencil, Sparkles } from 'lucide-react'
 import { useI18n } from '@/lib/i18n/context'
@@ -18,6 +18,12 @@ import { LocationPicker } from '@/components/location-picker'
 import { AddressSearch } from '@/components/address-search'
 import { PhotoInput } from '@/components/photo-input'
 import { useObjectUrls } from '@/lib/use-object-urls'
+import {
+  clearDraft,
+  loadDraft,
+  saveDraft,
+  type RestoredDraft,
+} from '@/lib/crm/property-draft'
 import { reverseGeocode, type Place } from '@/lib/google-maps'
 import { useResource } from '@/lib/use-resource'
 import {
@@ -41,6 +47,7 @@ import {
   createProperty,
   propertyPayload,
   stepOf,
+  propertyOffenders,
   validateProperty,
   type FacilityDistances,
   type ParameterValues,
@@ -177,6 +184,35 @@ function Chip({
 }
 
 /* ------------------------------------------------------------- parameters */
+
+/**
+ * Where each field's control actually lives in the DOM.
+ *
+ * Only the exceptions: most fields render through `field()`, whose id IS
+ * `property-${name}`. These five do not, and the mismatch is silent — the
+ * lookup returns null and the focus simply never moves, which reads as "the
+ * pending list is broken" rather than as a typo.
+ *
+ * `latitude` has no control at all: the pin is the input. It points at the
+ * address field instead, which is the thing the agent can actually use (a
+ * picked suggestion sets the pin) and sits directly above the map.
+ */
+const FIELD_ELEMENT_ID: Partial<Record<PropertyField, string>> = {
+  category_id: 'property-category',
+  title_image: 'property-title-image',
+  gallery_images: 'property-gallery',
+  three_d_image: 'property-3d',
+  meta_description: 'property-meta-description',
+  latitude: 'property-address',
+  longitude: 'property-address',
+}
+
+function elementIdOf(field: PropertyField): string {
+  // ParameterInput builds its own id as `param-${id}`, not `param:${id}`.
+  if (field.startsWith('param:')) return `param-${field.slice('param:'.length)}`
+
+  return FIELD_ELEMENT_ID[field] ?? `property-${field}`
+}
 
 /** One category parameter, rendered as whatever `type_of_parameter` says. */
 function ParameterInput({
@@ -358,7 +394,7 @@ function ParameterInput({
 /* ------------------------------------------------------------------ page */
 
 export function PropertyNewPage() {
-  const { t } = useI18n()
+  const { t, formatDate } = useI18n()
   const navigate = useNavigate()
   const reference = useResource((signal) => loadReference(signal), [])
 
@@ -374,6 +410,66 @@ export function PropertyNewPage() {
   const [writing, setWriting] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
   const [confirmingRegen, setConfirmingRegen] = useState(false)
+  /**
+   * Read once, on mount. Offered rather than applied: silently overwriting a
+   * blank form the agent opened on purpose is worse than asking, and the
+   * question costs one tap.
+   */
+  const [offered, setOffered] = useState<RestoredDraft | null>(() => loadDraft(Date.now()))
+  const [savedAt, setSavedAt] = useState<number | null>(null)
+
+  const touched =
+    form !== EMPTY_PROPERTY_FORM ||
+    Object.keys(parameters).length > 0 ||
+    Object.keys(facilities).length > 0
+
+  // 1.5s after the last change, not on every keystroke: localStorage is
+  // synchronous, and writing the whole wizard on each character is a stutter
+  // you can feel on a mid-range phone.
+  useEffect(() => {
+    if (!touched) return
+
+    const id = setTimeout(() => {
+      const at = Date.now()
+      saveDraft({ form, parameters, facilities, translations, step }, at)
+      setSavedAt(at)
+    }, 1500)
+
+    return () => {
+      clearTimeout(id)
+    }
+  }, [touched, form, parameters, facilities, translations, step])
+
+  // The browser's own "leave site?" prompt. It is the only thing that can stop
+  // a close, and it only appears if the page says there is something to lose.
+  useEffect(() => {
+    if (!touched) return
+
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+    }
+    window.addEventListener('beforeunload', warn)
+
+    return () => {
+      window.removeEventListener('beforeunload', warn)
+    }
+  }, [touched])
+
+  /**
+   * Put the agent inside the offending control after a step change.
+   *
+   * `preventScroll` + an explicit scrollIntoView, not the scroll the browser
+   * does for focus: that one only guarantees the field is *somewhere* on
+   * screen, and on a phone with the keyboard up "somewhere" is the last row of
+   * pixels above it. Centred is the only version that is actually readable.
+   */
+  useEffect(() => {
+    if (invalid === null) return
+
+    const element = document.getElementById(elementIdOf(invalid))
+    element?.focus({ preventScroll: true })
+    element?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [step, invalid])
 
   if (reference.status === 'loading') return <LoadingState label={t('common.loading')} />
   if (reference.status === 'error') {
@@ -410,6 +506,17 @@ export function PropertyNewPage() {
   )
   const photos = [media.title_image, ...media.gallery_images].filter(
     (file): file is File => file !== null,
+  )
+
+  // The same list validateProperty answers from, so Publish can never be
+  // enabled over a form submit() would bounce.
+  const pending = propertyOffenders(
+    form,
+    media,
+    parameters,
+    categoryParameters,
+    galleryLimit,
+    mediaRich,
   )
 
   const set = <K extends keyof PropertyForm>(field: K, value: PropertyForm[K]) => {
@@ -475,6 +582,10 @@ export function PropertyNewPage() {
   }
 
   const submit = async () => {
+    // Backstop, not the gate. The gate is Publish being disabled while
+    // `pending` is non-empty, and both read the same function — so this can
+    // only fire if that wiring is ever broken. Kept because what it protects
+    // is a multi-megabyte upload the agent would lose.
     const offending = validateProperty(
       form,
       media,
@@ -493,6 +604,9 @@ export function PropertyNewPage() {
     setError(null)
     try {
       await createProperty(propertyPayload(form, media, parameters, facilities, translations))
+      // Only after the server accepted it. Clearing on navigate-away, or
+      // optimistically here, is how a failed publish takes the draft with it.
+      clearDraft()
       // No success toast by design (see toast-context): the listing appearing
       // at the top of the list IS the confirmation.
       void navigate('/properties')
@@ -507,6 +621,12 @@ export function PropertyNewPage() {
   const stepIndex = step === 'review' ? STEPS.length : STEPS.indexOf(step)
   const goTo = (index: number) => {
     setStep(index >= STEPS.length ? 'review' : (STEPS[index] as PropertyStep))
+  }
+
+  /** Jump to the step that owns a field AND put the agent inside it. */
+  const editField = (target: PropertyStep, offending?: PropertyField) => {
+    setStep(target)
+    if (offending !== undefined) setInvalid(offending)
   }
 
   const selectedFacilities = allFacilities.filter((facility) => facility.id in facilities)
@@ -526,6 +646,43 @@ export function PropertyNewPage() {
       {/* The step list is navigation, not a progress bar: every step stays
           reachable, because an agent who spots a typo in step 2 while on step 6
           should not have to walk back through four screens. */}
+      {offered !== null && (
+        <div className="mb-4 rounded-lg border border-rule-2 bg-surface-raised px-3 py-3">
+          <p className="text-sm text-ink-2">
+            {t('newProperty.draftFound', { date: formatDate(offered.savedAt, { dateStyle: 'medium', timeStyle: 'short' }) })}
+          </p>
+          {/* Said out loud rather than hoped over: photos and file parameters
+              never made it to storage, and promising what was not saved is
+              worse than not saving it. */}
+          {offered.droppedFiles && (
+            <p className="mt-1 text-sm text-muted">{t('newProperty.draftNoFiles')}</p>
+          )}
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button
+              variant="primary"
+              onClick={() => {
+                setForm(offered.form)
+                setParameters(offered.parameters)
+                setFacilities(offered.facilities)
+                setTranslations(offered.translations)
+                setStep(offered.step)
+                setOffered(null)
+              }}
+            >
+              {t('newProperty.draftResume')}
+            </Button>
+            <Button
+              onClick={() => {
+                clearDraft()
+                setOffered(null)
+              }}
+            >
+              {t('newProperty.draftDiscard')}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <nav aria-label={t('newProperty.steps')} className="mb-4 flex flex-wrap gap-1.5">
         {[...STEPS, 'review' as const].map((entry, index) => (
           <button
@@ -543,6 +700,15 @@ export function PropertyNewPage() {
             {t(`newProperty.step.${entry}` as 'newProperty.step.category')}
           </button>
         ))}
+
+        {savedAt !== null && (
+          <p
+            aria-live="polite"
+            className="flex items-center px-1.5 text-xs text-muted"
+          >
+            {t('newProperty.draftSaved')}
+          </p>
+        )}
       </nav>
 
       <Card className="p-4">
@@ -894,7 +1060,7 @@ export function PropertyNewPage() {
                           }}
                           aria-label={`${labelOf(facility)} — km`}
                           placeholder="0.0"
-                          className="min-h-8 w-full rounded-md border border-rule-2 bg-surface-raised px-2 py-1 text-right text-sm text-ink placeholder:text-muted disabled:opacity-55"
+                          className="min-h-(--control-h-sm) w-full rounded-md border border-rule-2 bg-surface-raised px-2 py-1 text-right text-sm text-ink placeholder:text-muted disabled:opacity-55"
                         />
                         <span className="text-xs text-muted">km</span>
                       </div>
@@ -1089,7 +1255,8 @@ export function PropertyNewPage() {
             languages={languages}
             translations={translations}
             categoryLabel={category === null ? '—' : labelOf(category)}
-            onEdit={setStep}
+            pending={pending}
+            onEdit={editField}
           />
         )}
 
@@ -1111,6 +1278,11 @@ export function PropertyNewPage() {
             variant="primary"
             state={saving ? 'loading' : 'idle'}
             onClick={() => void submit()}
+            disabled={saving || pending.length > 0}
+            /* A disabled button with no stated reason is a dead end. This
+               points at the list of what is still missing, which is on screen
+               directly above it. */
+            aria-describedby={pending.length > 0 ? 'review-pending' : undefined}
           >
             {t(saving ? 'newProperty.publishing' : 'newProperty.publish')}
           </Button>
@@ -1200,6 +1372,7 @@ function ReviewStep({
   languages,
   translations,
   categoryLabel,
+  pending,
   onEdit,
 }: {
   form: PropertyForm
@@ -1211,7 +1384,9 @@ function ReviewStep({
   languages: Language[]
   translations: TranslationValues
   categoryLabel: string
-  onEdit: (step: PropertyStep) => void
+  /** Everything still blocking Publish, from propertyOffenders(). */
+  pending: PropertyField[]
+  onEdit: (step: PropertyStep, field?: PropertyField) => void
 }) {
   const { t, formatCurrency } = useI18n()
   const edit = t('common.edit')
@@ -1263,8 +1438,48 @@ function ReviewStep({
 
   const previewSrc = cover[0] ?? null
 
+  /**
+   * A `param:N` has no translation key — the parameter is a row in the admin's
+   * table, not a string in this app. Its own name is the only label there is.
+   */
+  const labelOfPending = (field: PropertyField): string => {
+    if (field.startsWith('param:')) {
+      const id = Number(field.slice('param:'.length))
+      const parameter = categoryParameters.find((entry) => entry.id === id)
+      if (parameter !== undefined) return labelOf(parameter)
+    }
+
+    return t(`newProperty.error.${field}` as 'newProperty.error.title')
+  }
+
   return (
     <div className="grid gap-3">
+      {pending.length > 0 && (
+        <div
+          id="review-pending"
+          role="alert"
+          className="rounded-lg bg-warning-bg px-3 py-3 text-warning"
+        >
+          <p className="text-sm font-semibold">{t('newProperty.pendingTitle')}</p>
+          <ul className="mt-1.5 grid gap-0.5">
+            {pending.map((field) => (
+              <li key={field}>
+                {/* A link to the field, not just its name: the summary used to
+                    show "—" and leave the agent to work out which of eight
+                    steps owned it. */}
+                <button
+                  type="button"
+                  onClick={() => onEdit(stepOf(field), field)}
+                  className="inline-flex min-h-11 items-center text-left text-sm underline underline-offset-2 hover:no-underline"
+                >
+                  {labelOfPending(field)}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <ReviewCard title={t('newProperty.step.category')} onEdit={() => onEdit('category')} editLabel={edit}>
         <Rows
           rows={[
