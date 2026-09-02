@@ -699,7 +699,9 @@ export function PropertiesPage() {
     setAdvancedResetKey((n) => n + 1)
   }
 
-  const resource = useResource((signal) => listProperties(filters, signal), [serializedFilters])
+  const resource = useResource((signal) => listProperties(filters, signal), [serializedFilters], {
+    key: `properties:${serializedFilters}`,
+  })
 
   // useResource keeps the previous ready `data` in place while a deps-change
   // refetch is in flight — good for not blanking the table, but it means

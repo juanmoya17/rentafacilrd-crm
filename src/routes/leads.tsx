@@ -74,6 +74,9 @@ export function LeadsPage() {
         signal,
       ),
     [stage, sla, propertyId, debounced],
+    // The key mirrors the deps exactly: two different filter sets are two
+    // different lists, and sharing a key between them serves one as the other.
+    { key: `leads:${stage ?? ''}:${sla ?? ''}:${propertyId ?? ''}:${debounced}` },
   )
 
   const clearPropertyFilter = () => {

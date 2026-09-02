@@ -4,6 +4,7 @@ import { ApiError, api, setUnauthorizedHandler } from '@/lib/api'
 import { exchangeGoogleCredential, signInWithGoogle } from '@/lib/crm/google-login'
 import { finishGoogleRedirect } from '@/lib/firebase'
 import { AuthContext, type AuthState, type CrmUser } from '@/lib/auth-context'
+import { resourceCache } from '@/lib/resource-cache'
 
 interface Envelope<T> {
   error: boolean
@@ -102,6 +103,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Drop the local session even if the call failed, otherwise a network
       // blip leaves the UI logged in against a dead session. The error still
       // propagates so the caller can surface it.
+      //
+      // The cache goes with it: it holds leads, and leads are names and phone
+      // numbers. On a phone that gets handed between agents, the next person
+      // signing in must not paint the previous one's pipeline for a frame.
+      resourceCache.clear()
       setState({ status: 'anonymous' })
     }
   }, [])
