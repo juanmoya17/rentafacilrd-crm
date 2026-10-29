@@ -57,6 +57,7 @@ export function ProjectEditPage() {
       subtitle={t('editProject.subtitle')}
       initialForm={resource.data.form}
       currentImage={resource.data.image}
+      existingDocuments={resource.data.documents}
       requireImage={false}
       submitLabel="editProject.save"
       onCancel={back}

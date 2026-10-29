@@ -25,6 +25,7 @@ import {
   type ProjectMedia,
 } from '@/lib/crm/create-project'
 import type { ProjectStage } from '@/lib/crm/projects'
+import { appendRemovedDocuments, type ProjectDocument } from '@/lib/crm/update-project'
 
 /**
  * The project field set, shared by the create and edit screens.
@@ -47,6 +48,8 @@ export interface ProjectFormViewProps {
   initialForm: ProjectForm
   /** Filename of the cover already on the record. Edit only. */
   currentImage?: string | null
+  /** Documents already saved on the record. Edit only. */
+  existingDocuments?: ProjectDocument[]
   requireImage: boolean
   submitLabel: string
   onSubmit: (body: FormData) => Promise<void>
@@ -58,12 +61,13 @@ export function ProjectFormView({
   subtitle,
   initialForm,
   currentImage = null,
+  existingDocuments = [],
   requireImage,
   submitLabel,
   onSubmit,
   onCancel,
 }: ProjectFormViewProps) {
-  const { t } = useI18n()
+  const { t, formatDate } = useI18n()
   const categories = useResource((signal) => fetchCategories(signal), [])
 
   const [form, setForm] = useState<ProjectForm>(initialForm)
@@ -71,6 +75,9 @@ export function ProjectFormView({
   const [invalid, setInvalid] = useState<ProjectField | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // Removal is applied on save, not on click: Cancel must leave the record alone.
+  const [removedDocs, setRemovedDocs] = useState<number[]>([])
+  const [confirmingDoc, setConfirmingDoc] = useState<number | null>(null)
 
   if (categories.status === 'loading') return <LoadingState label={t('common.loading')} />
   if (categories.status === 'error') {
@@ -132,7 +139,9 @@ export function ProjectFormView({
     setSaving(true)
     setError(null)
     try {
-      await onSubmit(projectPayload(form, media))
+      const body = projectPayload(form, media)
+      appendRemovedDocuments(body, removedDocs)
+      await onSubmit(body)
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : t('error.generic'))
       setSaving(false)
@@ -259,6 +268,63 @@ export function ProjectFormView({
           }}
           disabled={saving}
         />
+
+        {existingDocuments.length > 0 && (
+          <div>
+            <p className="mb-1 text-sm font-medium text-ink-2">{t('projects.existingDocuments')}</p>
+            <ul className="grid gap-2">
+              {existingDocuments.map((doc, index) => {
+                if (removedDocs.includes(doc.id)) return null
+                const extension = doc.url.split('?')[0]?.split('.').pop()?.toUpperCase() ?? doc.type
+                return (
+                  <li key={doc.id} className="rounded-md border border-rule px-3 py-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-sm text-ink">
+                        {t('projects.documentN', { n: index + 1 })} · {extension}
+                        {doc.created_at !== null && ` · ${formatDate(doc.created_at)}`}
+                      </span>
+                      <span className="flex gap-1.5">
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download
+                          className="inline-flex min-h-(--control-h) items-center rounded px-2 text-sm text-primary underline"
+                        >
+                          {t('common.download')}
+                        </a>
+                        <Button
+                          disabled={saving}
+                          onClick={() => setConfirmingDoc(doc.id)}
+                        >
+                          {t('common.delete')}
+                        </Button>
+                      </span>
+                    </div>
+                    {confirmingDoc === doc.id && (
+                      <div role="alert" className="mt-2 grid gap-2 border-t border-rule pt-2">
+                        <p className="text-sm text-ink-2">{t('projects.removeDocumentConfirm')}</p>
+                        <div className="flex gap-1.5">
+                          <Button
+                            variant="primary"
+                            className="!bg-error hover:!bg-error"
+                            onClick={() => {
+                              setRemovedDocs((current) => [...current, doc.id])
+                              setConfirmingDoc(null)
+                            }}
+                          >
+                            {t('common.delete')}
+                          </Button>
+                          <Button onClick={() => setConfirmingDoc(null)}>{t('common.cancel')}</Button>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
 
         <FileField
           id="project-documents"

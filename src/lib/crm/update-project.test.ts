@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { toProjectForm } from './update-project'
+import { appendRemovedDocuments, toProjectForm } from './update-project'
 
 /**
  * The prefill is the whole risk in the edit screen: a field that arrives as
@@ -57,5 +57,19 @@ describe('toProjectForm', () => {
     expect(toProjectForm({ id: 7, title: 'x', type: 'sold_out' }).type).toBe('upcoming')
     expect(toProjectForm({ id: 7, title: 'x', type: null }).type).toBe('upcoming')
     expect(toProjectForm({ id: 7, title: 'x', type: 'under_process' }).type).toBe('under_process')
+  })
+})
+
+describe('appendRemovedDocuments', () => {
+  it('sends the marked ids comma-separated, as post_project expects', () => {
+    const body = new FormData()
+    appendRemovedDocuments(body, [3, 9])
+    expect(body.get('remove_documents')).toBe('3,9')
+  })
+
+  it('omits the key when nothing is marked', () => {
+    const body = new FormData()
+    appendRemovedDocuments(body, [])
+    expect(body.has('remove_documents')).toBe(false)
   })
 })

@@ -75,6 +75,7 @@ export const en: Record<TranslationKey, string> = {
   'common.apply': 'Apply',
   'common.close': 'Close',
   'common.edit': 'Edit',
+  'common.download': 'Download',
   'common.delete': 'Delete',
   'common.create': 'Create',
   'common.actions': 'Actions',
@@ -300,6 +301,9 @@ export const en: Record<TranslationKey, string> = {
   'projects.typologies': 'Typologies',
   'projects.units': 'Units',
   'projects.available': 'Available',
+  'projects.existingDocuments': 'Existing documents',
+  'projects.documentN': 'Document {n}',
+  'projects.removeDocumentConfirm': 'Remove this document? It will be removed when you save.',
   'projects.empty': 'You have not created any projects yet.',
   'projects.emptyHint': 'A project groups typologies and units under a single listing.',
 

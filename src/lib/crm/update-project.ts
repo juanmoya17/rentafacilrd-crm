@@ -44,12 +44,23 @@ interface ProjectDetailRow {
   meta_description?: string | null
   meta_keywords?: string | null
   image?: string | null
+  documents?: ProjectDocument[] | null
+}
+
+/** A saved attachment. The original filename is not stored, so the editor
+ *  labels these by position, type and date. */
+export interface ProjectDocument {
+  id: number
+  url: string
+  type: string
+  created_at: string | null
 }
 
 export interface ProjectEditSource {
   form: ProjectForm
   /** Whatever cover the record already carries, so the field can say so. */
   image: string | null
+  documents: ProjectDocument[]
 }
 
 /** Every field is a string in the form: an emptied input has to stay
@@ -95,7 +106,13 @@ export async function fetchProjectForEdit(
   const row = response.data
   if (row === undefined || row === null) return null
 
-  return { form: toProjectForm(row), image: row.image ?? null }
+  return { form: toProjectForm(row), image: row.image ?? null, documents: row.documents ?? [] }
+}
+
+/** post_project reads `remove_documents` as comma-separated ids; absent means
+ *  "keep everything", so an empty selection must not send the key. */
+export function appendRemovedDocuments(body: FormData, ids: number[]): void {
+  if (ids.length > 0) body.append('remove_documents', ids.join(','))
 }
 
 export async function updateProject(projectId: number, body: FormData): Promise<void> {

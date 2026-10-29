@@ -79,6 +79,7 @@ export const es = {
   'common.apply': 'Aplicar',
   'common.close': 'Cerrar',
   'common.edit': 'Editar',
+  'common.download': 'Descargar',
   'common.delete': 'Eliminar',
   'common.create': 'Crear',
   'common.actions': 'Acciones',
@@ -307,6 +308,9 @@ export const es = {
   'projects.typologies': 'Tipologías',
   'projects.units': 'Unidades',
   'projects.available': 'Disponibles',
+  'projects.existingDocuments': 'Documentos existentes',
+  'projects.documentN': 'Documento {n}',
+  'projects.removeDocumentConfirm': '¿Eliminar este documento? Se quitará al guardar los cambios.',
   'projects.empty': 'Aún no has creado proyectos.',
   'projects.emptyHint': 'Un proyecto agrupa tipologías y unidades bajo una sola ficha.',
 
