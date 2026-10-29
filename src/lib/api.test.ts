@@ -54,6 +54,25 @@ describe('api() timeout', () => {
     expect((error as Error).message).toBe('Failed to fetch')
   })
 
+  it('gives a FormData body 120 s: not aborted at 20 s, aborted at 120 s', async () => {
+    vi.useFakeTimers()
+    fetchMock.mockImplementation(
+      (_url, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+        }),
+    )
+
+    const result = api('post_property', { method: 'POST', body: new FormData() }).catch((error: unknown) => error)
+    await vi.advanceTimersByTimeAsync(20_000)
+    const signal = fetchMock.mock.calls[0]?.[1]?.signal
+    expect(signal?.aborted).toBe(false)
+
+    await vi.advanceTimersByTimeAsync(100_000)
+    expect(signal?.aborted).toBe(true)
+    expect(await result).toBeInstanceOf(TypeError)
+  })
+
   it('keeps a caller abort as an AbortError, not a network error', async () => {
     const caller = new AbortController()
     fetchMock.mockImplementation(

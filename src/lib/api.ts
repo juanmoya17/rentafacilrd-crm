@@ -26,6 +26,8 @@ export class ApiError extends Error {
 }
 
 const REQUEST_TIMEOUT_MS = 20_000
+// Multipart uploads (photos) legitimately take longer on a mobile connection.
+const UPLOAD_TIMEOUT_MS = 120_000
 
 /**
  * fetch() bounded by REQUEST_TIMEOUT_MS on top of the caller's own signal.
@@ -46,7 +48,7 @@ async function fetchWithTimeout(url: string, init: RequestInit): Promise<Respons
   const timer = setTimeout(() => {
     timedOut = true
     controller.abort()
-  }, REQUEST_TIMEOUT_MS)
+  }, init.body instanceof FormData ? UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS)
   try {
     return await fetch(url, { ...init, signal: controller.signal })
   } catch (error) {
@@ -94,7 +96,7 @@ let csrfInflight: Promise<void> | null = null
 function primeCsrf(force = false): Promise<void> {
   if (!force && readCookie(CSRF_COOKIE)) return Promise.resolve()
 
-  csrfInflight ??= fetch(`${ORIGIN}/sanctum/csrf-cookie`, { credentials: 'include' })
+  csrfInflight ??= fetchWithTimeout(`${ORIGIN}/sanctum/csrf-cookie`, { credentials: 'include' })
     .then(() => undefined)
     .finally(() => {
       csrfInflight = null
