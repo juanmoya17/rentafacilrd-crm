@@ -32,6 +32,44 @@ afterEach(() => {
   setUnauthorizedHandler(null)
 })
 
+describe('api() timeout', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('aborts_after_timeout: a fetch that never resolves rejects as a network error', async () => {
+    vi.useFakeTimers()
+    fetchMock.mockImplementation(
+      (_url, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+        }),
+    )
+
+    const result = api('get-user-data').catch((error: unknown) => error)
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    const error = await result
+    expect(error).toBeInstanceOf(TypeError)
+    expect((error as Error).message).toBe('Failed to fetch')
+  })
+
+  it('keeps a caller abort as an AbortError, not a network error', async () => {
+    const caller = new AbortController()
+    fetchMock.mockImplementation(
+      (_url, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+        }),
+    )
+
+    const result = api('get-user-data', { signal: caller.signal }).catch((error: unknown) => error)
+    caller.abort()
+
+    expect(((await result) as Error).name).toBe('AbortError')
+  })
+})
+
 describe('api()', () => {
   it('sends the XSRF header and credentials on mutations, without re-priming an existing cookie', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ error: false, data: { id: 7 } }))

@@ -25,6 +25,41 @@ export class ApiError extends Error {
   }
 }
 
+const REQUEST_TIMEOUT_MS = 20_000
+
+/**
+ * fetch() bounded by REQUEST_TIMEOUT_MS on top of the caller's own signal.
+ *
+ * Hand-rolled instead of AbortSignal.any/timeout: those need Chrome 116 /
+ * Safari 17.4 / Firefox 124, and AbortSignal.timeout ignores fake timers.
+ * A timeout rejects with the same TypeError an offline fetch raises, so it
+ * reaches the UI through the path network failures already use; an abort by
+ * the caller stays an AbortError.
+ */
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController()
+  const callerSignal = init.signal
+  let timedOut = false
+  const onCallerAbort = (): void => controller.abort(callerSignal?.reason)
+  if (callerSignal?.aborted) onCallerAbort()
+  else callerSignal?.addEventListener('abort', onCallerAbort, { once: true })
+  const timer = setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, REQUEST_TIMEOUT_MS)
+  try {
+    return await fetch(url, { ...init, signal: controller.signal })
+  } catch (error) {
+    if (timedOut && callerSignal?.aborted !== true) {
+      throw new TypeError('Failed to fetch', { cause: error })
+    }
+    throw error
+  } finally {
+    clearTimeout(timer)
+    callerSignal?.removeEventListener('abort', onCallerAbort)
+  }
+}
+
 type UnauthorizedHandler = () => void
 
 let onUnauthorized: UnauthorizedHandler | null = null
@@ -128,7 +163,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     const token = readCookie(CSRF_COOKIE)
     if (mutates && token !== null) headers['X-XSRF-TOKEN'] = token
 
-    return fetch(url, {
+    return fetchWithTimeout(url, {
       method,
       credentials: 'include',
       headers,
