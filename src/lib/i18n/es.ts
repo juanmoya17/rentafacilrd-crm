@@ -649,6 +649,10 @@ export const es = {
   'gate.noPackageHint': 'Contrata un plan para poder publicar.',
   'gate.limitReached': 'Alcanzaste el límite de tu plan',
   'gate.limitReachedHint': 'Mejora tu plan para seguir publicando.',
+  'freeQuota.left': 'Te quedan {count} publicaciones gratis.',
+  'freeQuota.leftOne': 'Te queda 1 publicación gratis.',
+  'freeQuota.used': 'Agotaste tus {total} publicaciones gratis. Contrata un plan para seguir publicando.',
+  'freeQuota.verify': 'Verifica tu cuenta para publicar gratis.',
   'gate.seePlans': 'Ver planes',
   'gate.checking': 'Comprobando tu plan…',
 

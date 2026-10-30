@@ -637,6 +637,10 @@ export const en: Record<TranslationKey, string> = {
   'gate.noPackageHint': 'Subscribe to a plan to publish.',
   'gate.limitReached': "You've hit your plan's limit",
   'gate.limitReachedHint': 'Upgrade your plan to keep publishing.',
+  'freeQuota.left': 'You have {count} free listings left.',
+  'freeQuota.leftOne': 'You have 1 free listing left.',
+  'freeQuota.used': 'You used all {total} of your free listings. Get a plan to keep publishing.',
+  'freeQuota.verify': 'Verify your account to publish for free.',
   'gate.seePlans': 'See plans',
   'gate.checking': 'Checking your plan…',
 

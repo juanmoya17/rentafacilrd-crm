@@ -1,3 +1,4 @@
+import type { FreeQuota } from '@/lib/crm/free-quota'
 /**
  * Reference data for the create forms.
  *
@@ -167,6 +168,8 @@ export interface PackageLimit {
   feature_available: boolean
   limit_available: boolean
   limit?: number | null
+  /** property_list only, and only while the free allowance governs. */
+  free_quota?: FreeQuota
 }
 
 export async function checkPackageLimit(
