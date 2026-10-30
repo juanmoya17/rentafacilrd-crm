@@ -2,7 +2,7 @@ import { Link, useParams } from 'react-router'
 import { motion } from 'motion/react'
 import { PencilLine } from 'lucide-react'
 import { useI18n } from '@/lib/i18n/context'
-import { Button, Card, EmptyState, ErrorState, LoadingState, ScoreDot } from '@/components/ui'
+import { Button, Card, EmptyState, ErrorState, LinkButton, LoadingState, ScoreDot } from '@/components/ui'
 import { FactGrid, RecordHeader, RecordSectionHead } from '@/components/record'
 import { PropertyGallery } from '@/components/property-gallery'
 import { LifecycleBadge, OperationBadge, StageBadge } from '@/components/labels'
@@ -158,14 +158,10 @@ export function PropertyDetailPage() {
         }
         actions={
           canEdit && (
-            <Link to={`/properties/${property.code}/edit`} viewTransition>
-              <Button>
-                <PencilLine className="size-4" aria-hidden="true" />
-                {t(
-                  property.lifecycle === 'rejected' ? 'properties.inlineFix' : 'common.edit',
-                )}
-              </Button>
-            </Link>
+            <LinkButton to={`/properties/${property.code}/edit`}>
+              <PencilLine className="size-4" aria-hidden="true" />
+              {t(property.lifecycle === 'rejected' ? 'properties.inlineFix' : 'common.edit')}
+            </LinkButton>
           )
         }
       />
@@ -174,7 +170,7 @@ export function PropertyDetailPage() {
           sit in the badge row above; it is a labelled fact in Publicación now,
           and repeating it in both places would be the same value twice. */}
       <div className="space-y-5">
-        {property.reject_reason != null && (
+        {property.reject_reason?.reason?.trim() && (
           <div role="note" className="rounded-lg bg-warning-bg px-3 py-3 text-warning">
             <p className="text-sm font-semibold">{t('editProperty.rejected')}</p>
             <p className="mt-1 whitespace-pre-line text-sm">{property.reject_reason.reason}</p>

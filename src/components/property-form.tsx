@@ -1317,7 +1317,8 @@ export function PropertyFormView({
         {error !== null && (
           <div role="alert" className="mt-4 grid gap-1">
             <p className="text-xs text-error">{error}</p>
-            <LinkButton to="/plan">{t('gate.seePlans')}</LinkButton>
+            {/* Create errors are mostly plan limits; an edit's are not. */}
+            {edit === undefined && <LinkButton to="/plan">{t('gate.seePlans')}</LinkButton>}
           </div>
         )}
       </Card>

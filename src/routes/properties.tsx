@@ -20,6 +20,7 @@ import {
   Upload,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { canEditProperty } from '@/lib/crm/update-property'
 import { useI18n } from '@/lib/i18n/context'
 import type { Translate } from '@/lib/i18n/context'
 import {
@@ -121,19 +122,20 @@ function primaryInlineAction(
   property: CrmProperty,
   onPublish: (id: number) => void,
   t: Translate,
+  canEdit: boolean,
 ): ReactNode {
   // Each branch gets its own glyph, so the action a row is offering is legible
   // from the shape before the label is read — which is the point of icons in a
   // list where every row's button says something different.
   if (property.lifecycle === 'rejected') {
-    // RF-015 — editing a rejected listing is what resubmits it.
+    // RF-015 — editing a rejected listing is what resubmits it. Only offered
+    // to whoever may edit it: the server answers anyone else "No Data Found".
+    if (!canEdit) return null
     return (
-      <Link to={`/properties/${property.code}/edit`} viewTransition>
-        <Button>
-          <PencilLine className="size-4" aria-hidden="true" />
-          {t('properties.inlineFix')}
-        </Button>
-      </Link>
+      <LinkButton to={`/properties/${property.code}/edit`}>
+        <PencilLine className="size-4" aria-hidden="true" />
+        {t('properties.inlineFix')}
+      </LinkButton>
     )
   }
   if (property.lifecycle === 'paused') {
@@ -200,7 +202,13 @@ function InlineAction({
   onReassign: (property: CrmProperty) => void
 }) {
   const { t } = useI18n()
-  const primary = primaryInlineAction(property, onPublish, t)
+  const { state: authState } = useAuth()
+  const primary = primaryInlineAction(
+    property,
+    onPublish,
+    t,
+    canEditProperty(isAdmin, authState, property.added_by),
+  )
   const receivers = isAdmin ? reassignReceivers(members, property.added_by) : []
 
   if (receivers.length === 0) return primary
