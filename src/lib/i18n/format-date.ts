@@ -15,3 +15,12 @@ export function formatDateValue(
     typeof input === 'string' && CALENDAR_DATE.test(input) ? 'UTC' : 'America/Santo_Domingo'
   return new Intl.DateTimeFormat(intlLocale, { ...options, timeZone }).format(new Date(input))
 }
+
+/**
+ * Moment a listing's expiry stops counting. A bare YYYY-MM-DD is the last live
+ * day, so it runs to the end of that day in Santo Domingo (UTC-4, no DST); a
+ * full instant is returned as is.
+ */
+export function calendarDateEnd(value: string): Date {
+  return new Date(CALENDAR_DATE.test(value) ? `${value}T23:59:59-04:00` : value)
+}

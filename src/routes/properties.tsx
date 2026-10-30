@@ -23,6 +23,7 @@ import { useAuth, type AuthState } from '@/lib/auth-context'
 import { canEditProperty } from '@/lib/crm/update-property'
 import { useI18n } from '@/lib/i18n/context'
 import type { Translate } from '@/lib/i18n/context'
+import { calendarDateEnd } from '@/lib/i18n/format-date'
 import {
   Badge,
   Button,
@@ -171,7 +172,7 @@ function primaryInlineAction(
     // Compare the raw remainder, not the rounded display value — rounding
     // first (e.g. 2.1 days -> ceil -> 3) made the window effectively <=2
     // days instead of the intended <3.
-    const remaining = new Date(property.featured_expires_at).getTime() - Date.now()
+    const remaining = calendarDateEnd(property.featured_expires_at).getTime() - Date.now()
     if (remaining < EXPIRY_WINDOW_MS) {
       const days = Math.max(0, Math.ceil(remaining / 86_400_000))
       if (!canEdit) return null
