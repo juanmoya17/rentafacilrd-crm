@@ -98,6 +98,17 @@ describe('validateProperty', () => {
     )
   })
 
+  it('lets an edit keep the saved video even when it would not pass today', () => {
+    // An unchanged link is not sent, and the server only gates new media.
+    const saved = 'https://vimeo.com/123456789'
+    const edited = { ...valid, video_link: saved }
+    expect(validateProperty(edited, media, {}, [], null, false, false, saved)).toBeNull()
+    expect(validateProperty(edited, media, {}, [], null, true, false, saved)).toBeNull()
+    // A replacement is still checked.
+    const replaced = { ...valid, video_link: 'https://vimeo.com/1' }
+    expect(validateProperty(replaced, media, {}, [], null, true, false, saved)).toBe('video_link')
+  })
+
   it('mirrors the server YouTube rule rather than accepting any URL', () => {
     expect(check({ ...valid, video_link: 'https://vimeo.com/123456789' })).toBe('video_link')
     expect(check({ ...valid, video_link: 'https://youtu.be/hpci2MI2BcY' })).toBeNull()

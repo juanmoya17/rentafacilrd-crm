@@ -517,6 +517,7 @@ export function PropertyFormView({
       ? reference.data.galleryLimit
       : Math.max(0, reference.data.galleryLimit - edit.galleryCount)
   const titleImageRequired = edit === undefined
+  const savedVideoLink = edit?.values.form.video_link ?? ''
   const category = categories.find((entry) => String(entry.id) === form.category_id) ?? null
   const categoryParameters = category?.parameter_types ?? []
 
@@ -545,6 +546,7 @@ export function PropertyFormView({
     galleryLimit,
     mediaRich,
     titleImageRequired,
+    savedVideoLink,
   )
 
   const set = <K extends keyof PropertyForm>(field: K, value: PropertyForm[K]) => {
@@ -622,6 +624,7 @@ export function PropertyFormView({
       galleryLimit,
       mediaRich,
       titleImageRequired,
+      savedVideoLink,
     )
     if (offending !== null) {
       setInvalid(offending)

@@ -219,6 +219,8 @@ export function propertyOffenders(
   mediaRich: boolean,
   /** False on edit: the listing already has a cover, and no file keeps it. */
   titleImageRequired = true,
+  /** On edit, the saved link: left unchanged it is not re-sent, so not re-checked. */
+  savedVideoLink = '',
 ): PropertyField[] {
   const offenders: PropertyField[] = []
 
@@ -293,7 +295,9 @@ export function propertyOffenders(
   }
 
   const video = form.video_link.trim()
-  if (video !== '' && (!mediaRich || !YOUTUBE.test(video))) offenders.push('video_link')
+  if (video !== '' && video !== savedVideoLink.trim() && (!mediaRich || !YOUTUBE.test(video))) {
+    offenders.push('video_link')
+  }
 
   return offenders
 }
@@ -313,6 +317,7 @@ export function validateProperty(
   galleryLimit: number | null,
   mediaRich: boolean,
   titleImageRequired = true,
+  savedVideoLink = '',
 ): PropertyField | null {
   return (
     propertyOffenders(
@@ -323,6 +328,7 @@ export function validateProperty(
       galleryLimit,
       mediaRich,
       titleImageRequired,
+      savedVideoLink,
     )[0] ?? null
   )
 }
