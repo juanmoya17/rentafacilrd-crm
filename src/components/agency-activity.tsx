@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { activityFieldLabel, activityValueLabel } from '@/lib/crm/activity-labels'
 import { useI18n } from '@/lib/i18n/context'
 import { useResource } from '@/lib/use-resource'
 import { Card, EmptyState, ErrorState, LoadingState, Select } from '@/components/ui'
@@ -159,20 +160,14 @@ function Diff({ changes }: { changes: AgencyActivityEntry['changes'] }) {
       <dl className="mt-2 flex flex-col gap-1 text-xs">
         {fields.map(([field, change]) => (
           <div key={field} className="flex flex-wrap gap-x-2">
-            <dt className="text-muted">{field}</dt>
+            <dt className="text-muted">{activityFieldLabel(field, t)}</dt>
             <dd className="text-ink-2">
-              <s className="text-muted">{formatValue(change.from)}</s> → {formatValue(change.to)}
+              <s className="text-muted">{activityValueLabel(field, change.from, t)}</s> →{' '}
+              {activityValueLabel(field, change.to, t)}
             </dd>
           </div>
         ))}
       </dl>
     </details>
   )
-}
-
-/** Un vacío tiene que verse: sin esto "" y null se pintan como nada. */
-function formatValue(value: string | number | boolean | null): string {
-  if (value === null || value === '') return '—'
-
-  return String(value)
 }
