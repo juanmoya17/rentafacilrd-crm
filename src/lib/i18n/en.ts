@@ -729,6 +729,7 @@ export const en: Record<TranslationKey, string> = {
   'share.status.rejected': 'Declined',
   'share.status.revoked': 'Revoked',
   'share.contract': 'View contract',
+  'share.contractFile': 'contract-{id}.pdf',
   'shares.contractNoAccess': "You don't have access to this contract",
   'share.accept': 'Accept',
   'share.reject': 'Decline',

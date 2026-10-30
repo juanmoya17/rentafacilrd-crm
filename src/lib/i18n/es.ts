@@ -741,6 +741,7 @@ export const es = {
   'share.status.rejected': 'Rechazada',
   'share.status.revoked': 'Revocada',
   'share.contract': 'Ver el contrato',
+  'share.contractFile': 'contrato-{id}.pdf',
   'shares.contractNoAccess': 'No tienes acceso a este contrato',
   'share.accept': 'Aceptar',
   'share.reject': 'Rechazar',

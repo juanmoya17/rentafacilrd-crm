@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ApiError } from '@/lib/api'
+import { ApiError, messageOf } from '@/lib/api'
 import { useI18n } from '@/lib/i18n/context'
 import { useToast } from '@/lib/toast-context'
 import { useResource } from '@/lib/use-resource'
@@ -38,6 +38,8 @@ export function PropertyCollaborations({
   const [nonce, setNonce] = useState(0)
   const [sharing, setSharing] = useState(false)
   const [revoking, setRevoking] = useState<PropertyShare | null>(null)
+  // One contract at a time: a second click would open a second blank tab.
+  const [opening, setOpening] = useState<number | null>(null)
 
   const shares = useResource(
     (signal) => listShares({ limit: 50 }, signal),
@@ -60,6 +62,8 @@ export function PropertyCollaborations({
   // La pestaña se abre ANTES del await: tras él el navegador ya no lo cuenta
   // como gesto del usuario y el bloqueador de ventanas la descarta.
   const openContract = async (id: number) => {
+    if (opening !== null) return
+    setOpening(id)
     const tab = window.open('', '_blank')
     try {
       const url = URL.createObjectURL(await fetchContract(id))
@@ -67,7 +71,7 @@ export function PropertyCollaborations({
       else {
         const link = document.createElement('a')
         link.href = url
-        link.download = `contrato-${id}.pdf`
+        link.download = t('share.contractFile', { id })
         link.click()
       }
       // La pestaña necesita la URL viva mientras carga el PDF.
@@ -75,7 +79,12 @@ export function PropertyCollaborations({
     } catch (caught: unknown) {
       tab?.close()
       const noAccess = caught instanceof ApiError && (caught.status === 403 || caught.status === 404)
-      toast.fail(noAccess ? t('shares.contractNoAccess') : caught instanceof Error ? caught.message : t('error.generic'))
+      // Only the server's own sentence is worth showing; an HTML 500 or a
+      // network failure reads "Error 500" / "Failed to fetch" otherwise.
+      const said = caught instanceof ApiError ? messageOf(caught.payload) : null
+      toast.fail(noAccess ? t('shares.contractNoAccess') : (said ?? t('error.generic')))
+    } finally {
+      setOpening(null)
     }
   }
 
@@ -116,7 +125,13 @@ export function PropertyCollaborations({
                   <span className="font-mono text-xs text-muted">{share.commission_pct}%</span>
 
                   <div className="ml-auto flex flex-wrap gap-2">
-                    <Button onClick={() => openContract(share.id)}>{t('share.contract')}</Button>
+                    <Button
+                      onClick={() => void openContract(share.id)}
+                      state={opening === share.id ? 'loading' : 'idle'}
+                      disabled={opening !== null}
+                    >
+                      {t('share.contract')}
+                    </Button>
 
                     {/* Aceptar y rechazar son de quien recibe; revocar, de
                         quien comparte. Y solo mientras siga viva. */}

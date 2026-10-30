@@ -123,7 +123,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-function messageOf(payload: unknown): string | null {
+export function messageOf(payload: unknown): string | null {
   return isRecord(payload) && typeof payload.message === 'string' ? payload.message : null
 }
 
