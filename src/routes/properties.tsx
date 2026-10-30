@@ -66,6 +66,7 @@ import {
   propertyParams,
   PROPERTY_SORTS,
   runBatch,
+  showLifecycleBadge,
   type PropertyFilters,
   type PropertySort,
 } from '@/lib/crm/properties'
@@ -253,7 +254,9 @@ function StatusBadges({ property }: { property: CrmProperty }) {
     property.lifecycle === 'rejected' && property.moderation === 'rejected'
   return (
     <div className="flex flex-wrap items-center gap-1">
-      <LifecycleBadge lifecycle={property.lifecycle} />
+      {showLifecycleBadge(property.lifecycle ?? '', property.moderation) && (
+        <LifecycleBadge lifecycle={property.lifecycle} />
+      )}
       <OperationBadge operation={property.operation} />
       {!moderationAddsNothing && <ModerationBadge moderation={property.moderation} />}
       {property.featured_expires_at !== null && <Badge tone="warning">★</Badge>}

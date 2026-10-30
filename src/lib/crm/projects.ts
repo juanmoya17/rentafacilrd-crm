@@ -145,6 +145,20 @@ export async function fetchProjects(signal?: AbortSignal): Promise<CrmProject[]>
 }
 
 /**
+ * What a project is to the public: `live` only when it is on AND approved.
+ * `status` alone says "on", and a pending project is on-but-hidden — calling it
+ * "Visible" is the lie UX-002 removes. Off, or rejected, reads `hidden`.
+ */
+export function projectVisibility(p: {
+  status: number
+  request_status?: string | null
+}): 'live' | 'review' | 'hidden' {
+  if (p.status !== 1) return 'hidden'
+  if (p.request_status === 'pending') return 'review'
+  return p.request_status === 'rejected' ? 'hidden' : 'live'
+}
+
+/**
  * Whether the agent may flip this project's visibility, and why not.
  *
  * Mirrors what `change-project-status` enforces server-side, so the screen can

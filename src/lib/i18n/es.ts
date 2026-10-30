@@ -316,6 +316,7 @@ export const es = {
 
   'projectDetail.live': 'Visible',
   'projectDetail.hidden': 'Oculto',
+  'projectDetail.review': 'En revisión',
   'projectDetail.activate': 'Activar',
   'projectDetail.deactivate': 'Desactivar',
   'projectDetail.statusBlocked.pending': 'Pendiente de aprobación',

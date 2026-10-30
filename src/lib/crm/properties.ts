@@ -95,6 +95,15 @@ export function isLocated(property: CrmProperty): property is LocatedProperty {
   return property.lat !== null && property.lng !== null
 }
 
+/**
+ * "Borrador" beside "Pendiente" says the same thing twice and reads as if the
+ * agent still has to finish something: a draft awaiting moderation is simply
+ * in review, so the moderation badge alone carries it.
+ */
+export function showLifecycleBadge(lifecycle: string, moderation: string | null): boolean {
+  return !(lifecycle === 'draft' && moderation === 'pending')
+}
+
 export function formatSpecs(
   property: Pick<CrmProperty, 'bedrooms' | 'bathrooms' | 'area'>,
   formatNumber: (value: number) => string,

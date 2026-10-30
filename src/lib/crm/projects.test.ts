@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   UNIT_STATUSES,
   inventoryState,
+  projectVisibility,
   projectStatusGate,
   toNumberOrNull,
   validateTypology,
@@ -120,5 +121,21 @@ describe('projectStatusGate', () => {
   it('treats an absent state as pending, never as publishable', () => {
     // Failing open here would render an Activate button that 400s.
     expect(projectStatusGate({ moderation: null })).toEqual({ can: false, reason: 'pending' })
+  })
+})
+
+describe('projectVisibility', () => {
+  it('reads an on-but-pending project as in review, not live', () => {
+    expect(projectVisibility({ status: 1, request_status: 'pending' })).toBe('review')
+  })
+
+  it('is live only when on and approved (or the legacy field is absent)', () => {
+    expect(projectVisibility({ status: 1, request_status: 'approved' })).toBe('live')
+    expect(projectVisibility({ status: 1 })).toBe('live')
+  })
+
+  it('is hidden when off or rejected', () => {
+    expect(projectVisibility({ status: 0, request_status: 'approved' })).toBe('hidden')
+    expect(projectVisibility({ status: 1, request_status: 'rejected' })).toBe('hidden')
   })
 })

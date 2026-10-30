@@ -27,6 +27,7 @@ import {
   deleteTypology,
   fetchProjectDetail,
   projectStatusGate,
+  projectVisibility,
   setProjectStatus,
   type CrmTypology,
   type CrmUnit,
@@ -219,11 +220,12 @@ export function ProjectDetailPage() {
         badges={
           <>
             <Badge tone="brand">{t(`projectStage.${project.type}`)}</Badge>
-            {project.status === 1 ? (
-              <Badge tone="success">{t('projectDetail.live')}</Badge>
-            ) : (
-              <Badge tone="neutral">{t('projectDetail.hidden')}</Badge>
-            )}
+            {(() => {
+              const visibility = projectVisibility(project)
+              if (visibility === 'live') return <Badge tone="success">{t('projectDetail.live')}</Badge>
+              if (visibility === 'review') return <Badge tone="warning">{t('projectDetail.review')}</Badge>
+              return <Badge tone="neutral">{t('projectDetail.hidden')}</Badge>
+            })()}
             {project.sold_out && <Badge tone="neutral">{t('projects.soldOut')}</Badge>}
           </>
         }

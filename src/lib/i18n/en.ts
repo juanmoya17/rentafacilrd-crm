@@ -309,6 +309,7 @@ export const en: Record<TranslationKey, string> = {
 
   'projectDetail.live': 'Visible',
   'projectDetail.hidden': 'Hidden',
+  'projectDetail.review': 'In review',
   'projectDetail.activate': 'Activate',
   'projectDetail.deactivate': 'Deactivate',
   'projectDetail.statusBlocked.pending': 'Awaiting approval',

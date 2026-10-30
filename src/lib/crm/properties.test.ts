@@ -10,6 +10,7 @@ import {
   normalizeProperty,
   propertyParams,
   railBucketTarget,
+  showLifecycleBadge,
   type BatchFailure,
 } from './properties'
 
@@ -223,5 +224,17 @@ describe('normalizeProperty', () => {
   it('drops a half-geocoded row to unlocated rather than passing a NaN to Leaflet', () => {
     const row = normalizeProperty(wire({ id: 1, latitude: '18.47', longitude: null }))
     expect(isLocated(row)).toBe(false)
+  })
+})
+
+describe('showLifecycleBadge', () => {
+  it('hides "draft" while moderation is pending', () => {
+    expect(showLifecycleBadge('draft', 'pending')).toBe(false)
+  })
+
+  it('keeps every other pairing', () => {
+    expect(showLifecycleBadge('draft', null)).toBe(true)
+    expect(showLifecycleBadge('draft', 'rejected')).toBe(true)
+    expect(showLifecycleBadge('published', 'approved')).toBe(true)
   })
 })
