@@ -257,7 +257,7 @@ export const es = {
   'properties.inlineRenew': 'Renovar destacado ({days}d)',
   'properties.renewConfirm': 'Renovar',
   'properties.renewConfirmTitle': '¿Renovar el destacado?',
-  'properties.renewConfirmBody': 'Se usará 1 crédito de destacado.',
+  'properties.renewConfirmBody': 'Se usará 1 crédito de destacado para «{title}».',
   'properties.featuredUntil': 'Destacado hasta {date}',
 
   'properties.sort': 'Orden',

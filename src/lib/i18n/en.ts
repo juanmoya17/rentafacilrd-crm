@@ -250,7 +250,7 @@ export const en: Record<TranslationKey, string> = {
   'properties.inlineRenew': 'Renew featured ({days}d)',
   'properties.renewConfirm': 'Renew',
   'properties.renewConfirmTitle': 'Renew the featured spot?',
-  'properties.renewConfirmBody': '1 featured credit will be used.',
+  'properties.renewConfirmBody': '1 featured credit will be used for “{title}”.',
   'properties.featuredUntil': 'Featured until {date}',
 
   'properties.sort': 'Sort',

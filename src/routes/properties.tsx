@@ -1444,7 +1444,7 @@ export function PropertiesPage() {
             </div>
           }
         >
-          <p className="text-sm text-ink-2">{t('properties.renewConfirmBody')}</p>
+          <p className="text-sm text-ink-2">{t('properties.renewConfirmBody', { title: renewing.title })}</p>
         </Modal>
       )}
 

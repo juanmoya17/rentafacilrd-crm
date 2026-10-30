@@ -118,7 +118,13 @@ export function NewTaskForm({ leadId, onCreated }: { leadId: number; onCreated: 
         <Button type="submit" variant="primary" state={saving ? 'loading' : 'idle'}>
           {t('common.save')}
         </Button>
-        <Button disabled={saving} onClick={() => setOpen(false)}>
+        <Button
+          disabled={saving}
+          onClick={() => {
+            setProblem(null)
+            setOpen(false)
+          }}
+        >
           {t('common.cancel')}
         </Button>
       </div>
