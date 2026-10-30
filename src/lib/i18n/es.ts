@@ -741,6 +741,7 @@ export const es = {
   'share.status.rejected': 'Rechazada',
   'share.status.revoked': 'Revocada',
   'share.contract': 'Ver el contrato',
+  'shares.contractNoAccess': 'No tienes acceso a este contrato',
   'share.accept': 'Aceptar',
   'share.reject': 'Rechazar',
   'share.revoke': 'Revocar',

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ApiError } from '@/lib/api'
 import { useI18n } from '@/lib/i18n/context'
 import { useToast } from '@/lib/toast-context'
 import { useResource } from '@/lib/use-resource'
@@ -6,7 +7,7 @@ import { Badge, Button, Card, EmptyState, ErrorState, Field, LoadingState, Modal
 import { SharePropertyDialog } from '@/components/share-property-dialog'
 import {
   acceptShare,
-  contractUrl,
+  fetchContract,
   listCollaboratorLeads,
   listShares,
   rejectShare,
@@ -56,6 +57,28 @@ export function PropertyCollaborations({
     }
   }
 
+  // La pestaña se abre ANTES del await: tras él el navegador ya no lo cuenta
+  // como gesto del usuario y el bloqueador de ventanas la descarta.
+  const openContract = async (id: number) => {
+    const tab = window.open('', '_blank')
+    try {
+      const url = URL.createObjectURL(await fetchContract(id))
+      if (tab !== null) tab.location.href = url
+      else {
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `contrato-${id}.pdf`
+        link.click()
+      }
+      // La pestaña necesita la URL viva mientras carga el PDF.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch (caught: unknown) {
+      tab?.close()
+      const noAccess = caught instanceof ApiError && (caught.status === 403 || caught.status === 404)
+      toast.fail(noAccess ? t('shares.contractNoAccess') : caught instanceof Error ? caught.message : t('error.generic'))
+    }
+  }
+
   if (shares.status === 'loading') return <LoadingState label={t('common.loading')} />
   if (shares.status === 'error') {
     return <ErrorState message={shares.message} onRetry={shares.reload} retryLabel={t('common.retry')} />
@@ -93,16 +116,7 @@ export function PropertyCollaborations({
                   <span className="font-mono text-xs text-muted">{share.commission_pct}%</span>
 
                   <div className="ml-auto flex flex-wrap gap-2">
-                    {/* Se abre en pestaña: la respuesta es un PDF, no la
-                        envoltura JSON, y el navegador ya sabe enseñarlo. */}
-                    <a
-                      href={contractUrl(share.id)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="min-h-(--control-h) rounded-md border border-rule-2 px-3 py-1.5 text-sm text-ink-2 hover:bg-surface-sunken"
-                    >
-                      {t('share.contract')}
-                    </a>
+                    <Button onClick={() => openContract(share.id)}>{t('share.contract')}</Button>
 
                     {/* Aceptar y rechazar son de quien recibe; revocar, de
                         quien comparte. Y solo mientras siga viva. */}

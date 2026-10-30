@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import { CONTRACT_TYPES, SHARE_STATUSES, contractUrl } from './shares'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiError, setUnauthorizedHandler } from '@/lib/api'
+import { CONTRACT_TYPES, SHARE_STATUSES, fetchContract } from './shares'
 
 /**
  * Las listas son la fuente de la que sale el tipo, no una copia suya: con las
@@ -16,10 +17,37 @@ describe('shares constants', () => {
   })
 })
 
-describe('contractUrl', () => {
-  // Se abre en pestaña, así que tiene que llevar el mismo prefijo que api()
-  // en vez de una copia que se quede atrás cuando cambie.
-  it('builds an absolute path through the shared api prefix', () => {
-    expect(contractUrl(7)).toBe('/api/crm/property-shares/7/contract')
+describe('fetchContract', () => {
+  const fetchMock = vi.fn<typeof fetch>()
+  beforeEach(() => {
+    globalThis.fetch = fetchMock
+    fetchMock.mockReset()
+  })
+  afterEach(() => setUnauthorizedHandler(null))
+
+  it('sends the session cookie and asks for a PDF, returning the blob', async () => {
+    fetchMock.mockResolvedValue(new Response('%PDF-1.4', { status: 200 }))
+    const blob = await fetchContract(7)
+    const call = fetchMock.mock.calls[0]
+    const init = call?.[1]
+    expect(call?.[0]).toBe('/api/crm/property-shares/7/contract')
+    expect(init?.credentials).toBe('include')
+    expect(init?.headers).toMatchObject({ Accept: 'application/pdf' })
+    expect(await blob.text()).toBe('%PDF-1.4')
+  })
+
+  it('maps 401 to the unauthorized flow', async () => {
+    const handler = vi.fn()
+    setUnauthorizedHandler(handler)
+    fetchMock.mockResolvedValue(new Response('{"message":"x"}', { status: 401 }))
+    await expect(fetchContract(7)).rejects.toMatchObject({ status: 401 })
+    expect(handler).toHaveBeenCalledOnce()
+  })
+
+  it.each([403, 404])('surfaces %i as an ApiError carrying the status', async (status) => {
+    fetchMock.mockResolvedValue(new Response('{"message":"no"}', { status }))
+    const error = await fetchContract(7).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error).toMatchObject({ status })
   })
 })

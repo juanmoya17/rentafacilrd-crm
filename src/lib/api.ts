@@ -115,6 +115,8 @@ export interface RequestOptions {
   signal?: AbortSignal
   /** Skip the global sign-out on 401. Used by the boot probe, where 401 just means "not logged in". */
   silent401?: boolean
+  /** Ask for a PDF and resolve with the Blob instead of the JSON envelope. Errors stay JSON. */
+  blob?: boolean
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -148,14 +150,14 @@ export function apiUrl(path: string): string {
 }
 
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, signal, silent401 = false } = options
+  const { method = 'GET', body, signal, silent401 = false, blob = false } = options
   const mutates = method !== 'GET'
   const url = apiUrl(path)
 
   const multipart = body instanceof FormData
 
   const send = (): Promise<Response> => {
-    const headers: Record<string, string> = { Accept: 'application/json' }
+    const headers: Record<string, string> = { Accept: blob ? 'application/pdf' : 'application/json' }
     // Never set Content-Type for a FormData: the browser has to append the
     // multipart boundary itself, and a hand-written header has none — PHP
     // would parse zero fields out of a body that looks perfectly fine here.
@@ -185,6 +187,8 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     await primeCsrf(true)
     response = await send()
   }
+
+  if (blob && response.ok) return (await response.blob()) as T
 
   const payload = await parseBody(response)
 

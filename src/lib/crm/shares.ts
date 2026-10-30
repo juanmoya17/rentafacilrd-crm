@@ -9,7 +9,7 @@
  * desajuste tiene que ser un error de compilación y no un `undefined` callado.
  */
 
-import { api, apiUrl } from '@/lib/api'
+import { api } from '@/lib/api'
 import type { Envelope } from './api'
 
 /** El orden es el que ve el usuario en el desplegable. */
@@ -131,12 +131,13 @@ export async function revokeShare(id: number, reason: string): Promise<void> {
 }
 
 /**
- * La URL del contrato en PDF. Se abre en una pestaña en vez de descargarse por
- * fetch: la respuesta no es la envoltura JSON del resto y el navegador ya sabe
- * enseñar un PDF.
+ * El contrato en PDF, con la sesión del CRM. Abrirlo como navegación directa
+ * llega sin cookie de Sanctum (sin Referer/Origin) y acababa en el login del
+ * Admin; por fetch pasa por el mismo flujo de 401 que el resto. 403/404 llegan
+ * como ApiError con su `status`.
  */
-export function contractUrl(id: number): string {
-  return apiUrl(`crm/property-shares/${id}/contract`)
+export function fetchContract(id: number): Promise<Blob> {
+  return api<Blob>(`crm/property-shares/${id}/contract`, { blob: true })
 }
 
 export interface CollaboratorLeadGroup {
