@@ -139,6 +139,7 @@ export type PropertyField =
   | 'gallery_images'
   | 'documents'
   | `param:${number}`
+  | `facility:${number}`
 
 /** Which wizard step owns each field, so a failure can send the agent to it. */
 export type PropertyStep =
@@ -152,6 +153,7 @@ export type PropertyStep =
 
 export function stepOf(field: PropertyField): PropertyStep {
   if (field.startsWith('param:')) return 'parameters'
+  if (field.startsWith('facility:')) return 'facilities'
 
   switch (field) {
     case 'category_id':
@@ -212,7 +214,7 @@ export function propertyOffenders(
   form: PropertyForm,
   media: PropertyMedia,
   parameters: ParameterValues,
-  required: { id: number; is_required: number }[],
+  required: { id: number; is_required: number; type_of_parameter?: string }[],
   /** From check-package-limit. Null = unlimited or not resolved; never treat as 0. */
   galleryLimit: number | null,
   /** False hides 3D + video; the server answers `media_rich_locked` for either. */
@@ -221,6 +223,8 @@ export function propertyOffenders(
   titleImageRequired = true,
   /** On edit, the saved link: left unchanged it is not re-sent, so not re-checked. */
   savedVideoLink = '',
+  /** Facility id -> distance in km; a negative or non-numeric one is refused. */
+  facilities: FacilityDistances = {},
 ): PropertyField[] {
   const offenders: PropertyField[] = []
 
@@ -247,6 +251,19 @@ export function propertyOffenders(
       value instanceof File ||
       (Array.isArray(value) ? value.length > 0 : (value ?? '').toString().trim() !== '')
     if (!filled) offenders.push(`param:${parameter.id}`)
+  }
+
+  // A `number` parameter is a quantity (rooms, floors): no negatives, no text.
+  for (const parameter of required) {
+    if (parameter.type_of_parameter !== 'number') continue
+    const raw = (parameters[parameter.id] ?? '').toString().trim()
+    const id = `param:${parameter.id}` as const
+    if (raw !== '' && !DECIMAL.test(raw) && !offenders.includes(id)) offenders.push(id)
+  }
+
+  // Blank is fine: the handler drops it. Anything typed must be a distance.
+  for (const [id, distance] of Object.entries(facilities)) {
+    if (distance.trim() !== '' && !DECIMAL.test(distance.trim())) offenders.push(`facility:${Number(id)}`)
   }
 
   if (form.address.trim() === '') offenders.push('address')
@@ -313,11 +330,12 @@ export function validateProperty(
   form: PropertyForm,
   media: PropertyMedia,
   parameters: ParameterValues,
-  required: { id: number; is_required: number }[],
+  required: { id: number; is_required: number; type_of_parameter?: string }[],
   galleryLimit: number | null,
   mediaRich: boolean,
   titleImageRequired = true,
   savedVideoLink = '',
+  facilities: FacilityDistances = {},
 ): PropertyField | null {
   return (
     propertyOffenders(
@@ -329,6 +347,7 @@ export function validateProperty(
       mediaRich,
       titleImageRequired,
       savedVideoLink,
+      facilities,
     )[0] ?? null
   )
 }

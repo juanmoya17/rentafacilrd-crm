@@ -205,6 +205,18 @@ describe('propertyOffenders', () => {
     expect(offenders.filter((field) => field === 'documents')).toEqual(['documents'])
   })
 
+  it('refuses impossible quantities in number parameters and facility distances', () => {
+    const numeric = [{ id: 9, is_required: 0, type_of_parameter: 'number' }]
+    const offenders = (parameters: Record<number, string>, facilities: Record<number, string>) =>
+      propertyOffenders(valid, media, parameters, numeric, null, true, true, '', facilities)
+
+    expect(offenders({ 9: '-1' }, {})).toEqual(['param:9'])
+    expect(offenders({ 9: 'abc' }, {})).toEqual(['param:9'])
+    expect(offenders({}, { 3: '-1' })).toEqual(['facility:3'])
+    expect(offenders({}, { 3: 'abc' })).toEqual(['facility:3'])
+    expect(offenders({ 9: '0' }, { 3: '2.5', 4: '' })).toEqual([])
+  })
+
   it('is empty for a listing that is ready', () => {
     expect(propertyOffenders(valid, media, {}, [], null, true)).toEqual([])
   })

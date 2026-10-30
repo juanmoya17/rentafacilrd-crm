@@ -215,6 +215,7 @@ const FIELD_ELEMENT_ID: Partial<Record<PropertyField, string>> = {
 function elementIdOf(field: PropertyField): string {
   // ParameterInput builds its own id as `param-${id}`, not `param:${id}`.
   if (field.startsWith('param:')) return `param-${field.slice('param:'.length)}`
+  if (field.startsWith('facility:')) return `facility-${field.slice('facility:'.length)}`
 
   return FIELD_ELEMENT_ID[field] ?? `property-${field}`
 }
@@ -547,6 +548,7 @@ export function PropertyFormView({
     mediaRich,
     titleImageRequired,
     savedVideoLink,
+    facilities,
   )
 
   const set = <K extends keyof PropertyForm>(field: K, value: PropertyForm[K]) => {
@@ -625,6 +627,7 @@ export function PropertyFormView({
       mediaRich,
       titleImageRequired,
       savedVideoLink,
+      facilities,
     )
     if (offending !== null) {
       setInvalid(offending)
@@ -1507,6 +1510,12 @@ function ReviewStep({
       const id = Number(field.slice('param:'.length))
       const parameter = categoryParameters.find((entry) => entry.id === id)
       if (parameter !== undefined) return labelOf(parameter)
+    }
+
+    if (field.startsWith('facility:')) {
+      const id = Number(field.slice('facility:'.length))
+      const facility = allFacilities.find((entry) => entry.id === id)
+      if (facility !== undefined) return labelOf(facility)
     }
 
     return t(`newProperty.error.${field}` as 'newProperty.error.title')
