@@ -18,6 +18,7 @@ import { useToast } from '@/lib/toast-context'
 import { useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { addActivity, getLead, updateLeadStage } from '@/lib/crm/api'
+import { mergeLead } from '@/lib/crm/merge-lead'
 import { STAGES, type ActivityType, type CrmLead, type Stage } from '@/lib/crm/types'
 
 const ACTIVITY_TYPES: ActivityType[] = ['message', 'call', 'visit', 'note']
@@ -70,7 +71,7 @@ export function LeadDetailPage() {
     const previous = lead.stage
     setLead({ ...lead, stage: next })
     try {
-      setLead(await updateLeadStage(lead.id, next))
+      setLead(mergeLead(lead, await updateLeadStage(lead.id, next)))
     } catch (error: unknown) {
       // The badge and the select both snap back on their own; without the toast
       // that reads as the control refusing the click.
@@ -88,7 +89,7 @@ export function LeadDetailPage() {
     try {
       // The response carries the refreshed lead, so the SLA badge and the
       // timeline update together instead of drifting apart.
-      setLead(await addActivity(lead.id, { type, body: body.trim() || undefined }))
+      setLead(mergeLead(lead, await addActivity(lead.id, { type, body: body.trim() || undefined })))
       setBody('')
     } catch (error: unknown) {
       toast.fail(error instanceof Error ? error.message : t('error.generic'))
