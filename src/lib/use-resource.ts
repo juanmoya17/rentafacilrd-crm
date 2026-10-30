@@ -76,8 +76,19 @@ export function useResource<T>(
     setNonce((n) => n + 1)
   }, [key])
 
+  // The visibility refresh: same fetch, but behind what is on screen — no
+  // skeleton, no cache invalidation, and a failure (a laptop waking with no
+  // network yet) keeps the data the agent was reading.
+  const silent = useRef(false)
+  const revalidate = useCallback(() => {
+    silent.current = true
+    setNonce((n) => n + 1)
+  }, [])
+
   useEffect(() => {
     const controller = new AbortController()
+    const background = silent.current
+    silent.current = false
 
     fetcher(controller.signal)
       .then((data) => {
@@ -93,10 +104,11 @@ export function useResource<T>(
         // screen: replacing something readable with an error message, because
         // a refresh the agent never asked for failed, is a downgrade.
         if (key !== undefined && resourceCache.has(key, Date.now(), staleMs)) return
-        setState({
+        const failed: ResourceState<T> = {
           status: 'error',
           message: error instanceof Error ? error.message : 'Error',
-        })
+        }
+        setState((current) => (background && current.status === 'ready' ? current : failed))
       })
 
     return () => {
@@ -115,9 +127,9 @@ export function useResource<T>(
     return reloadWhenVisible(
       document,
       () => Date.now() - loadedAt.current > staleMs,
-      reload,
+      revalidate,
     )
-  }, [key, staleMs, reload])
+  }, [key, staleMs, revalidate])
 
   return { ...state, reload }
 }
