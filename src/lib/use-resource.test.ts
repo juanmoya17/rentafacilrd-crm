@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { reloadWhenVisible, type VisibilitySource } from './use-resource'
+import { createElement } from 'react'
+import { renderToString } from 'react-dom/server'
+import { reloadWhenVisible, useResource, type VisibilitySource } from './use-resource'
 
 function fakeDocument() {
   const listeners = new Set<() => void>()
@@ -48,5 +50,22 @@ describe('reloadWhenVisible', () => {
 
     expect(listeners.size).toBe(0)
     expect(reload).not.toHaveBeenCalled()
+  })
+})
+
+describe('useResource', () => {
+  it('hands back a silent revalidate next to reload', () => {
+    let seen: ReturnType<typeof useResource<number>> | undefined
+    const Probe = () => {
+      seen = useResource(() => Promise.resolve(1), [])
+      return null
+    }
+    renderToString(createElement(Probe))
+
+    // First paint is loading; revalidate is what lets a reassign refetch
+    // without ever returning to it (the dialog keeps its success state).
+    expect(seen?.status).toBe('loading')
+    expect(typeof seen?.revalidate).toBe('function')
+    expect(seen?.revalidate).not.toBe(seen?.reload)
   })
 })

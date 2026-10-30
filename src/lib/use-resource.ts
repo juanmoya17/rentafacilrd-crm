@@ -57,7 +57,7 @@ export function useResource<T>(
   fetcher: (signal: AbortSignal) => Promise<T>,
   deps: unknown[],
   options: { key?: string; staleMs?: number } = {},
-): ResourceState<T> & { reload: () => void } {
+): ResourceState<T> & { reload: () => void; revalidate: () => void } {
   const { key, staleMs = DEFAULT_STALE_MS } = options
 
   // Read synchronously in the initialiser, not in an effect: one render later
@@ -131,5 +131,5 @@ export function useResource<T>(
     )
   }, [key, staleMs, revalidate])
 
-  return { ...state, reload }
+  return { ...state, reload, revalidate }
 }

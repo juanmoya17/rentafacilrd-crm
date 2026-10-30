@@ -225,7 +225,7 @@ export function ProjectsPage() {
           listingTitle={reassigning.title}
           receivers={reassignReceivers(members, reassigning.added_by)}
           onClose={() => setReassigning(null)}
-          onReassigned={() => projects.reload()}
+          onReassigned={() => projects.revalidate()}
         />
       )}
     </>

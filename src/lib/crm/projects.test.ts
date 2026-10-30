@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   UNIT_STATUSES,
+  canWriteProject,
   inventoryState,
   projectVisibility,
   projectStatusGate,
@@ -137,5 +138,16 @@ describe('projectVisibility', () => {
   it('is hidden when off or rejected', () => {
     expect(projectVisibility({ status: 0, request_status: 'approved' })).toBe('hidden')
     expect(projectVisibility({ status: 1, request_status: 'rejected' })).toBe('hidden')
+  })
+})
+
+describe('canWriteProject', () => {
+  it('allows when the server sent no verdict (older server)', () => {
+    expect(canWriteProject({})).toBe(true)
+  })
+
+  it('allows and refuses on the server verdict', () => {
+    expect(canWriteProject({ can_edit: true })).toBe(true)
+    expect(canWriteProject({ can_edit: false })).toBe(false)
   })
 })

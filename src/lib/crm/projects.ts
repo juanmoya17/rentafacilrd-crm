@@ -60,6 +60,9 @@ export interface CrmProject {
   added_by: number
   /** Their name, already resolved server-side. Null if the account was deleted. */
   added_by_name: string | null
+  /** UX-004 — absent on an older server, which reads as allowed. */
+  can_edit?: boolean
+  can_reassign?: boolean
 }
 
 export interface CrmTypology {
@@ -116,6 +119,11 @@ interface Envelope<T> {
   message?: string
   data: T
   total?: number
+}
+
+/** Whether the caller may change this project. Absent means an older server: allow, and let the 403 explain. */
+export function canWriteProject(project: { can_edit?: boolean }): boolean {
+  return project.can_edit !== false
 }
 
 export type InventoryState = 'empty' | 'sold_out' | 'available'

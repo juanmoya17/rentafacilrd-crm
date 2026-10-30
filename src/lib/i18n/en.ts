@@ -336,6 +336,7 @@ export const en: Record<TranslationKey, string> = {
   'projectDetail.noUnitsHint': 'Generate a range (“301” to “312”) and create the whole floor at once.',
   'projectDetail.generateUnits': 'Generate units',
   'projectDetail.unitsShown': 'Showing {shown} of {total} units.',
+  'projectDetail.readOnly': 'Read-only — assigned to {name}',
   'projectDetail.changeStatus': 'Change status',
 
   'typology.name': 'Name',

@@ -19,7 +19,7 @@ import {
   StretchVertical,
   Upload,
 } from 'lucide-react'
-import { useAuth } from '@/lib/auth-context'
+import { useAuth, type AuthState } from '@/lib/auth-context'
 import { canEditProperty } from '@/lib/crm/update-property'
 import { useI18n } from '@/lib/i18n/context'
 import type { Translate } from '@/lib/i18n/context'
@@ -113,6 +113,11 @@ function filtersFromParams(params: URLSearchParams): PropertyFilters {
   }
 }
 
+/** Server's verdict when it sends one; the role rule when the server is older. */
+function mayEdit(property: CrmProperty, isAdmin: boolean, auth: AuthState): boolean {
+  return property.can_edit ?? canEditProperty(isAdmin, auth, property.added_by)
+}
+
 /**
  * The lifecycle-driven half of A.7 — the one contextual action this listing
  * needs, without opening the detail. Split out so `InlineAction` below can
@@ -140,6 +145,7 @@ function primaryInlineAction(
     )
   }
   if (property.lifecycle === 'paused') {
+    if (!canEdit) return null
     return (
       <Button onClick={() => onPublish(property.id)}>
         <Upload className="size-4" aria-hidden="true" />
@@ -167,6 +173,7 @@ function primaryInlineAction(
     const remaining = new Date(property.featured_expires_at).getTime() - Date.now()
     if (remaining < EXPIRY_WINDOW_MS) {
       const days = Math.max(0, Math.ceil(remaining / 86_400_000))
+      if (!canEdit) return null
       return (
         <Button variant="primary">
           <Star className="size-4" aria-hidden="true" />
@@ -208,7 +215,7 @@ function InlineAction({
     property,
     onPublish,
     t,
-    canEditProperty(isAdmin, authState, property.added_by),
+    mayEdit(property, isAdmin, authState),
   )
   const receivers = isAdmin ? reassignReceivers(members, property.added_by) : []
 
@@ -314,6 +321,7 @@ function PropertyCardGrid({
   onReassign: (property: CrmProperty) => void
 }) {
   const { t, formatNumber } = useI18n()
+  const { state: authState } = useAuth()
   const reveal = useRowReveal()
 
   return (
@@ -352,12 +360,14 @@ function PropertyCardGrid({
                   light sky and lost against a dark roof — while the label
                   around it carries the 44px target. Selecting a card on a
                   phone used to mean hitting 16px in the corner of a photo. */}
-              <CheckField
-                checked={selected.has(property.id)}
-                onChange={() => onToggle(property.id)}
-                ariaLabel={property.title}
-                className="absolute left-0 top-0 p-2 [&_input]:rounded-sm [&_input]:bg-surface-raised [&_input]:shadow-[0_0_0_3px_var(--color-surface-raised)]"
-              />
+              {mayEdit(property, isAdmin, authState) && (
+                <CheckField
+                  checked={selected.has(property.id)}
+                  onChange={() => onToggle(property.id)}
+                  ariaLabel={property.title}
+                  className="absolute left-0 top-0 p-2 [&_input]:rounded-sm [&_input]:bg-surface-raised [&_input]:shadow-[0_0_0_3px_var(--color-surface-raised)]"
+                />
+              )}
             </figure>
 
             <div className="min-w-0">
@@ -793,14 +803,18 @@ export function PropertiesPage() {
   const { items, total } = resource.data
   const offset = filters.offset ?? 0
 
+  // Only what the caller may edit: a batch holding a colleague's row is
+  // refused whole, so select-all must not sweep one in.
+  const selectable = items.filter((property) => mayEdit(property, isAdmin, authState))
+
   const selectAllShown = () => {
     // The server refuses more than MAX_BATCH ids. Cap here so the agent gets
     // a clear message instead of a 422 they cannot act on.
-    setSelected(new Set(items.slice(0, MAX_BATCH).map((property) => property.id)))
-    if (items.length > MAX_BATCH) fail(t('bulk.cappedAt', { max: MAX_BATCH }))
+    setSelected(new Set(selectable.slice(0, MAX_BATCH).map((property) => property.id)))
+    if (selectable.length > MAX_BATCH) fail(t('bulk.cappedAt', { max: MAX_BATCH }))
   }
 
-  const allShown = items.length > 0 && items.every((property) => selected.has(property.id))
+  const allShown = selectable.length > 0 && selectable.every((property) => selected.has(property.id))
 
   const columns: Column<CrmProperty>[] = [
     {
@@ -809,15 +823,16 @@ export function PropertiesPage() {
       // Desktop-only: the card layout selects by tapping, so a checkbox column
       // there would be a second way to do one thing.
       card: 'hide',
-      render: (property) => (
-        <input
-          type="checkbox"
-          checked={selected.has(property.id)}
-          onChange={() => toggle(property.id)}
-          aria-label={property.title}
-          className="accent-[var(--color-accent)]"
-        />
-      ),
+      render: (property) =>
+        mayEdit(property, isAdmin, authState) ? (
+          <input
+            type="checkbox"
+            checked={selected.has(property.id)}
+            onChange={() => toggle(property.id)}
+            aria-label={property.title}
+            className="accent-[var(--color-accent)]"
+          />
+        ) : null,
     },
     {
       key: 'title',
@@ -1382,7 +1397,7 @@ export function PropertiesPage() {
           // Only the row list changes — reassigning moves nothing the KPI
           // strip or the action rail count (lifecycle, leads, featured
           // windows are all untouched).
-          onReassigned={() => resource.reload()}
+          onReassigned={() => resource.revalidate()}
         />
       )}
     </>

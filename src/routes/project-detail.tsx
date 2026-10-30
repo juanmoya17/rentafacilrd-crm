@@ -30,6 +30,7 @@ import {
   projectVisibility,
   setProjectStatus,
   type CrmTypology,
+  canWriteProject,
   type CrmUnit,
 } from '@/lib/crm/projects'
 
@@ -138,6 +139,9 @@ export function ProjectDetailPage() {
   }
 
   const { project, typologies, units, unitsTotal } = resource.data
+  // UX-004 — a colleague's project is readable, not writable: the server
+  // would answer every one of these buttons with a 403.
+  const canWrite = canWriteProject(project)
 
   // Null renders as nothing: "Desde RD$0" is a lie, not a placeholder. Both
   // ends only appear as a range when they actually differ.
@@ -193,19 +197,23 @@ export function ProjectDetailPage() {
       header: t('common.status'),
       render: (unit) => <UnitStatusBadge status={unit.status} />,
     },
-    {
-      key: 'actions',
-      header: t('common.actions'),
-      render: (unit) => (
-        <Button
-          variant="ghost"
-          aria-label={`${t('projectDetail.changeStatus')} — ${unit.identifier}`}
-          onClick={() => setDialog({ kind: 'unit', unit })}
-        >
-          {t('projectDetail.changeStatus')}
-        </Button>
-      ),
-    },
+    ...(canWrite
+      ? [
+          {
+            key: 'actions',
+            header: t('common.actions'),
+            render: (unit: CrmUnit) => (
+              <Button
+                variant="ghost"
+                aria-label={`${t('projectDetail.changeStatus')} — ${unit.identifier}`}
+                onClick={() => setDialog({ kind: 'unit', unit })}
+              >
+                {t('projectDetail.changeStatus')}
+              </Button>
+            ),
+          },
+        ]
+      : []),
   ]
 
   return (
@@ -227,9 +235,15 @@ export function ProjectDetailPage() {
               return <Badge tone="neutral">{t('projectDetail.hidden')}</Badge>
             })()}
             {project.sold_out && <Badge tone="neutral">{t('projects.soldOut')}</Badge>}
+            {!canWrite && (
+              <Badge tone="neutral">
+                {t('projectDetail.readOnly', { name: project.added_by_name ?? '—' })}
+              </Badge>
+            )}
           </>
         }
         actions={
+          canWrite ? (
           <>
             {(() => {
               const gate = projectStatusGate(project)
@@ -263,6 +277,7 @@ export function ProjectDetailPage() {
               {t('projectDetail.closeSale')}
             </Button>
           </>
+          ) : undefined
         }
       />
 
@@ -321,23 +336,27 @@ export function ProjectDetailPage() {
         >
           {tab === 'models' ? (
             <>
-              <div className="mb-3 flex justify-end">
-                <Button onClick={() => setDialog({ kind: 'typology', typology: null })}>
-                  {t('projectDetail.newTypology')}
-                </Button>
-              </div>
+              {canWrite && (
+                <div className="mb-3 flex justify-end">
+                  <Button onClick={() => setDialog({ kind: 'typology', typology: null })}>
+                    {t('projectDetail.newTypology')}
+                  </Button>
+                </div>
+              )}
 
               {typologies.length === 0 ? (
                 <EmptyState
                   title={t('projectDetail.noTypologies')}
                   hint={t('projectDetail.noTypologiesHint')}
                   action={
-                    <Button
-                      variant="primary"
-                      onClick={() => setDialog({ kind: 'typology', typology: null })}
-                    >
-                      {t('projectDetail.newTypology')}
-                    </Button>
+                    canWrite ? (
+                      <Button
+                        variant="primary"
+                        onClick={() => setDialog({ kind: 'typology', typology: null })}
+                      >
+                        {t('projectDetail.newTypology')}
+                      </Button>
+                    ) : undefined
                   }
                 />
               ) : (
@@ -379,6 +398,7 @@ export function ProjectDetailPage() {
                             </p>
                           )}
 
+                          {canWrite && (
                           <div className="mt-3 flex flex-wrap gap-2">
                             <Button
                               aria-label={`${t('common.edit')} — ${typology.title}`}
@@ -394,6 +414,7 @@ export function ProjectDetailPage() {
                               {t('common.delete')}
                             </Button>
                           </div>
+                          )}
                         </Card>
                       </motion.div>
                     )
@@ -406,9 +427,11 @@ export function ProjectDetailPage() {
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 {/* E.4 — the public side only ever sees this aggregated by typology. */}
                 <p className="text-xs text-muted">{t('projectDetail.availabilityNote')}</p>
-                <Button onClick={() => setDialog({ kind: 'batch' })}>
-                  {t('projectDetail.generateUnits')}
-                </Button>
+                {canWrite && (
+                  <Button onClick={() => setDialog({ kind: 'batch' })}>
+                    {t('projectDetail.generateUnits')}
+                  </Button>
+                )}
               </div>
 
               {units.length === 0 ? (
@@ -416,9 +439,11 @@ export function ProjectDetailPage() {
                   title={t('projectDetail.noUnits')}
                   hint={t('projectDetail.noUnitsHint')}
                   action={
-                    <Button variant="primary" onClick={() => setDialog({ kind: 'batch' })}>
-                      {t('projectDetail.generateUnits')}
-                    </Button>
+                    canWrite ? (
+                      <Button variant="primary" onClick={() => setDialog({ kind: 'batch' })}>
+                        {t('projectDetail.generateUnits')}
+                      </Button>
+                    ) : undefined
                   }
                 />
               ) : (

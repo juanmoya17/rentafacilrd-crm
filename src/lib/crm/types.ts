@@ -131,6 +131,9 @@ export interface CrmProperty {
   added_by: number
   /** Their name, already resolved server-side. Null if the account was deleted. */
   added_by_name: string | null
+  /** UX-004 — what the caller may do with this row. Absent on an older server, which reads as allowed. */
+  can_edit?: boolean
+  can_reassign?: boolean
   /**
    * Photo URLs, listing order, cover first. Always an array — a listing with
    * no photos sends `[]`, never null, so every consumer can `.length` it

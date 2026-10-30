@@ -344,6 +344,7 @@ export const es = {
   'projectDetail.noUnitsHint': 'Genera un rango («301» a «312») y crea el piso completo de una vez.',
   'projectDetail.generateUnits': 'Generar unidades',
   'projectDetail.unitsShown': 'Mostrando {shown} de {total} unidades.',
+  'projectDetail.readOnly': 'Solo lectura — asignado a {name}',
   'projectDetail.changeStatus': 'Cambiar estado',
 
   'typology.name': 'Nombre',
