@@ -126,11 +126,14 @@ function primaryInlineAction(
   // from the shape before the label is read — which is the point of icons in a
   // list where every row's button says something different.
   if (property.lifecycle === 'rejected') {
+    // RF-015 — editing a rejected listing is what resubmits it.
     return (
-      <Button>
-        <PencilLine className="size-4" aria-hidden="true" />
-        {t('properties.inlineFix')}
-      </Button>
+      <Link to={`/properties/${property.code}/edit`} viewTransition>
+        <Button>
+          <PencilLine className="size-4" aria-hidden="true" />
+          {t('properties.inlineFix')}
+        </Button>
+      </Link>
     )
   }
   if (property.lifecycle === 'paused') {

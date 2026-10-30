@@ -145,6 +145,9 @@ export interface CrmProperty {
    */
   lat: number | null
   lng: number | null
+  /** RF-015 — the latest moderator note on a rejected listing; null otherwise.
+   *  Optional: only the CRM list sends it, not every source of these rows. */
+  reject_reason?: { reason: string } | null
 }
 
 export interface PropertySummary {

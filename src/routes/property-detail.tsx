@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router'
 import { motion } from 'motion/react'
+import { PencilLine } from 'lucide-react'
 import { useI18n } from '@/lib/i18n/context'
 import { Button, Card, EmptyState, ErrorState, LoadingState, ScoreDot } from '@/components/ui'
 import { FactGrid, RecordHeader, RecordSectionHead } from '@/components/record'
@@ -12,6 +13,7 @@ import { useAgencyRole } from '@/lib/crm/use-agency-role'
 import { PropertyCollaborations } from '@/components/property-collaborations'
 import { listLeads, type Page } from '@/lib/crm/api'
 import { formatSpecs, listProperties } from '@/lib/crm/properties'
+import { canEditProperty } from '@/lib/crm/update-property'
 import type { CrmLead } from '@/lib/crm/types'
 
 const EMPTY_LEADS: Page<CrmLead> = { items: [], total: 0 }
@@ -103,6 +105,8 @@ export function PropertyDetailPage() {
     },
   ]
 
+  const canEdit = canEditProperty(isAdmin, state, property.added_by)
+
   const listing = [
     { label: t('common.city'), value: property.city ?? '—' },
     { label: t('common.code'), value: property.code, numeric: true },
@@ -152,12 +156,31 @@ export function PropertyDetailPage() {
             <OperationBadge operation={property.operation} />
           </>
         }
+        actions={
+          canEdit && (
+            <Link to={`/properties/${property.code}/edit`} viewTransition>
+              <Button>
+                <PencilLine className="size-4" aria-hidden="true" />
+                {t(
+                  property.lifecycle === 'rejected' ? 'properties.inlineFix' : 'common.edit',
+                )}
+              </Button>
+            </Link>
+          )
+        }
       />
 
       {/* Stacked labelled sections, each full-width. The featured date used to
           sit in the badge row above; it is a labelled fact in Publicación now,
           and repeating it in both places would be the same value twice. */}
       <div className="space-y-5">
+        {property.reject_reason != null && (
+          <div role="note" className="rounded-lg bg-warning-bg px-3 py-3 text-warning">
+            <p className="text-sm font-semibold">{t('editProperty.rejected')}</p>
+            <p className="mt-1 whitespace-pre-line text-sm">{property.reject_reason.reason}</p>
+          </div>
+        )}
+
         {/* Hidden rather than emptied when there is no copy: a labelled
             section holding a dash tells the agent the field exists and is
             blank, which on a draft they are mid-way through writing is noise
@@ -240,17 +263,9 @@ export function PropertyDetailPage() {
             ))}
         </section>
 
-        {/* Compartir es la regla de Editar: el asesor sobre lo suyo, owner y
-            admin sobre cualquier anuncio de la agencia. El servidor la vuelve
-            a aplicar; esto solo evita ofrecer un botón que daría 403. */}
+        {/* Compartir es la regla de Editar (canEditProperty). */}
         {property !== undefined && (
-          <PropertyCollaborations
-            propertyId={property.id}
-            canShare={
-              isAdmin ||
-              (state.status === 'authenticated' && property.added_by === state.user.id)
-            }
-          />
+          <PropertyCollaborations propertyId={property.id} canShare={canEdit} />
         )}
       </div>
     </>

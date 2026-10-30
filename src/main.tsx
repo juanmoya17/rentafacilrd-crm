@@ -46,6 +46,9 @@ const PropertiesPage = lazy(() =>
 const PropertyNewPage = lazy(() =>
   import('@/routes/property-new').then((m) => ({ default: m.PropertyNewPage })),
 )
+const PropertyEditPage = lazy(() =>
+  import('@/routes/property-edit').then((m) => ({ default: m.PropertyEditPage })),
+)
 const PropertyDetailPage = lazy(() =>
   import('@/routes/property-detail').then((m) => ({ default: m.PropertyDetailPage })),
 )
@@ -101,6 +104,7 @@ const router = createBrowserRouter([
           // otherwise be read as an RF code and 404 against the list.
           { path: '/properties/new', element: <PropertyNewPage /> },
           { path: '/properties/:code', element: <PropertyDetailPage /> },
+          { path: '/properties/:code/edit', element: <PropertyEditPage /> },
           { path: '/projects', element: <ProjectsPage /> },
           { path: '/projects/new', element: <ProjectNewPage /> },
           { path: '/projects/:id', element: <ProjectDetailPage /> },

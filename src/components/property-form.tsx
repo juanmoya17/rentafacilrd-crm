@@ -57,6 +57,11 @@ import {
   type PropertyStep,
   type TranslationValues,
 } from '@/lib/crm/create-property'
+import {
+  propertyUpdatePayload,
+  updateProperty,
+  type PropertyEditSource,
+} from '@/lib/crm/update-property'
 
 /**
  * The listing wizard — full parity with the Flutter app's flow, because a
@@ -393,17 +398,34 @@ function ParameterInput({
 
 /* ------------------------------------------------------------------ page */
 
-export function PropertyFormView() {
+/**
+ * The listing wizard, for create and edit. Edit differs in four ways, all keyed
+ * off `edit`: it starts from the saved listing, the cover is optional (the
+ * listing has one), the saved photos count against the gallery cap, and it
+ * posts only what changed to update_post_property. The localStorage draft is
+ * create-only — an edit's "draft" is the listing itself.
+ */
+export function PropertyFormView({
+  edit,
+  exitTo = '/properties',
+}: {
+  /** The listing being edited. Absent on create. */
+  edit?: PropertyEditSource
+  /** Where Cancel and a successful save go. */
+  exitTo?: string
+} = {}) {
   const { t, formatDate } = useI18n()
   const navigate = useNavigate()
   const reference = useResource((signal) => loadReference(signal), [])
 
   const [step, setStep] = useState<PropertyStep | 'review'>('category')
-  const [form, setForm] = useState<PropertyForm>(EMPTY_PROPERTY_FORM)
+  const [form, setForm] = useState<PropertyForm>(edit?.values.form ?? EMPTY_PROPERTY_FORM)
   const [media, setMedia] = useState<PropertyMedia>(EMPTY_PROPERTY_MEDIA)
-  const [parameters, setParameters] = useState<ParameterValues>({})
-  const [facilities, setFacilities] = useState<FacilityDistances>({})
-  const [translations, setTranslations] = useState<TranslationValues>({})
+  const [parameters, setParameters] = useState<ParameterValues>(edit?.values.parameters ?? {})
+  const [facilities, setFacilities] = useState<FacilityDistances>(edit?.values.facilities ?? {})
+  const [translations, setTranslations] = useState<TranslationValues>(
+    edit?.values.translations ?? {},
+  )
   const [invalid, setInvalid] = useState<PropertyField | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -415,13 +437,18 @@ export function PropertyFormView() {
    * blank form the agent opened on purpose is worse than asking, and the
    * question costs one tap.
    */
-  const [offered, setOffered] = useState<RestoredDraft | null>(() => loadDraft(Date.now()))
+  const [offered, setOffered] = useState<RestoredDraft | null>(() =>
+    edit === undefined ? loadDraft(Date.now()) : null,
+  )
   const [savedAt, setSavedAt] = useState<number | null>(null)
 
+  // Never true on edit: it drives the draft autosave and the leave-site
+  // prompt, and an edit has neither.
   const touched =
-    form !== EMPTY_PROPERTY_FORM ||
-    Object.keys(parameters).length > 0 ||
-    Object.keys(facilities).length > 0
+    edit === undefined &&
+    (form !== EMPTY_PROPERTY_FORM ||
+      Object.keys(parameters).length > 0 ||
+      Object.keys(facilities).length > 0)
 
   // 1.5s after the last change, not on every keystroke: localStorage is
   // synchronous, and writing the whole wizard on each character is a stutter
@@ -482,14 +509,14 @@ export function PropertyFormView() {
     )
   }
 
-  const {
-    categories,
-    facilities: allFacilities,
-    languages,
-    galleryLimit,
-    mediaRich,
-    aiDescription,
-  } = reference.data
+  const { categories, facilities: allFacilities, languages, mediaRich, aiDescription } =
+    reference.data
+  // What is left of the cap. The server counts saved + new against it.
+  const galleryLimit =
+    reference.data.galleryLimit === null || edit === undefined
+      ? reference.data.galleryLimit
+      : Math.max(0, reference.data.galleryLimit - edit.galleryCount)
+  const titleImageRequired = edit === undefined
   const category = categories.find((entry) => String(entry.id) === form.category_id) ?? null
   const categoryParameters = category?.parameter_types ?? []
 
@@ -517,6 +544,7 @@ export function PropertyFormView() {
     categoryParameters,
     galleryLimit,
     mediaRich,
+    titleImageRequired,
   )
 
   const set = <K extends keyof PropertyForm>(field: K, value: PropertyForm[K]) => {
@@ -593,6 +621,7 @@ export function PropertyFormView() {
       categoryParameters,
       galleryLimit,
       mediaRich,
+      titleImageRequired,
     )
     if (offending !== null) {
       setInvalid(offending)
@@ -603,13 +632,20 @@ export function PropertyFormView() {
     setSaving(true)
     setError(null)
     try {
+      if (edit !== undefined) {
+        await updateProperty(
+          propertyUpdatePayload(edit, { form, parameters, facilities, translations }, media),
+        )
+        void navigate(exitTo)
+        return
+      }
       await createProperty(propertyPayload(form, media, parameters, facilities, translations))
       // Only after the server accepted it. Clearing on navigate-away, or
       // optimistically here, is how a failed publish takes the draft with it.
       clearDraft()
       // No success toast by design (see toast-context): the listing appearing
       // at the top of the list IS the confirmation.
-      void navigate('/properties')
+      void navigate(exitTo)
     } catch (caught: unknown) {
       // Verbatim — the server's own wording is what distinguishes "you are out
       // of listing slots" from "your plan has no 3D images".
@@ -634,14 +670,24 @@ export function PropertyFormView() {
   return (
     <>
       <PageHeader
-        title={t('newProperty.title')}
-        subtitle={t('newProperty.subtitle')}
+        title={t(edit === undefined ? 'newProperty.title' : 'editProperty.title')}
+        subtitle={t(edit === undefined ? 'newProperty.subtitle' : 'editProperty.subtitle')}
         actions={
-          <Button onClick={() => void navigate('/properties')} disabled={saving}>
+          <Button onClick={() => void navigate(exitTo)} disabled={saving}>
             {t('common.cancel')}
           </Button>
         }
       />
+
+      {/* What the moderator asked for, above everything: it is the reason the
+          agent is on this screen. */}
+      {edit !== undefined && edit.rejectReason !== null && (
+        <div role="note" className="mb-4 rounded-lg bg-warning-bg px-3 py-3 text-warning">
+          <p className="text-sm font-semibold">{t('editProperty.rejected')}</p>
+          <p className="mt-1 whitespace-pre-line text-sm">{edit.rejectReason}</p>
+          <p className="mt-1 text-xs">{t('editProperty.resubmitHint')}</p>
+        </div>
+      )}
 
       {/* The step list is navigation, not a progress bar: every step stays
           reachable, because an agent who spots a typo in step 2 while on step 6
@@ -1141,11 +1187,15 @@ export function PropertyFormView() {
                 setMedia((current) => ({ ...current, title_image: files[0] ?? null }))
                 if (invalid === 'title_image') setInvalid(null)
               }}
-              helper={t('newProperty.imageRule')}
+              helper={
+                edit === undefined
+                  ? t('newProperty.imageRule')
+                  : `${t('editProperty.coverKept')} ${t('newProperty.imageRule')}`
+              }
               error={t('newProperty.error.title_image')}
               state={invalid === 'title_image' ? 'error' : 'idle'}
               disabled={saving}
-              required
+              required={titleImageRequired}
               removeLabel={t('common.delete')}
             />
 
@@ -1257,6 +1307,7 @@ export function PropertyFormView() {
             categoryLabel={category === null ? '—' : labelOf(category)}
             pending={pending}
             onEdit={editField}
+            editing={edit !== undefined}
           />
         )}
 
@@ -1284,7 +1335,9 @@ export function PropertyFormView() {
                directly above it. */
             aria-describedby={pending.length > 0 ? 'review-pending' : undefined}
           >
-            {t(saving ? 'newProperty.publishing' : 'newProperty.publish')}
+            {edit === undefined
+              ? t(saving ? 'newProperty.publishing' : 'newProperty.publish')
+              : t(saving ? 'common.saving' : 'editProperty.save')}
           </Button>
         ) : (
           <Button variant="primary" onClick={() => goTo(stepIndex + 1)} disabled={saving}>
@@ -1374,6 +1427,7 @@ function ReviewStep({
   categoryLabel,
   pending,
   onEdit,
+  editing,
 }: {
   form: PropertyForm
   media: PropertyMedia
@@ -1387,6 +1441,8 @@ function ReviewStep({
   /** Everything still blocking Publish, from propertyOffenders(). */
   pending: PropertyField[]
   onEdit: (step: PropertyStep, field?: PropertyField) => void
+  /** Media here is only what is being added; the saved files stay. */
+  editing: boolean
 }) {
   const { t, formatCurrency } = useI18n()
   const edit = t('common.edit')
@@ -1576,7 +1632,9 @@ function ReviewStep({
       <ReviewCard title={t('newProperty.step.media')} onEdit={() => onEdit('media')} editLabel={edit}>
         <div className="flex flex-wrap items-start gap-3">
           {previewSrc === null ? (
-            <p className="text-sm text-muted">{t('newProperty.reviewNoPhoto')}</p>
+            <p className="text-sm text-muted">
+              {t(editing ? 'editProperty.coverKept' : 'newProperty.reviewNoPhoto')}
+            </p>
           ) : (
             <img
               src={previewSrc}
@@ -1587,7 +1645,7 @@ function ReviewStep({
           <div className="min-w-40 flex-1">
             <Rows
               rows={[
-                [t('newProperty.photos'), String((media.title_image === null ? 0 : 1) + media.gallery_images.length)],
+                [t(editing ? 'editProperty.newPhotos' : 'newProperty.photos'), String((media.title_image === null ? 0 : 1) + media.gallery_images.length)],
                 [t('newProperty.threeD'), media.three_d_image === null ? dash : '1'],
                 [t('newProperty.videoLink'), form.video_link || dash],
                 [t('newProperty.documents'), String(media.documents.length)],

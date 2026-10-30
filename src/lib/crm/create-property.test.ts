@@ -75,6 +75,13 @@ describe('validateProperty', () => {
     ).toBe('title_image')
   })
 
+  it('lets an edit keep the saved cover, but still checks a replacement', () => {
+    const noCover = { ...media, title_image: null }
+    expect(validateProperty(valid, noCover, {}, [], null, true, false)).toBeNull()
+    const oversized = { ...media, title_image: jpeg('c.jpg', 3000 * 1024 + 1) }
+    expect(validateProperty(valid, oversized, {}, [], null, true, false)).toBe('title_image')
+  })
+
   it('enforces the tier gallery cap, and treats null as unlimited rather than zero', () => {
     const gallery = { ...media, gallery_images: [jpeg('a.jpg'), jpeg('b.jpg')] }
     expect(check(valid, gallery, {}, [], 1)).toBe('gallery_images')

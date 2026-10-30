@@ -217,6 +217,8 @@ export function propertyOffenders(
   galleryLimit: number | null,
   /** False hides 3D + video; the server answers `media_rich_locked` for either. */
   mediaRich: boolean,
+  /** False on edit: the listing already has a cover, and no file keeps it. */
+  titleImageRequired = true,
 ): PropertyField[] {
   const offenders: PropertyField[] = []
 
@@ -250,9 +252,10 @@ export function propertyOffenders(
   if (form.latitude.trim() === '' || form.longitude.trim() === '') offenders.push('latitude')
 
   if (
-    media.title_image === null ||
-    !TITLE_IMAGE_TYPES.includes(media.title_image.type) ||
-    media.title_image.size > IMAGE_MAX_BYTES
+    media.title_image === null
+      ? titleImageRequired
+      : !TITLE_IMAGE_TYPES.includes(media.title_image.type) ||
+        media.title_image.size > IMAGE_MAX_BYTES
   ) {
     offenders.push('title_image')
   }
@@ -309,9 +312,18 @@ export function validateProperty(
   required: { id: number; is_required: number }[],
   galleryLimit: number | null,
   mediaRich: boolean,
+  titleImageRequired = true,
 ): PropertyField | null {
   return (
-    propertyOffenders(form, media, parameters, required, galleryLimit, mediaRich)[0] ?? null
+    propertyOffenders(
+      form,
+      media,
+      parameters,
+      required,
+      galleryLimit,
+      mediaRich,
+      titleImageRequired,
+    )[0] ?? null
   )
 }
 
@@ -394,16 +406,7 @@ export function propertyPayload(
     index += 1
   }
 
-  let facilityIndex = 0
-  for (const [id, distance] of Object.entries(facilities)) {
-    // PHP's empty('0') is true, so the handler drops a facility whose distance
-    // is "0" exactly as if it were blank. The app sends '0.0' for the same
-    // reason — its redesign dropped the distance input entirely.
-    const value = distance.trim() === '' || Number(distance) === 0 ? '0.0' : distance.trim()
-    body.append(`facilities[${facilityIndex}][facility_id]`, id)
-    body.append(`facilities[${facilityIndex}][distance]`, value)
-    facilityIndex += 1
-  }
+  appendFacilities(body, facilities)
 
   let translationIndex = 0
   for (const [languageId, copy] of Object.entries(translations)) {
@@ -418,6 +421,20 @@ export function propertyPayload(
   }
 
   return body
+}
+
+/** Shared with the edit payload (update-property.ts): same handler rule. */
+export function appendFacilities(body: FormData, facilities: FacilityDistances): void {
+  let index = 0
+  for (const [id, distance] of Object.entries(facilities)) {
+    // PHP's empty('0') is true, so the handler drops a facility whose distance
+    // is "0" exactly as if it were blank. The app sends '0.0' for the same
+    // reason — its redesign dropped the distance input entirely.
+    const value = distance.trim() === '' || Number(distance) === 0 ? '0.0' : distance.trim()
+    body.append(`facilities[${index}][facility_id]`, id)
+    body.append(`facilities[${index}][distance]`, value)
+    index += 1
+  }
 }
 
 /** What the CRM needs back to route to the new listing. */
