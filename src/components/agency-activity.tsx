@@ -162,7 +162,10 @@ function Diff({ changes }: { changes: AgencyActivityEntry['changes'] }) {
           <div key={field} className="flex flex-wrap gap-x-2">
             <dt className="text-muted">{activityFieldLabel(field, t)}</dt>
             <dd className="text-ink-2">
-              <s className="text-muted">{activityValueLabel(field, change.from, t, formatDate)}</s> →{' '}
+              <s className="text-muted">
+                {activityValueLabel(field, change.from, t, formatDate)}
+              </s>{' '}
+              →{' '}
               {activityValueLabel(field, change.to, t, formatDate)}
             </dd>
           </div>

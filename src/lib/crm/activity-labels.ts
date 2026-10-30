@@ -28,8 +28,8 @@ const VALUE_LABEL_PREFIX: Record<string, string> = {
 const DATE_FIELD = /(_at|_date)$/
 
 /**
- * Valor legible: etapa, origen, rol y estados usan las etiquetas que el CRM ya
- * muestra, las fechas ISO salen con el formato del lector; lo demás se imprime tal cual. Un vacío tiene que verse.
+ * Valor legible: etapa, origen, rol y estados usan las etiquetas que el CRM
+ * ya muestra, las fechas ISO salen con el formato del lector; lo demás se imprime tal cual. Un vacío tiene que verse.
  */
 export function activityValueLabel(
   field: string,

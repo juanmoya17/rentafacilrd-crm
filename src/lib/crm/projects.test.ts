@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   UNIT_STATUSES,
+  canReassign,
   canWriteProject,
   initialBuyer,
   inventoryState,
@@ -167,5 +168,20 @@ describe('initialBuyer', () => {
   it('is empty when there is no unit or no buyer', () => {
     expect(initialBuyer(null)).toBe('')
     expect(initialBuyer({ sold_by: null })).toBe('')
+  })
+})
+
+describe('canReassign', () => {
+  it('trusts the API when it says yes, even for a non-admin', () => {
+    expect(canReassign({ can_reassign: true }, false)).toBe(true)
+  })
+
+  it('trusts the API when it says no, even for an admin', () => {
+    expect(canReassign({ can_reassign: false }, true)).toBe(false)
+  })
+
+  it('falls back to isAdmin on an older server', () => {
+    expect(canReassign({}, true)).toBe(true)
+    expect(canReassign({}, false)).toBe(false)
   })
 })

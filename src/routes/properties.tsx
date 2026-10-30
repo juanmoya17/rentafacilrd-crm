@@ -48,6 +48,7 @@ import { useRecordMorph, useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
 import { useToast } from '@/lib/toast-context'
 import { useAgencyRole } from '@/lib/crm/use-agency-role'
+import { canReassign } from '@/lib/crm/projects'
 import {
   assignedAgentName,
   canFilterByMember,
@@ -222,7 +223,9 @@ function InlineAction({
     t,
     mayEdit(property, isAdmin, authState),
   )
-  const receivers = (property.can_reassign ?? isAdmin) ? reassignReceivers(members, property.added_by) : []
+  const receivers = canReassign(property, isAdmin)
+    ? reassignReceivers(members, property.added_by)
+    : []
 
   if (receivers.length === 0) return primary
 
@@ -1444,7 +1447,9 @@ export function PropertiesPage() {
             </div>
           }
         >
-          <p className="text-sm text-ink-2">{t('properties.renewConfirmBody', { title: renewing.title })}</p>
+          <p className="text-sm text-ink-2">
+            {t('properties.renewConfirmBody', { title: renewing.title })}
+          </p>
         </Modal>
       )}
 

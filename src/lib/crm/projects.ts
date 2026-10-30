@@ -134,6 +134,11 @@ export function canWriteProject(project: { can_edit?: boolean }): boolean {
   return project.can_edit !== false
 }
 
+/** Whether to offer reassigning this row: the API's verdict, or admin-only on an older server. */
+export function canReassign(row: { can_reassign?: boolean }, isAdmin: boolean): boolean {
+  return row.can_reassign ?? isAdmin
+}
+
 export type InventoryState = 'empty' | 'sold_out' | 'available'
 
 /**

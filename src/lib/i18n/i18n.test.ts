@@ -36,6 +36,11 @@ describe('createTranslate', () => {
     expect(tEs('dashboard.greeting', { name: 'Ana' })).toBe('Hola, Ana')
   })
 
+  it('names the listing in the renew confirmation', () => {
+    expect(tEs('properties.renewConfirmBody', { title: 'Villa Mar' })).toContain('Villa Mar')
+    expect(tEn('properties.renewConfirmBody', { title: 'Villa Mar' })).toContain('Villa Mar')
+  })
+
   it('leaves an unknown placeholder untouched instead of printing undefined', () => {
     expect(tEs('dashboard.greeting', {})).toBe('Hola, {name}')
   })

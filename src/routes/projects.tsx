@@ -15,7 +15,7 @@ import {
   type AgencyMember,
 } from '@/lib/crm/agency'
 import { ReassignDialog } from '@/components/reassign-dialog'
-import { fetchProjects, inventoryState, type CrmProject } from '@/lib/crm/projects'
+import { canReassign, fetchProjects, inventoryState, type CrmProject } from '@/lib/crm/projects'
 
 /** Share of units still available — the one number this card exists to show. */
 function AvailabilityBar({ available, total }: { available: number; total: number }) {
@@ -67,7 +67,8 @@ function ProjectCard({
   const available = project.units_available
   const total = project.units_total
   const assignedTo = assignedAgentName(project.added_by, project.added_by_name, myId)
-  const canReassign = (project.can_reassign ?? isAdmin) && reassignReceivers(members, project.added_by).length > 0
+  const mayReassign =
+    canReassign(project, isAdmin) && reassignReceivers(members, project.added_by).length > 0
 
   return (
     // `relative`, and the card body is no longer wrapped in a single <Link>:
@@ -131,7 +132,7 @@ function ProjectCard({
             </>
           )}
 
-          {canReassign && (
+          {mayReassign && (
             <div className="mt-2 flex justify-end">
               <Button onClick={() => onReassign(project)}>
                 <ArrowRightLeft className="size-4" aria-hidden="true" />
