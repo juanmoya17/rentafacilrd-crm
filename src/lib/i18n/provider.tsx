@@ -5,6 +5,7 @@ import { en } from './en'
 import { es, type TranslationKey } from './es'
 import { DEFAULT_LOCALE, I18nContext, isLocale, type Locale } from './context'
 import { createTranslate } from './translate'
+import { formatDateValue } from './format-date'
 
 const DICTIONARIES: Record<Locale, Record<TranslationKey, string>> = { es, en }
 const STORAGE_KEY = 'rf-crm-locale'
@@ -73,10 +74,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       }).format(input)
 
     const formatDate = (input: Date | string | number, options?: Intl.DateTimeFormatOptions) =>
-      new Intl.DateTimeFormat(
-        intlLocale,
-        options ?? { day: 'numeric', month: 'short', year: 'numeric' },
-      ).format(new Date(input))
+      formatDateValue(intlLocale, input, options)
 
     const formatRelativeTime = (input: Date | string | number) => {
       const formatter = new Intl.RelativeTimeFormat(intlLocale, { numeric: 'auto' })
