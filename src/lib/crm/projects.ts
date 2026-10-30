@@ -93,7 +93,15 @@ export interface CrmUnit {
   price: string | null
   status: UnitStatus
   sold_by: number | null
+  /** The buyer's name, so the dialog can name a buyer outside the contacts page. */
+  sold_by_name?: string | null
   sold_at: string | null
+}
+
+/** The buyer a unit's dialog opens with: the recorded one, so re-saving a sold
+ *  unit sends the same buyer (and the API keeps its sale date). */
+export function initialBuyer(unit: { sold_by: number | null } | null): string {
+  return unit?.sold_by == null ? '' : String(unit.sold_by)
 }
 
 export interface InventoryProjectRow {

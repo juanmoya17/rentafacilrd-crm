@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   UNIT_STATUSES,
   canWriteProject,
+  initialBuyer,
   inventoryState,
   projectVisibility,
   projectStatusGate,
@@ -149,5 +150,16 @@ describe('canWriteProject', () => {
   it('allows and refuses on the server verdict', () => {
     expect(canWriteProject({ can_edit: true })).toBe(true)
     expect(canWriteProject({ can_edit: false })).toBe(false)
+  })
+})
+
+describe('initialBuyer', () => {
+  it('seeds the recorded buyer so reopening a sold unit keeps it', () => {
+    expect(initialBuyer({ sold_by: 93 })).toBe('93')
+  })
+
+  it('is empty when there is no unit or no buyer', () => {
+    expect(initialBuyer(null)).toBe('')
+    expect(initialBuyer({ sold_by: null })).toBe('')
   })
 })

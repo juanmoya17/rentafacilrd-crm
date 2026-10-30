@@ -7,6 +7,7 @@ import {
   UNIT_STATUSES,
   createTypology,
   createUnitBatch,
+  initialBuyer,
   toNumberOrNull,
   updateTypology,
   updateUnit,
@@ -359,7 +360,7 @@ export function UnitStatusDialog({
 
   const [unitId, setUnitId] = useState<string>(initial === null ? '' : String(initial.id))
   const [status, setStatus] = useState<string>(unit === null ? 'sold' : unit.status)
-  const [buyer, setBuyer] = useState('')
+  const [buyer, setBuyer] = useState(initialBuyer(initial))
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -440,7 +441,10 @@ export function UnitStatusDialog({
             id="unit-pick"
             label={t('units.pickUnit')}
             value={unitId}
-            onChange={setUnitId}
+            onChange={(value) => {
+              setUnitId(value)
+              setBuyer(initialBuyer(units.find((candidate) => String(candidate.id) === value) ?? null))
+            }}
             options={unitOptions}
             disabled={saving || unit !== null}
           />
@@ -487,6 +491,11 @@ export function UnitStatusDialog({
                       onChange={setBuyer}
                       options={[
                         { value: '', label: t('common.none') },
+                        // The recorded buyer may sit beyond the 100 contacts
+                        // loaded; without this the select would show "none".
+                        ...(buyer !== '' && !buyers.some((c) => String(c.customer_id) === buyer)
+                          ? [{ value: buyer, label: selected?.sold_by_name ?? `#${buyer}` }]
+                          : []),
                         ...buyers.map((contact) => ({
                           value: String(contact.customer_id),
                           label:

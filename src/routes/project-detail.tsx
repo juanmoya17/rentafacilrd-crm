@@ -529,6 +529,7 @@ export function ProjectDetailPage() {
 
       {dialog?.kind === 'unit' && (
         <UnitStatusDialog
+          key={dialog.unit?.id ?? 'new'}
           projectId={project.id}
           units={units}
           unit={dialog.unit}
