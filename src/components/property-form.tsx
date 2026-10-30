@@ -1109,10 +1109,14 @@ export function PropertyFormView({
                               ...current,
                               [facility.id]: event.target.value,
                             }))
+                            if (invalid === `facility:${facility.id}`) setInvalid(null)
                           }}
                           aria-label={`${labelOf(facility)} — km`}
+                          aria-invalid={invalid === `facility:${facility.id}` || undefined}
                           placeholder="0.0"
-                          className="min-h-(--control-h-sm) w-full rounded-md border border-rule-2 bg-surface-raised px-2 py-1 text-right text-sm text-ink placeholder:text-muted disabled:opacity-55"
+                          className={`min-h-(--control-h-sm) w-full rounded-md border ${
+                            invalid === `facility:${facility.id}` ? 'border-error' : 'border-rule-2'
+                          } bg-surface-raised px-2 py-1 text-right text-sm text-ink placeholder:text-muted disabled:opacity-55`}
                         />
                         <span className="text-xs text-muted">km</span>
                       </div>
