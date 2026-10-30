@@ -13,6 +13,13 @@ describe('activityFieldLabel', () => {
     expect(activityFieldLabel('stage', tEn)).toBe('Stage')
   })
 
+  it('labels the fields the activity log emits', () => {
+    expect(activityFieldLabel('closed_at', tEs)).toBe('Cerrado el')
+    expect(activityFieldLabel('reassigned_to', tEn)).toBe('Reassigned to')
+    expect(activityFieldLabel('from_member', tEs)).toBe('Traspasado desde')
+    expect(activityFieldLabel('agency_id', tEn)).toBe('Agency')
+  })
+
   it('turns an unknown field into readable text', () => {
     expect(activityFieldLabel('some_new_field', tEs)).toBe('some new field')
   })
@@ -22,6 +29,12 @@ describe('activityValueLabel', () => {
   it('translates stage values with the existing stage labels', () => {
     expect(activityValueLabel('stage', 'negotiation', tEs)).toBe('Negociación')
     expect(activityValueLabel('stage', 'won', tEn)).toBe('Won')
+  })
+
+  it('translates origin and role values', () => {
+    expect(activityValueLabel('origin', 'whatsapp', tEs)).toBe('WhatsApp')
+    expect(activityValueLabel('role', 'agent', tEs)).toBe('Asesor')
+    expect(activityValueLabel('role', 'agent', tEn)).toBe('Agent')
   })
 
   it('leaves other values and unknown stages as they come', () => {
