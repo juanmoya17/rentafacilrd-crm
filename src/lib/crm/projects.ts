@@ -167,11 +167,14 @@ export async function fetchProjects(signal?: AbortSignal): Promise<CrmProject[]>
  */
 export function projectVisibility(p: {
   status: number
+  moderation?: string | null
   request_status?: string | null
 }): 'live' | 'review' | 'hidden' {
   if (p.status !== 1) return 'hidden'
-  if (p.request_status === 'pending') return 'review'
-  return p.request_status === 'rejected' ? 'hidden' : 'live'
+  // Derived column first, legacy one while both ship (as projectStatusGate).
+  const state = p.moderation ?? p.request_status
+  if (state === 'pending') return 'review'
+  return state === 'rejected' ? 'hidden' : 'live'
 }
 
 /**

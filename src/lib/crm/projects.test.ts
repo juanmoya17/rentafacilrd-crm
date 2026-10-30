@@ -140,6 +140,12 @@ describe('projectVisibility', () => {
     expect(projectVisibility({ status: 0, request_status: 'approved' })).toBe('hidden')
     expect(projectVisibility({ status: 1, request_status: 'rejected' })).toBe('hidden')
   })
+
+  it('prefers the derived moderation over the deprecated request_status', () => {
+    expect(projectVisibility({ status: 1, moderation: 'pending' })).toBe('review')
+    expect(projectVisibility({ status: 1, moderation: 'rejected', request_status: 'approved' })).toBe('hidden')
+    expect(projectVisibility({ status: 1, moderation: null, request_status: 'pending' })).toBe('review')
+  })
 })
 
 describe('canWriteProject', () => {
