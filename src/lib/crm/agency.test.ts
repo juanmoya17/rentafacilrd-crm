@@ -8,6 +8,7 @@ import {
   claimKeyToItem,
   exitReceivers,
   holdsSomething,
+  inviteTarget,
   reassignReceivers,
   seatsLabel,
   type AgencyMember,
@@ -236,5 +237,22 @@ describe('claimKey', () => {
       type: 'project',
       id: 12,
     })
+  })
+})
+
+describe('inviteTarget', () => {
+  it('accepts an email', () => {
+    expect(inviteTarget(' ana@example.com ')).toEqual({ email: 'ana@example.com' })
+  })
+
+  it('normalizes a phone', () => {
+    expect(inviteTarget('809 123 4567')).toEqual({ phone: '8091234567' })
+    expect(inviteTarget('+1 (809) 123-4567')).toEqual({ phone: '+18091234567' })
+  })
+
+  it('refuses text that is neither', () => {
+    expect(inviteTarget('no-es-correo')).toEqual({ error: 'phone' })
+    expect(inviteTarget('12345')).toEqual({ error: 'phone' })
+    expect(inviteTarget('ana@')).toEqual({ error: 'email' })
   })
 })

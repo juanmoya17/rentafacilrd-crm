@@ -673,6 +673,8 @@ export const es = {
   'agency.invite': 'Invitar',
   'agency.inviteContact': 'Correo o teléfono',
   'agency.inviteContactHelp': 'Uno de los dos, no los dos a la vez.',
+  'agency.inviteInvalidEmail': 'Escribe un correo válido, por ejemplo nombre@dominio.com.',
+  'agency.inviteInvalidPhone': 'Escribe un teléfono válido de 10 a 15 dígitos, por ejemplo 809 123 4567.',
   'agency.inviteCreated': 'Invitación creada. El enlace solo se puede copiar ahora.',
   'agency.copyLink': 'Copiar enlace',
   'agency.noSeats': 'No quedan plazas en tu plan.',

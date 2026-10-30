@@ -661,6 +661,8 @@ export const en: Record<TranslationKey, string> = {
   'agency.invite': 'Invite',
   'agency.inviteContact': 'Email or phone',
   'agency.inviteContactHelp': 'One or the other, not both.',
+  'agency.inviteInvalidEmail': 'Enter a valid email, for example name@domain.com.',
+  'agency.inviteInvalidPhone': 'Enter a valid phone of 10 to 15 digits, for example 809 123 4567.',
   'agency.inviteCreated': 'Invitation created. The link can only be copied now.',
   'agency.copyLink': 'Copy link',
   'agency.noSeats': 'No seats left on your plan.',

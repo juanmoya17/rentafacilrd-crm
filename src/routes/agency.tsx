@@ -29,6 +29,7 @@ import {
   getAgency,
   holdsSomething,
   inviteMember,
+  inviteTarget,
   listInvitations,
   listMembers,
   seatsLabel,
@@ -411,16 +412,21 @@ function InviteBox({ disabled, onInvited }: { disabled: boolean; onInvited: () =
   const [contact, setContact] = useState('')
   const [role, setRole] = useState<'admin' | 'agent'>('agent')
   const [busy, setBusy] = useState(false)
+  const [invalid, setInvalid] = useState<'email' | 'phone' | null>(null)
 
   const submit = async () => {
     const value = contact.trim()
     if (value === '') return
 
+    const target = inviteTarget(value)
+    if ('error' in target) {
+      setInvalid(target.error)
+      return
+    }
+
     setBusy(true)
     try {
-      const created = await inviteMember(
-        value.includes('@') ? { email: value, role } : { phone: value, role },
-      )
+      const created = await inviteMember({ ...target, role })
       setContact('')
       // El enlace se ve UNA vez: en la base solo queda su hash, así que no hay
       // forma de recuperarlo después. Si se pierde, se cancela y se rehace —
@@ -442,9 +448,18 @@ function InviteBox({ disabled, onInvited }: { disabled: boolean; onInvited: () =
           id="invite-contact"
           label={t('agency.inviteContact')}
           value={contact}
-          onChange={setContact}
+          onChange={(next) => {
+            setContact(next)
+            setInvalid(null)
+          }}
           disabled={disabled}
           helper={t('agency.inviteContactHelp')}
+          state={invalid === null ? 'idle' : 'error'}
+          error={
+            invalid === null
+              ? undefined
+              : t(invalid === 'email' ? 'agency.inviteInvalidEmail' : 'agency.inviteInvalidPhone')
+          }
         />
         <Select
           id="invite-role"

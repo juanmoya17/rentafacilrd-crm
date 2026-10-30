@@ -148,6 +148,23 @@ export function canInvite(roster: Pick<Roster, 'seats_used' | 'seats_limit' | 'o
   return roster.seats_limit === null || roster.seats_used < roster.seats_limit
 }
 
+/**
+ * Qué se invita: un correo (si trae `@`) o un teléfono de 10-15 dígitos con
+ * `+` opcional, tras quitar espacios, guiones, paréntesis y puntos. Lo mismo
+ * que exige la API; aquí solo para avisar antes de enviar.
+ */
+export function inviteTarget(
+  value: string,
+): { email: string } | { phone: string } | { error: 'email' | 'phone' } {
+  const text = value.trim()
+  if (text.includes('@')) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text) ? { email: text } : { error: 'email' }
+  }
+  const phone = text.replace(/[\s\-().]/g, '')
+
+  return /^\+?\d{10,15}$/.test(phone) ? { phone } : { error: 'phone' }
+}
+
 /** Qué sigue a nombre de quien se va. Cero en todo = la salida no mueve nada. */
 export function holdsSomething(preflight: ExitPreflight): boolean {
   return (
