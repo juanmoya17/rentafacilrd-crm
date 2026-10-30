@@ -20,14 +20,28 @@ const VALUE_LABEL_PREFIX: Record<string, string> = {
   stage: 'stage',
   origin: 'origin',
   role: 'agency.role',
+  status: 'lifecycle',
+  request_status: 'moderation',
 }
 
+/** `closed_at`, `due_at`, `start_date`…: the log stores them as ISO strings. */
+const DATE_FIELD = /(_at|_date)$/
+
 /**
- * Valor legible: etapa, origen y rol usan las etiquetas que el CRM ya
- * muestra; lo demás se imprime tal cual. Un vacío tiene que verse.
+ * Valor legible: etapa, origen, rol y estados usan las etiquetas que el CRM ya
+ * muestra, las fechas ISO salen con el formato del lector; lo demás se imprime tal cual. Un vacío tiene que verse.
  */
-export function activityValueLabel(field: string, value: ActivityValue, t: Translate): string {
+export function activityValueLabel(
+  field: string,
+  value: ActivityValue,
+  t: Translate,
+  formatDate: (value: string) => string = String,
+): string {
   if (value === null || value === '') return '—'
+
+  if (DATE_FIELD.test(field) && typeof value === 'string' && !Number.isNaN(Date.parse(value))) {
+    return formatDate(value)
+  }
 
   const prefix = VALUE_LABEL_PREFIX[field]
   if (prefix) {

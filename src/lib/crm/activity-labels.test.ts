@@ -37,6 +37,20 @@ describe('activityValueLabel', () => {
     expect(activityValueLabel('role', 'agent', tEn)).toBe('Agent')
   })
 
+  it('translates status and request_status values', () => {
+    expect(activityValueLabel('status', 'published', tEs)).toBe('Publicada')
+    expect(activityValueLabel('request_status', 'approved', tEs)).toBe('Aprobada')
+    expect(activityValueLabel('request_status', 'pending', tEn)).toBe('In review')
+  })
+
+  it('formats ISO dates with the reader formatter', () => {
+    const fmt = (v: string) => `<${v}>`
+    expect(activityValueLabel('closed_at', '2026-10-30T14:00:00Z', tEs, fmt)).toBe('<2026-10-30T14:00:00Z>')
+    expect(activityValueLabel('start_date', '2026-11-07', tEs, fmt)).toBe('<2026-11-07>')
+    expect(activityValueLabel('title', '2026-11-07', tEs, fmt)).toBe('2026-11-07')
+    expect(activityValueLabel('closed_at', 'soon', tEs, fmt)).toBe('soon')
+  })
+
   it('leaves other values and unknown stages as they come', () => {
     expect(activityValueLabel('stage', 'weird', tEs)).toBe('weird')
     expect(activityValueLabel('price', 165000, tEs)).toBe('165000')

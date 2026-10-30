@@ -147,7 +147,7 @@ export function AgencyActivity({ members }: { members: AgencyMember[] }) {
  * y algo que el propietario lee de verdad.
  */
 function Diff({ changes }: { changes: AgencyActivityEntry['changes'] }) {
-  const { t } = useI18n()
+  const { t, formatDate } = useI18n()
   const fields = Object.entries(changes ?? {})
 
   if (fields.length === 0) return null
@@ -162,8 +162,8 @@ function Diff({ changes }: { changes: AgencyActivityEntry['changes'] }) {
           <div key={field} className="flex flex-wrap gap-x-2">
             <dt className="text-muted">{activityFieldLabel(field, t)}</dt>
             <dd className="text-ink-2">
-              <s className="text-muted">{activityValueLabel(field, change.from, t)}</s> →{' '}
-              {activityValueLabel(field, change.to, t)}
+              <s className="text-muted">{activityValueLabel(field, change.from, t, formatDate)}</s> →{' '}
+              {activityValueLabel(field, change.to, t, formatDate)}
             </dd>
           </div>
         ))}
