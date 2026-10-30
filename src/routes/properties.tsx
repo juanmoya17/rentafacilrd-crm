@@ -222,7 +222,7 @@ function InlineAction({
     t,
     mayEdit(property, isAdmin, authState),
   )
-  const receivers = isAdmin ? reassignReceivers(members, property.added_by) : []
+  const receivers = (property.can_reassign ?? isAdmin) ? reassignReceivers(members, property.added_by) : []
 
   if (receivers.length === 0) return primary
 

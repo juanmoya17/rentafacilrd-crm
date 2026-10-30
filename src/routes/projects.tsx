@@ -67,7 +67,7 @@ function ProjectCard({
   const available = project.units_available
   const total = project.units_total
   const assignedTo = assignedAgentName(project.added_by, project.added_by_name, myId)
-  const canReassign = isAdmin && reassignReceivers(members, project.added_by).length > 0
+  const canReassign = (project.can_reassign ?? isAdmin) && reassignReceivers(members, project.added_by).length > 0
 
   return (
     // `relative`, and the card body is no longer wrapped in a single <Link>:
