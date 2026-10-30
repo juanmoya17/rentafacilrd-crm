@@ -70,7 +70,7 @@ export function InventoryPage() {
       card: 'primary',
       render: (row) => <ProjectName row={row} />,
     },
-    { key: 'city', header: t('inventory.project'), card: 'meta', render: (row) => row.city },
+    { key: 'city', header: t('inventory.city'), card: 'meta', render: (row) => row.city },
     ...STATUSES.map(
       (status, index): Column<Row> => ({
         key: status,

@@ -387,6 +387,7 @@ export const es = {
   'inventory.title': 'Inventario global',
   'inventory.subtitle': 'Todas las unidades de la cuenta, agregadas por estado.',
   'inventory.project': 'Proyecto',
+  'inventory.city': 'Ciudad',
   'inventory.empty': 'No hay unidades cargadas todavía.',
 
   'tasks.title': 'Tareas',
@@ -444,7 +445,7 @@ export const es = {
   'settings.agentId': 'ID de agente',
   'settings.language': 'Idioma de la interfaz',
   'settings.session': 'Sesión',
-  'settings.sessionNote': 'Sesión por cookie httpOnly contra el backend Laravel. No se guarda ningún token en el navegador.',
+  'settings.sessionNote': 'Tu sesión se mantiene en este navegador. Si pierdes el acceso, vuelve a iniciar sesión.',
   'settings.notifications': 'Preferencias de notificaciones',
 
   'condition.a_estrenar': 'A estrenar',
@@ -857,6 +858,7 @@ export const es = {
   'agencyProfile.readOnly': 'Solo la dirección de la agencia puede editar estos datos.',
 
   'claim.title': 'Anuncios por incorporar',
+  'claim.empty': 'Aquí aparecerán los anuncios que traigan los miembros al unirse a la agencia.',
   'claim.hint': 'Los trajo consigo alguien de tu equipo. Hasta que los incorpores no aparecen en el inventario de la agencia.',
   'claim.owner': 'De',
   'claim.selected': '{count} seleccionados',

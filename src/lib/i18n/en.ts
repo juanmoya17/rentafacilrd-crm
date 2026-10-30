@@ -375,6 +375,7 @@ export const en: Record<TranslationKey, string> = {
   'inventory.title': 'Global inventory',
   'inventory.subtitle': 'Every unit in the account, aggregated by status.',
   'inventory.project': 'Project',
+  'inventory.city': 'City',
   'inventory.empty': 'No units loaded yet.',
 
   'tasks.title': 'Tasks',
@@ -432,7 +433,7 @@ export const en: Record<TranslationKey, string> = {
   'settings.agentId': 'Agent ID',
   'settings.language': 'Interface language',
   'settings.session': 'Session',
-  'settings.sessionNote': 'httpOnly cookie session against the Laravel backend. No token is stored in the browser.',
+  'settings.sessionNote': 'Your session stays in this browser. If you lose access, sign in again.',
   'settings.notifications': 'Notification preferences',
 
   'condition.a_estrenar': 'Brand new',
@@ -844,6 +845,7 @@ export const en: Record<TranslationKey, string> = {
   'agencyProfile.verified': 'Verified agency',
   'agencyProfile.readOnly': 'Only the agency management can edit these details.',
   'claim.title': 'Listings to bring in',
+  'claim.empty': 'Listings that members bring when they join the agency will appear here.',
   'claim.hint': 'Someone on your team arrived with these. Until you bring them in they do not appear in the agency inventory.',
   'claim.owner': 'From',
   'claim.selected': '{count} selected',

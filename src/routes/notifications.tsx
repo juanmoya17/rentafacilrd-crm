@@ -160,7 +160,7 @@ export function NotificationsPage() {
     <>
       <PageHeader
         title={t('notifications.title')}
-        subtitle={unread > 0 ? t('common.resultCount', { count: unread }) : undefined}
+        subtitle={unread > 0 ? t('notifications.unread', { count: unread }) : undefined}
       />
 
       <div className="grid gap-4 lg:grid-cols-3">

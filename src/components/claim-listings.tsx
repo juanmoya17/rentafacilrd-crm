@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   CheckField,
+  EmptyState,
   ErrorState,
   LoadingState,
 } from '@/components/ui'
@@ -17,6 +18,7 @@ import {
   listClaimable,
   type ClaimableListing,
 } from '@/lib/crm/agency'
+import { claimEmptyKey } from '@/lib/crm/empty-states'
 
 /**
  * Los anuncios que alguien del equipo trajo consigo.
@@ -26,8 +28,8 @@ import {
  * es la única pantalla que los enseña — el listado de inventario filtra por
  * `agency_id` y por definición no puede verlos.
  *
- * Solo se monta cuando hay algo que incorporar: un estado vacío permanente sería
- * ruido en todas las agencias que no tienen nada pendiente.
+ * Sin nada pendiente muestra un estado vacío: es la pestaña entera y en blanco
+ * parecería rota.
  */
 export function ClaimListings({ onClaimed }: { onClaimed: () => void }) {
   const { t } = useI18n()
@@ -70,8 +72,9 @@ export function ClaimListings({ onClaimed }: { onClaimed: () => void }) {
   if (resource.status === 'error') {
     return <ErrorState message={resource.message} onRetry={resource.reload} retryLabel={t('common.retry')} />
   }
-  // Nada que incorporar: la sección no existe.
-  if (items.length === 0) return null
+  // Es la pestaña entera: vacía, dice qué aparecerá aquí en vez de quedar en blanco.
+  const emptyKey = claimEmptyKey(items.length)
+  if (emptyKey) return <EmptyState title={t(emptyKey)} />
 
   const toggle = (key: string) =>
     setSelected((current) => {
