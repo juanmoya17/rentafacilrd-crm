@@ -15,9 +15,8 @@ import type { CrmUser } from '@/lib/auth-context'
  * La ficha personal, editable. Antes se enseñaba de solo lectura y no había
  * forma de corregir un nombre mal escrito sin salir a la app.
  *
- * Los cuatro campos van SIEMPRE porque el servidor los exige todos. Por eso el
- * formulario arranca precargado en vez de en blanco: mandar el teléfono vacío
- * no es "déjalo como está", es borrarlo.
+ * Nombre y correo son obligatorios; el teléfono es opcional y, vacío, se
+ * borra. Por eso el formulario arranca precargado en vez de en blanco.
  */
 export function ProfileForm({ user }: { user: CrmUser }) {
   const { t } = useI18n()
@@ -79,7 +78,6 @@ export function ProfileForm({ user }: { user: CrmUser }) {
           onChange={set('country_code')}
           inputMode="numeric"
           placeholder="1"
-          required
         />
         <Field
           id="profile-mobile"
@@ -88,7 +86,6 @@ export function ProfileForm({ user }: { user: CrmUser }) {
           value={draft.mobile}
           onChange={set('mobile')}
           autoComplete="tel"
-          required
         />
       </div>
 

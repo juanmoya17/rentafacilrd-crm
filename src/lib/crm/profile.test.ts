@@ -38,9 +38,12 @@ describe('isCompleteProfile', () => {
     expect(isCompleteProfile(draftFromUser(user()))).toBe(true)
   })
 
-  // El servidor exige los cuatro. Dejar enviar con uno vacío no es "no
-  // cambiar ese", es borrarlo.
-  it.each(['name', 'email', 'mobile', 'country_code'] as const)('rejects a blank %s', (field) => {
+  // UX-013: el teléfono es opcional.
+  it('accepts a draft without a phone', () => {
+    expect(isCompleteProfile(draftFromUser(user({ mobile: null, country_code: null })))).toBe(true)
+  })
+
+  it.each(['name', 'email'] as const)('rejects a blank %s', (field) => {
     expect(isCompleteProfile({ ...draftFromUser(user()), [field]: '   ' })).toBe(false)
   })
 })

@@ -20,18 +20,12 @@ export interface ProfileDraft {
 }
 
 /**
- * Los cuatro campos son obligatorios en el servidor, así que van siempre los
- * cuatro. Es la razón de que el formulario los precargue en vez de empezar en
- * blanco: un envío parcial no es "no cambiar eso", es un 400 —o peor, un
- * guardado con el campo vacío.
+ * Solo nombre y correo son obligatorios (UX-013): el teléfono es opcional, y
+ * un alta por Google no lo pide. El borrador sigue llevando los cuatro campos;
+ * `updateProfile` decide qué enviar del teléfono.
  */
 export function isCompleteProfile(draft: ProfileDraft): boolean {
-  return (
-    draft.name.trim() !== '' &&
-    draft.email.trim() !== '' &&
-    draft.mobile.trim() !== '' &&
-    draft.country_code.trim() !== ''
-  )
+  return draft.name.trim() !== '' && draft.email.trim() !== ''
 }
 
 /** Lo que el formulario debe precargar. Un campo ausente arranca vacío, no `undefined`. */
@@ -45,5 +39,9 @@ export function draftFromUser(user: CrmUser): ProfileDraft {
 }
 
 export async function updateProfile(draft: ProfileDraft): Promise<void> {
-  await api<Envelope<unknown>>('update_profile', { method: 'POST', body: draft })
+  // El servidor quiere código y móvil juntos, y el móvil solo con dígitos:
+  // sin teléfono se manda vacío el par entero.
+  const mobile = draft.mobile.replace(/\D/g, '')
+  const body = { ...draft, mobile, country_code: mobile ? draft.country_code.trim() : '' }
+  await api<Envelope<unknown>>('update_profile', { method: 'POST', body })
 }
