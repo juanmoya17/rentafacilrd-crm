@@ -214,6 +214,7 @@ const flat = (value: ParameterValues[number] | undefined): string =>
  * - `facilities`: it deletes the listing's facilities and re-adds what it
  *   receives, so the set goes whole every time.
  * - `rentduration` with a switch to rent: required_if property_type is 1.
+ * - `slug_id` with a new title: otherwise the slug is rebuilt from it.
  *
  * A cleared field goes out empty rather than absent, so the handlers that
  * read it with has() (condition, area, land_area) clear the column.
@@ -241,6 +242,11 @@ export function propertyUpdatePayload(
   for (const key of Object.keys(after) as (keyof PropertyForm)[]) {
     const value = after[key].trim()
     if (ALWAYS.includes(key) || value !== before[key].trim()) body.append(key, value)
+  }
+  // A new title alone makes the handler rebuild the slug from it, which
+  // moves the public URL of a published listing. Send the saved one.
+  if (body.has('title') && !body.has('slug_id') && before.slug_id.trim() !== '') {
+    body.append('slug_id', before.slug_id.trim())
   }
   if (after.property_type === '1' && body.has('property_type') && !body.has('rentduration')) {
     body.append('rentduration', after.rentduration.trim())

@@ -141,12 +141,25 @@ describe('propertyUpdatePayload', () => {
   it('adds only the fields that changed', () => {
     const body = propertyUpdatePayload(
       source,
+      { ...source.values, form: { ...source.values.form, description: 'Cuatro habitaciones.' } },
+      EMPTY_PROPERTY_MEDIA,
+    )
+
+    expect(keys(body)).toEqual([...ALWAYS, 'description'].sort())
+    expect(body.get('description')).toBe('Cuatro habitaciones.')
+  })
+
+  it('keeps the saved slug when only the title changes, so the public URL survives', () => {
+    // The handler rebuilds the slug from the title unless it receives one.
+    const body = propertyUpdatePayload(
+      source,
       { ...source.values, form: { ...source.values.form, title: 'Casa en Naco, 3 hab.' } },
       EMPTY_PROPERTY_MEDIA,
     )
 
-    expect(keys(body)).toEqual([...ALWAYS, 'title'].sort())
+    expect(keys(body)).toEqual([...ALWAYS, 'slug_id', 'title'].sort())
     expect(body.get('title')).toBe('Casa en Naco, 3 hab.')
+    expect(body.get('slug_id')).toBe('casa-en-naco')
   })
 
   it('sends a cleared field empty, so the server clears it', () => {
