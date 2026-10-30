@@ -1,9 +1,31 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { resourceCache } from '@/lib/resource-cache'
 
 /** Long enough that going back to a list is instant, short enough that a
  *  second agent's change shows up without a reload. */
 const DEFAULT_STALE_MS = 30_000
+
+/** The slice of `document` the visibility refresh needs, so a test can fake it. */
+export type VisibilitySource = Pick<
+  Document,
+  'addEventListener' | 'removeEventListener' | 'visibilityState'
+>
+
+/**
+ * Calls `reload` when the tab becomes visible again and `isStale()` says the
+ * data on screen is old. Returns the cleanup.
+ */
+export function reloadWhenVisible(
+  source: VisibilitySource,
+  isStale: () => boolean,
+  reload: () => void,
+): () => void {
+  const onChange = () => {
+    if (source.visibilityState === 'visible' && isStale()) reload()
+  }
+  source.addEventListener('visibilitychange', onChange)
+  return () => source.removeEventListener('visibilitychange', onChange)
+}
 
 export type ResourceState<T> =
   | { status: 'loading' }
@@ -46,6 +68,7 @@ export function useResource<T>(
       : { status: 'loading' },
   )
   const [nonce, setNonce] = useState(0)
+  const loadedAt = useRef(Date.now())
 
   const reload = useCallback(() => {
     if (key !== undefined) resourceCache.invalidate(key)
@@ -59,7 +82,8 @@ export function useResource<T>(
     fetcher(controller.signal)
       .then((data) => {
         if (controller.signal.aborted) return
-        if (key !== undefined) resourceCache.set(key, data, Date.now())
+        loadedAt.current = Date.now()
+        if (key !== undefined) resourceCache.set(key, data, loadedAt.current)
         setState({ status: 'ready', data })
       })
       .catch((error: unknown) => {
@@ -82,6 +106,18 @@ export function useResource<T>(
     // would refetch on every render since callers pass an inline arrow.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, nonce, key])
+
+  // A tab left open keeps its list until something remounts it; coming back
+  // to it should not mean a second agent's change stays invisible. Keyed
+  // callers only, like the cache.
+  useEffect(() => {
+    if (key === undefined) return undefined
+    return reloadWhenVisible(
+      document,
+      () => Date.now() - loadedAt.current > staleMs,
+      reload,
+    )
+  }, [key, staleMs, reload])
 
   return { ...state, reload }
 }
