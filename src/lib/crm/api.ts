@@ -119,6 +119,26 @@ export async function setTaskDone(id: number, isDone: boolean): Promise<CrmTask>
   return response.data
 }
 
+export async function createTask(input: {
+  title: string
+  due_at: string
+  lead_id?: number
+}): Promise<CrmTask> {
+  const response = await api<Envelope<CrmTask>>('crm/tasks', { method: 'POST', body: input })
+  return response.data
+}
+
+export async function updateTask(
+  id: number,
+  input: { due_at?: string; title?: string },
+): Promise<CrmTask> {
+  const response = await api<Envelope<CrmTask>>(`crm/tasks/${id}`, {
+    method: 'PATCH',
+    body: input,
+  })
+  return response.data
+}
+
 export type ContactFilters = { q?: string; offset?: number; limit?: number }
 
 export async function listContacts(

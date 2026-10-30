@@ -5,6 +5,7 @@ import { X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n/context'
 import { Badge, Card, EmptyState, ErrorState, LoadingState, PageHeader } from '@/components/ui'
 import { FilterBar } from '@/components/register'
+import { TaskDueControl } from '@/components/task-controls'
 import { useToast } from '@/lib/toast-context'
 import { useRowReveal } from '@/lib/motion'
 import { useResource } from '@/lib/use-resource'
@@ -121,6 +122,14 @@ export function TasksPage() {
           <time dateTime={task.due_at} className="font-mono text-xs text-muted">
             {formatDate(task.due_at)} · {formatRelativeTime(task.due_at)}
           </time>
+        )}
+        {!task.is_done && (
+          <TaskDueControl
+            task={task}
+            onSaved={(updated) =>
+              setTasks((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+            }
+          />
         )}
       </Card>
     </motion.li>

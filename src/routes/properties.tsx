@@ -127,6 +127,7 @@ function mayEdit(property: CrmProperty, isAdmin: boolean, auth: AuthState): bool
 function primaryInlineAction(
   property: CrmProperty,
   onPublish: (id: number) => void,
+  onRenew: (property: CrmProperty) => void,
   t: Translate,
   canEdit: boolean,
 ): ReactNode {
@@ -175,7 +176,7 @@ function primaryInlineAction(
       const days = Math.max(0, Math.ceil(remaining / 86_400_000))
       if (!canEdit) return null
       return (
-        <Button variant="primary">
+        <Button variant="primary" onClick={() => onRenew(property)}>
           <Star className="size-4" aria-hidden="true" />
           {t('properties.inlineRenew', { days })}
         </Button>
@@ -198,12 +199,14 @@ function primaryInlineAction(
 function InlineAction({
   property,
   onPublish,
+  onRenew,
   isAdmin,
   members,
   onReassign,
 }: {
   property: CrmProperty
   onPublish: (id: number) => void
+  onRenew: (property: CrmProperty) => void
   /** `false` today for everyone — see Task 6 report: `agency_role` isn't served yet, so `useAgencyRole().known` is false and `isAdmin` fails closed. */
   isAdmin: boolean
   members: AgencyMember[]
@@ -214,6 +217,7 @@ function InlineAction({
   const primary = primaryInlineAction(
     property,
     onPublish,
+    onRenew,
     t,
     mayEdit(property, isAdmin, authState),
   )
@@ -305,6 +309,7 @@ function PropertyCardGrid({
   selected,
   onToggle,
   onPublish,
+  onRenew,
   myId,
   isAdmin,
   members,
@@ -314,6 +319,7 @@ function PropertyCardGrid({
   selected: Set<number>
   onToggle: (id: number) => void
   onPublish: (id: number) => void
+  onRenew: (property: CrmProperty) => void
   /** Who is looking. `undefined` while the auth context is still resolving. */
   myId: number | undefined
   isAdmin: boolean
@@ -411,6 +417,7 @@ function PropertyCardGrid({
               <InlineAction
                 property={property}
                 onPublish={onPublish}
+                onRenew={onRenew}
                 isAdmin={isAdmin}
                 members={members}
                 onReassign={onReassign}
@@ -438,12 +445,14 @@ function PropertyCardGrid({
 function PropertyMapView({
   items,
   onPublish,
+  onRenew,
   isAdmin,
   members,
   onReassign,
 }: {
   items: CrmProperty[]
   onPublish: (id: number) => void
+  onRenew: (property: CrmProperty) => void
   isAdmin: boolean
   members: AgencyMember[]
   onReassign: (property: CrmProperty) => void
@@ -506,6 +515,7 @@ function PropertyMapView({
                 <InlineAction
                   property={property}
                   onPublish={onPublish}
+                  onRenew={onRenew}
                   isAdmin={isAdmin}
                   members={members}
                   onReassign={onReassign}
@@ -595,6 +605,8 @@ export function PropertiesPage() {
   // whole row, not just an id — the dialog's title reads the listing's own
   // `title`.
   const [reassigning, setReassigning] = useState<CrmProperty | null>(null)
+  const [renewing, setRenewing] = useState<CrmProperty | null>(null)
+  const [renewBusy, setRenewBusy] = useState(false)
   const [params, setParams] = useSearchParams()
   const [compact, setCompact] = useState(true)
   // Local, not in the URL, for the same reason `compact` is: this is a display
@@ -793,6 +805,27 @@ export function PropertiesPage() {
     }
   }
 
+  // V-16 — a featured credit is spent, so the click asks first. Same batch
+  // endpoint as publishOne; the list refreshes silently (revalidate) so the
+  // row's new expiry replaces the stale one without a spinner.
+  const renewOne = async (property: CrmProperty) => {
+    setRenewBusy(true)
+    try {
+      await runBatch('feature', [property.id])
+      setRenewing(null)
+      resource.revalidate()
+      summaryResource.reload()
+      railResource.reload()
+    } catch (failure: unknown) {
+      const classified = classifyBatchError(failure)
+      fail(messageFor(classified, t))
+      setRenewing(null)
+      if (classified.kind === 'stale') resource.reload()
+    } finally {
+      setRenewBusy(false)
+    }
+  }
+
   if (resource.status === 'loading') return <LoadingState label={t('common.loading')} />
   if (resource.status === 'error') {
     return (
@@ -897,6 +930,7 @@ export function PropertiesPage() {
         <InlineAction
           property={property}
           onPublish={publishOne}
+          onRenew={setRenewing}
           isAdmin={isAdmin}
           members={members}
           onReassign={setReassigning}
@@ -1339,6 +1373,7 @@ export function PropertiesPage() {
               <PropertyMapView
                 items={items}
                 onPublish={publishOne}
+                onRenew={setRenewing}
                 isAdmin={isAdmin}
                 members={members}
                 onReassign={setReassigning}
@@ -1356,6 +1391,7 @@ export function PropertiesPage() {
                 selected={selected}
                 onToggle={toggle}
                 onPublish={publishOne}
+                onRenew={setRenewing}
                 myId={myId}
                 isAdmin={isAdmin}
                 members={members}
@@ -1385,6 +1421,30 @@ export function PropertiesPage() {
             </>
           )}
         </div>
+      )}
+
+      {renewing !== null && (
+        <Modal
+          title={t('properties.renewConfirmTitle')}
+          closeLabel={t('common.close')}
+          onClose={renewBusy ? () => {} : () => setRenewing(null)}
+          footer={
+            <div className="flex justify-end gap-2">
+              <Button disabled={renewBusy} onClick={() => setRenewing(null)}>
+                {t('common.cancel')}
+              </Button>
+              <Button
+                variant="primary"
+                state={renewBusy ? 'loading' : 'idle'}
+                onClick={() => void renewOne(renewing)}
+              >
+                {t('properties.renewConfirm')}
+              </Button>
+            </div>
+          }
+        >
+          <p className="text-sm text-ink-2">{t('properties.renewConfirmBody')}</p>
+        </Modal>
       )}
 
       {reassigning !== null && (

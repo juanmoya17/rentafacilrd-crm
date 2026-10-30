@@ -12,6 +12,7 @@ import {
   LoadingState,
   ScoreDot,
 } from '@/components/ui'
+import { NewTaskForm, TaskDueControl } from '@/components/task-controls'
 import { FactGrid, RecordHeader, RecordSectionHead } from '@/components/record'
 import { OriginBadge, StageBadge } from '@/components/labels'
 import { useToast } from '@/lib/toast-context'
@@ -312,11 +313,19 @@ export function LeadDetailPage() {
                           {t('common.due')} {formatDate(task.due_at)}
                         </p>
                       )}
+                      {!task.is_done && (
+                        <div className="mt-2">
+                          <TaskDueControl task={task} onSaved={() => resource.revalidate()} />
+                        </div>
+                      )}
                     </Card>
                   </motion.li>
                 ))}
               </ul>
             )}
+            <div className="mt-3">
+              <NewTaskForm leadId={lead.id} onCreated={() => resource.revalidate()} />
+            </div>
           </div>
         </div>
       </div>
